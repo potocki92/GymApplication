@@ -15,3 +15,9 @@ export type {
 export { SESSION_SCHEMA_VERSION } from "./session";
 export type { ExerciseHistoryRecord } from "./history";
 export { HISTORY_SCHEMA_VERSION } from "./history";
+export type {
+  BodyMetricGoal,
+  BodyMetricKey,
+  BodyMetricRecord,
+} from "./body-metric";
+export { METRIC_SCHEMA_VERSION } from "./body-metric";

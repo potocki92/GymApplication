@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { TrendingUp } from "lucide-react";
 
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { MetricsView } from "@/features/metrics/metrics-view";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: `${getDictionary().nav.progress} — FitFlow`,
+  title: `${getDictionary().metrics.title} — FitFlow`,
 };
 
 export default function ProgressPage() {
-  return <ComingSoon title={getDictionary().nav.progress} icon={TrendingUp} />;
+  return <MetricsView />;
 }
