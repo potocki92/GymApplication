@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Settings } from "lucide-react";
 
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { SectionHeader } from "@/components/shared/section-header";
+import { AccountCard } from "@/features/auth/account-card";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -9,5 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  return <ComingSoon title={getDictionary().nav.settings} icon={Settings} />;
+  const t = getDictionary();
+  return (
+    <div className="space-y-6">
+      <SectionHeader title={t.nav.settings} />
+      <AccountCard />
+    </div>
+  );
 }

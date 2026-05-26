@@ -1,5 +1,24 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Backend (Supabase)
+
+The app works fully offline — without any backend it falls back to IndexedDB —
+but to enable accounts and cross-device sync you'll want Supabase.
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
+3. Apply the schema:
+   - **CLI:** `supabase db push` (with the Supabase CLI linked to your project), or
+   - **Dashboard:** SQL Editor → paste `supabase/migrations/20260526120000_init.sql`
+     → Run.
+4. (Dev convenience) Auth → Providers → Email → toggle off "Confirm email" so
+   signups log in immediately. Re-enable for production.
+
+When the env vars are present, the app gates `(app)` routes behind sign-in and
+reads/writes user data through Supabase. When they're absent, every storage
+operation falls back to IndexedDB on the device — useful for offline demos.
+
 ## Getting Started
 
 First, run the development server:
