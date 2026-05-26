@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { useAuthStore, useHistoryStore, useMetricsStore } from "@/store";
+import {
+  useAuthStore,
+  useHistoryStore,
+  useMetricsStore,
+  usePlanStore,
+} from "@/store";
 
 /**
  * Reads the current Supabase user once on mount, subscribes to auth state
@@ -40,6 +45,7 @@ export function AuthHydrationGate() {
         // server data into the local Zustand caches.
         void useHistoryStore.getState().rehydrate?.();
         void useMetricsStore.getState().rehydrate?.();
+        void usePlanStore.getState().rehydrate?.();
       }
     });
 
