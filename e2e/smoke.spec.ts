@@ -1,12 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+import { getSupabaseEnv } from "../tests/helpers/env";
+
 /**
  * Smoke test that every public route renders without unhandled errors.
  *
  * Runs in "fallback mode" (no NEXT_PUBLIC_SUPABASE_* env), so the proxy is a
  * no-op and auth pages just inform the user that Supabase is not configured.
  * Both auth and (app) routes should respond 200 and not crash the client.
+ *
+ * When Supabase IS configured locally, middleware gates (app) routes behind
+ * auth and the "not configured" copy disappears — those scenarios are covered
+ * by persistence.spec.ts instead, so this file skips.
  */
+test.skip(
+  getSupabaseEnv().configured,
+  "fallback-mode smoke — covered by persistence.spec when Supabase is configured",
+);
+
 const PUBLIC_ROUTES = [
   { path: "/", expect: "FitFlow" },
   { path: "/plan", expect: "Plan treningowy" },
