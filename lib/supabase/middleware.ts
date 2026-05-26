@@ -34,6 +34,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   });
 
   // IMPORTANT: getUser() refreshes the session and validates the JWT.
+  // The refreshed-token cookies are written to `response` via setAll above;
+  // any redirect we return must carry those cookies forward or the next
+  // request will look unauthenticated and the redirect will loop.
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -43,18 +46,26 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const isPublic =
     isAuthRoute || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 
+  function redirectKeepingSession(url: URL): NextResponse {
+    const redirect = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) {
+      redirect.cookies.set(cookie);
+    }
+    return redirect;
+  }
+
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+    return redirectKeepingSession(url);
   }
 
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectKeepingSession(url);
   }
 
   return response;
