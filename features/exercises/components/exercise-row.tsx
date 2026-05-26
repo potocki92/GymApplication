@@ -1,12 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Trophy } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
+import { CategoryBadge } from "@/components/shared/category-badge";
 import { ExerciseIcon } from "@/components/shared/exercise-icon";
 import { MuscleBadge } from "@/components/shared/muscle-badge";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { bestPRForExercise } from "@/lib/pr-utils";
+import { bestPRForExercise, recentRecordsForExercise } from "@/lib/pr-utils";
 import { useHistoryStore } from "@/store";
 import type { Exercise } from "@/types";
 
@@ -14,43 +16,64 @@ export function ExerciseRow({ exercise }: { exercise: Exercise }) {
   const t = useDictionary();
   const records = useHistoryStore((s) => s.records);
   const pr = bestPRForExercise(records, exercise.id);
+  const last = recentRecordsForExercise(records, exercise.id, 1)[0];
+
+  const lastLabel = last
+    ? last.weightKg > 0
+      ? `${last.weightKg} ${t.units.kg} × ${last.reps}`
+      : `${last.reps} ${t.units.reps}`
+    : `${exercise.defaultSets} × ${exercise.defaultReps}`;
+  const lastPrefix = last ? t.exercises.last : t.exercises.defaults;
 
   return (
     <Link
       href={`/exercises/${exercise.id}`}
-      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="relative flex items-stretch gap-4 rounded-2xl border border-border bg-card p-3 transition-all hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
-      <ExerciseIcon muscleGroup={exercise.muscleGroup} category={exercise.category} />
-      <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 text-sm font-medium">{exercise.name}</p>
-        <div className="mt-1 flex items-center gap-2">
-          <MuscleBadge group={exercise.muscleGroup} />
-          <span className="text-xs text-muted-foreground">
-            {t.categories[exercise.category]}
-          </span>
-        </div>
-      </div>
-      <div className="hidden shrink-0 text-right sm:block">
-        {pr ? (
-          <>
-            <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-              <Trophy className="size-3 text-primary" />
-              {t.exercises.pr}
-            </p>
-            <p className="text-sm font-medium tabular-nums">
-              {pr.weightKg} {t.units.kg} × {pr.reps}
-            </p>
-          </>
+      <div className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-muted">
+        {exercise.image ? (
+          <Image
+            src={exercise.image}
+            alt={exercise.name}
+            fill
+            sizes="72px"
+            className="object-cover"
+          />
         ) : (
-          <>
-            <p className="text-xs text-muted-foreground">{t.exercises.defaults}</p>
-            <p className="text-sm font-medium tabular-nums">
-              {exercise.defaultSets} × {exercise.defaultReps}
-            </p>
-          </>
+          <div className="flex size-full items-center justify-center">
+            <ExerciseIcon
+              muscleGroup={exercise.muscleGroup}
+              category={exercise.category}
+              className="size-12 rounded-lg"
+              iconClassName="size-6"
+            />
+          </div>
         )}
       </div>
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 pr-10">
+        <p className="line-clamp-1 text-base font-semibold leading-tight">
+          {exercise.name}
+        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <MuscleBadge group={exercise.muscleGroup} />
+          <CategoryBadge category={exercise.category} />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {lastPrefix}:{" "}
+          <span className="font-medium tabular-nums text-primary">
+            {lastLabel}
+          </span>
+        </p>
+      </div>
+
+      {pr ? (
+        <span className="absolute right-3 top-3 rounded-md bg-primary px-2 py-0.5 text-[10px] font-bold tracking-wide text-primary-foreground">
+          {t.exercises.pr}
+        </span>
+      ) : null}
+
+      <ChevronRight className="absolute right-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
     </Link>
   );
 }
