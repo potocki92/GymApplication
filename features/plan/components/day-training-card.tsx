@@ -1,17 +1,29 @@
+"use client";
+
 import Link from "next/link";
-import { CircleCheckBig, Coffee, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CircleCheckBig, Coffee, Play, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useActiveSessionStore } from "@/store";
 import type { WorkoutDay } from "@/types";
 
 export function DayTrainingCard({ day }: { day: WorkoutDay }) {
   const t = useDictionary();
+  const router = useRouter();
+  const startSession = useActiveSessionStore((s) => s.start);
   const { weekday, rest, workout } = day;
   const href = `/plan/new?day=${weekday}`;
+
+  const handleStart = () => {
+    if (!workout) return;
+    startSession(workout);
+    router.push("/workout/active");
+  };
 
   return (
     <Card
@@ -54,6 +66,12 @@ export function DayTrainingCard({ day }: { day: WorkoutDay }) {
               {t.plan.exercises}: {workout.exercises.length} ·{" "}
               {formatMinutes(workout.estimatedDurationMin)}
             </p>
+            {!workout.completed ? (
+              <Button size="sm" className="w-full" onClick={handleStart}>
+                <Play className="size-4" />
+                {t.activeWorkout.start}
+              </Button>
+            ) : null}
             <Link
               href={href}
               className="text-sm font-medium text-primary hover:underline"

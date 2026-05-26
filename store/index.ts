@@ -8,3 +8,4 @@ export {
   selectUpcomingDays,
 } from "./use-plan-store";
 export { useWorkoutDraftStore } from "./use-workout-draft-store";
+export { useActiveSessionStore } from "./use-active-session-store";
