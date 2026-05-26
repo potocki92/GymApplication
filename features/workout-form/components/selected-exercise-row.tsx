@@ -24,7 +24,12 @@ export function SelectedExerciseRow({
   return (
     <div className="space-y-3 rounded-xl border border-border bg-card p-3">
       <div className="flex items-start gap-3">
-        <ExerciseIcon muscleGroup={exercise.muscleGroup} category={exercise.category} />
+        <ExerciseIcon
+          muscleGroup={exercise.muscleGroup}
+          category={exercise.category}
+          image={exercise.image}
+          name={exercise.name}
+        />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-1 text-sm font-medium">{exercise.name}</p>
           <MuscleBadge group={exercise.muscleGroup} className="mt-1" />

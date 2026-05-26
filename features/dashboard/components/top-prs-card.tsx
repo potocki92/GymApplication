@@ -57,6 +57,8 @@ export function TopPRsCard() {
                     <ExerciseIcon
                       muscleGroup={ex.muscleGroup}
                       category={ex.category}
+                      image={ex.image}
+                      name={ex.name}
                       className="size-8"
                       iconClassName="size-4"
                     />

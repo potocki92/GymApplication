@@ -59,6 +59,8 @@ export function ExercisePicker() {
                 <ExerciseIcon
                   muscleGroup={ex.muscleGroup}
                   category={ex.category}
+                  image={ex.image}
+                  name={ex.name}
                   className="size-9"
                   iconClassName="size-4.5"
                 />
