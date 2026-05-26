@@ -19,6 +19,23 @@ When the env vars are present, the app gates `(app)` routes behind sign-in and
 reads/writes user data through Supabase. When they're absent, every storage
 operation falls back to IndexedDB on the device — useful for offline demos.
 
+## Testing
+
+Two layers of tests live in the repo:
+
+- **Unit tests** (Vitest) under `lib/__tests__/` — pure utility functions
+  (PRs, 1RM math, SMA-7, mappers between camelCase records and the snake_case
+  Supabase schema). Fast, no browser, no network.
+- **End-to-end smoke** (Playwright) under `e2e/` — boots `next dev` against the
+  unconfigured-Supabase fallback path and walks every public route to make sure
+  it returns 200 and doesn't crash the client.
+
+```bash
+npm test              # unit tests, single run
+npm run test:watch    # unit tests, watch mode
+npm run test:e2e      # browser smoke (requires `npx playwright install chromium` once)
+```
+
 ## Getting Started
 
 First, run the development server:
