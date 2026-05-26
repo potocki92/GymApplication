@@ -55,6 +55,9 @@ export function ExerciseHistoryView({ exerciseId }: { exerciseId: string }) {
         <ExerciseIcon
           muscleGroup={exercise.muscleGroup}
           category={exercise.category}
+          image={exercise.image}
+          name={exercise.name}
+          className="size-16"
         />
         <div className="min-w-0 flex-1">
           <h1 className="font-heading text-xl font-bold tracking-tight">

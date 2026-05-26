@@ -24,7 +24,12 @@ export function CurrentExercisePanel({ session }: { session: ActiveSession }) {
     <div className="space-y-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
       <div className="flex items-start gap-3">
         {meta ? (
-          <ExerciseIcon muscleGroup={meta.muscleGroup} category={meta.category} />
+          <ExerciseIcon
+            muscleGroup={meta.muscleGroup}
+            category={meta.category}
+            image={meta.image}
+            name={meta.name}
+          />
         ) : null}
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground">
