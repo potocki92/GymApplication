@@ -1,12 +1,14 @@
 "use client";
 
-import { Check, ChevronRight, Minus, Plus } from "lucide-react";
+import { useState } from "react";
+import { Calculator, Check, ChevronRight, Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { currentExercise, currentSet, suggestedReps } from "@/lib/session-utils";
 import { useActiveSessionStore } from "@/store";
 import type { ActiveSession } from "@/types";
+import { PlateCalculatorDialog } from "./plate-calculator-dialog";
 
 function Stepper({
   label,
@@ -62,6 +64,7 @@ export function SetLogger({ session }: { session: ActiveSession }) {
   const addSet = useActiveSessionStore((s) => s.addSet);
   const removeSet = useActiveSessionStore((s) => s.removeSet);
 
+  const [plateDialogOpen, setPlateDialogOpen] = useState(false);
   const ex = currentExercise(session);
   const cur = currentSet(session);
   if (!ex || !cur) return null;
@@ -108,6 +111,18 @@ export function SetLogger({ session }: { session: ActiveSession }) {
         />
       </div>
 
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setPlateDialogOpen(true)}
+        >
+          <Calculator className="size-3.5" />
+          {t.plates.button}
+        </Button>
+      </div>
+
       <Stepper
         label={`${t.activeWorkout.rest} (${t.units.sec})`}
         display={String(restSec)}
@@ -151,6 +166,12 @@ export function SetLogger({ session }: { session: ActiveSession }) {
           {t.activeWorkout.completeSet}
         </Button>
       )}
+
+      <PlateCalculatorDialog
+        open={plateDialogOpen}
+        onOpenChange={setPlateDialogOpen}
+        initialWeightKg={weight}
+      />
     </div>
   );
 }

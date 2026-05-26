@@ -167,6 +167,49 @@ export const pl = {
     emptyHint: "Spróbuj zmienić wyszukiwanie lub filtr partii mięśniowej.",
     count: "ćwiczeń",
     defaults: "Domyślnie",
+    pr: "PR",
+    oneRM: "1RM",
+    noPR: "Brak rekordu",
+    viewHistory: "Pokaż historię",
+    detail: {
+      back: "Powrót do biblioteki",
+      bestLift: "Najlepsze podejście",
+      estimated1RM: "Szacowane 1RM",
+      recentSets: "Ostatnie serie",
+      noHistory: "Brak historii dla tego ćwiczenia",
+      noHistoryHint:
+        "Ukończ trening z tym ćwiczeniem, aby zobaczyć historię i rekordy.",
+      columns: {
+        date: "Data",
+        weight: "Ciężar",
+        reps: "Powt.",
+        oneRM: "1RM",
+      },
+      notFound: "Nie znaleziono ćwiczenia",
+    },
+  },
+
+  prs: {
+    title: "Top rekordy (PR)",
+    subtitle: "Twoje najmocniejsze ćwiczenia",
+    empty: "Brak rekordów",
+    emptyHint: "Ukończ pierwszy trening, aby zobaczyć rekordy.",
+    seeAll: "Zobacz wszystkie",
+    estimated: "szacowane 1RM",
+  },
+
+  plates: {
+    title: "Kalkulator talerzy",
+    subtitle: "Rozkład talerzy na sztangę",
+    button: "Talerze",
+    target: "Ciężar docelowy",
+    bar: "Sztanga",
+    perSide: "Na stronę",
+    plates: "Talerze",
+    remainder: "Niedokładność",
+    belowBar: "Ciężar mniejszy niż waga sztangi",
+    noPlates: "Sztanga bez talerzy",
+    each: "× {count}",
   },
 
   activeWorkout: {

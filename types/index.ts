@@ -13,3 +13,5 @@ export type {
   SetStatus,
 } from "./session";
 export { SESSION_SCHEMA_VERSION } from "./session";
+export type { ExerciseHistoryRecord } from "./history";
+export { HISTORY_SCHEMA_VERSION } from "./history";
