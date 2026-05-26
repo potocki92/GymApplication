@@ -70,18 +70,18 @@ export function WeightChart({
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
           <XAxis
             dataKey="date"
             tickFormatter={(iso: string) => formatShortWeekdayDatePL(iso)}
-            tick={{ fontSize: 11 }}
-            stroke="#9ca3af"
+            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
+            stroke="rgba(255,255,255,0.2)"
             minTickGap={24}
           />
           <YAxis
             domain={["auto", "auto"]}
-            tick={{ fontSize: 11 }}
-            stroke="#9ca3af"
+            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
+            stroke="rgba(255,255,255,0.2)"
             width={42}
             tickFormatter={(v: number) => `${v}`}
           />
@@ -91,21 +91,24 @@ export function WeightChart({
               typeof label === "string" ? formatShortWeekdayDatePL(label) : ""
             }
             contentStyle={{
-              borderRadius: 10,
-              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#1a1a1a",
+              color: "#ffffff",
               fontSize: 12,
             }}
+            labelStyle={{ color: "rgba(255,255,255,0.7)" }}
           />
           {showGoalLine && goal ? (
             <ReferenceLine
               y={goal.targetKg}
-              stroke="#22c55e"
+              stroke="#4CAF50"
               strokeDasharray="4 4"
               label={{
                 value: `${t.metrics.goal}: ${goal.targetKg} ${t.units.kg}`,
                 position: "insideTopRight",
                 fontSize: 11,
-                fill: "#16a34a",
+                fill: "#4CAF50",
               }}
             />
           ) : null}
@@ -113,17 +116,17 @@ export function WeightChart({
             type="monotone"
             dataKey="value"
             name={t.metrics.raw}
-            stroke="#a78bfa"
+            stroke="rgba(255,255,255,0.45)"
             strokeWidth={1.5}
-            dot={{ r: 3 }}
-            activeDot={{ r: 5 }}
+            dot={{ r: 3, fill: "rgba(255,255,255,0.6)" }}
+            activeDot={{ r: 5, fill: "#ffffff" }}
             connectNulls
           />
           <Line
             type="monotone"
             dataKey="sma"
             name={t.metrics.sma7}
-            stroke="#7c3aed"
+            stroke="#C6FF3D"
             strokeWidth={2.5}
             dot={false}
             activeDot={false}

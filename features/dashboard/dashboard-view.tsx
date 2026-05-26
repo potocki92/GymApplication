@@ -5,12 +5,7 @@ import Link from "next/link";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ACTIVITY, CURRENT_USER, TRAINING_GOAL, WORKOUT_STATS } from "@/data";
 import { useDictionary } from "@/hooks/use-dictionary";
-import {
-  selectLastWorkout,
-  selectNextWorkout,
-  selectUpcomingDays,
-  usePlanStore,
-} from "@/store";
+import { selectLastWorkout, selectNextWorkout, usePlanStore } from "@/store";
 import { WeeklyPlan } from "@/features/plan/components/weekly-plan";
 import { ActivityHeatmap } from "./components/activity-heatmap";
 import { DashboardHeader } from "./components/dashboard-header";
@@ -20,7 +15,6 @@ import { NextWorkoutCard } from "./components/next-workout-card";
 import { QuickAddWeightCard } from "@/features/metrics/quick-add-weight-card";
 import { StreakCard } from "./components/streak-card";
 import { TopPRsCard } from "./components/top-prs-card";
-import { UpcomingWorkoutsCard } from "./components/upcoming-workouts-card";
 import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
 
@@ -30,7 +24,6 @@ export function DashboardView() {
 
   const lastWorkout = selectLastWorkout(plan);
   const nextWorkout = selectNextWorkout(plan);
-  const upcoming = selectUpcomingDays(plan);
 
   return (
     <div className="space-y-6">
@@ -46,11 +39,8 @@ export function DashboardView() {
           <StreakCard days={WORKOUT_STATS.currentStreakDays} />
         </div>
 
-        <div className="sm:col-span-2 lg:col-span-2">
+        <div className="sm:col-span-2 lg:col-span-3">
           <ActivityHeatmap activity={ACTIVITY} />
-        </div>
-        <div className="sm:col-span-2 lg:col-span-1">
-          <UpcomingWorkoutsCard days={upcoming} weekStart={plan.weekStart} />
         </div>
 
         <LastWorkoutCard workout={lastWorkout} />
