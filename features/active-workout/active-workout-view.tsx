@@ -13,9 +13,10 @@ import { useRestAlarm } from "@/hooks/use-rest-alarm";
 import { useSessionAutosave } from "@/hooks/use-session-autosave";
 import { useSessionClock } from "@/hooks/use-session-clock";
 import { useWakeLock } from "@/hooks/use-wake-lock";
+import { completedSessionToHistoryRecords } from "@/lib/history-utils";
 import { clearSession } from "@/lib/idb-session";
 import { setProgress } from "@/lib/session-utils";
-import { useActiveSessionStore } from "@/store";
+import { useActiveSessionStore, useHistoryStore } from "@/store";
 import { CurrentExercisePanel } from "./components/current-exercise-panel";
 import { SessionControls } from "./components/session-controls";
 import { SessionSummary } from "./components/session-summary";
@@ -40,8 +41,14 @@ export function ActiveWorkoutView() {
   };
 
   const handleSave = () => {
-    useActiveSessionStore.getState().save();
+    const completed = useActiveSessionStore.getState().save();
     void clearSession();
+    if (completed) {
+      const records = completedSessionToHistoryRecords(completed);
+      if (records.length > 0) {
+        void useHistoryStore.getState().appendMany(records);
+      }
+    }
     toast.success(t.activeWorkout.summary.saved);
     router.push("/");
   };

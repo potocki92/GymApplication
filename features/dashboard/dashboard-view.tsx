@@ -18,6 +18,7 @@ import { GoalCard } from "./components/goal-card";
 import { LastWorkoutCard } from "./components/last-workout-card";
 import { NextWorkoutCard } from "./components/next-workout-card";
 import { StreakCard } from "./components/streak-card";
+import { TopPRsCard } from "./components/top-prs-card";
 import { UpcomingWorkoutsCard } from "./components/upcoming-workouts-card";
 import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
@@ -55,6 +56,10 @@ export function DashboardView() {
         <NextWorkoutCard workout={nextWorkout} />
         <div className="sm:col-span-2 lg:col-span-1">
           <WeeklyStatsCard stats={WORKOUT_STATS} />
+        </div>
+
+        <div className="sm:col-span-2 lg:col-span-3">
+          <TopPRsCard />
         </div>
       </div>
 
