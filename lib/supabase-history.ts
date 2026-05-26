@@ -18,7 +18,7 @@ interface HistoryRow {
   notes: string | null;
 }
 
-function mapRowToRecord(row: HistoryRow): ExerciseHistoryRecord {
+export function mapRowToRecord(row: HistoryRow): ExerciseHistoryRecord {
   return {
     id: row.id,
     exerciseId: row.exercise_id,
@@ -34,7 +34,7 @@ function mapRowToRecord(row: HistoryRow): ExerciseHistoryRecord {
   };
 }
 
-function recordToRow(
+export function recordToRow(
   r: ExerciseHistoryRecord,
   userId: string,
 ): Omit<HistoryRow, "weight_kg" | "one_rm_kg"> & {

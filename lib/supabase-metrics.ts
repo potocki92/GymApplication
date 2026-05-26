@@ -30,7 +30,7 @@ function num(v: number | string | null | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function mapRowToMetric(row: MetricRow): BodyMetricRecord {
+export function mapRowToMetric(row: MetricRow): BodyMetricRecord {
   return {
     id: row.id,
     date: row.date,
@@ -44,7 +44,7 @@ function mapRowToMetric(row: MetricRow): BodyMetricRecord {
   };
 }
 
-function metricToRow(
+export function metricToRow(
   r: BodyMetricRecord,
   userId: string,
 ): {
