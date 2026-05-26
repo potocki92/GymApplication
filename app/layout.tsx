@@ -21,7 +21,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pl" className={`${inter.variable} h-full antialiased`}>
+    <html lang="pl" className={`${inter.variable} dark h-full antialiased`}>
       <body className="min-h-screen bg-background text-foreground">
         <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
         <Toaster position="top-center" richColors />

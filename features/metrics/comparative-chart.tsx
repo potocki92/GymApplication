@@ -79,27 +79,27 @@ export function ComparativeChart({
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
           <XAxis
             dataKey="date"
             tickFormatter={(iso: string) => formatShortWeekdayDatePL(iso)}
-            tick={{ fontSize: 11 }}
-            stroke="#9ca3af"
+            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
+            stroke="rgba(255,255,255,0.2)"
             minTickGap={24}
           />
           <YAxis
             yAxisId="left"
             domain={["auto", "auto"]}
-            tick={{ fontSize: 11, fill: "#7c3aed" }}
-            stroke="#7c3aed"
+            tick={{ fontSize: 11, fill: "#C6FF3D" }}
+            stroke="#C6FF3D"
             width={42}
           />
           <YAxis
             yAxisId="right"
             orientation="right"
             domain={["auto", "auto"]}
-            tick={{ fontSize: 11, fill: "#f59e0b" }}
-            stroke="#f59e0b"
+            tick={{ fontSize: 11, fill: "#FF5722" }}
+            stroke="#FF5722"
             width={42}
           />
           <Tooltip
@@ -115,13 +115,16 @@ export function ComparativeChart({
               return [`${value} ${unit}`];
             }}
             contentStyle={{
-              borderRadius: 10,
-              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#1a1a1a",
+              color: "#ffffff",
               fontSize: 12,
             }}
+            labelStyle={{ color: "rgba(255,255,255,0.7)" }}
           />
           <Legend
-            wrapperStyle={{ fontSize: 12 }}
+            wrapperStyle={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}
             formatter={(value) =>
               value === "primary"
                 ? t.metrics.metricSelector[primary]
@@ -132,18 +135,18 @@ export function ComparativeChart({
             yAxisId="left"
             type="monotone"
             dataKey="primary"
-            stroke="#7c3aed"
+            stroke="#C6FF3D"
             strokeWidth={2}
-            dot={{ r: 3 }}
+            dot={{ r: 3, fill: "#C6FF3D" }}
             connectNulls
           />
           <Line
             yAxisId="right"
             type="monotone"
             dataKey="secondary"
-            stroke="#f59e0b"
+            stroke="#FF5722"
             strokeWidth={2}
-            dot={{ r: 3 }}
+            dot={{ r: 3, fill: "#FF5722" }}
             connectNulls
           />
         </LineChart>
