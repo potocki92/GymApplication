@@ -167,6 +167,7 @@ export const pl = {
     emptyHint: "Spróbuj zmienić wyszukiwanie, filtr partii mięśniowej lub sprzętu.",
     count: "ćwiczeń",
     defaults: "Domyślnie",
+    last: "Ostatnio",
     equipment: "Sprzęt",
     pr: "PR",
     oneRM: "1RM",

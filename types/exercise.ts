@@ -26,6 +26,8 @@ export interface Exercise {
   category: ExerciseCategory;
   /** lucide-react icon name, resolved in the UI layer. */
   icon?: string;
+  /** Path to thumbnail illustration. Falls back to muscle-tinted icon when absent. */
+  image?: string;
   defaultSets: number;
   /** Rep target as a range string, e.g. "8-12". */
   defaultReps: string;
