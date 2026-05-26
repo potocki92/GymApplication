@@ -4,11 +4,19 @@ import { useState } from "react";
 import { Calculator, Check, ChevronRight, Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { currentExercise, currentSet, suggestedReps } from "@/lib/session-utils";
+import {
+  currentExercise,
+  currentSet,
+  loggingTarget,
+  suggestedReps,
+} from "@/lib/session-utils";
 import { useActiveSessionStore } from "@/store";
-import type { ActiveSession } from "@/types";
+import type { ActiveSession, LoggedSet } from "@/types";
 import { PlateCalculatorDialog } from "./plate-calculator-dialog";
+import { RPESelector } from "./rpe-selector";
 
 function Stepper({
   label,
@@ -55,9 +63,59 @@ function Stepper({
   );
 }
 
+/**
+ * RPE + notes block bound to the "logging target" (the set we should be capturing
+ * metadata for right now). Local notes state with onBlur commit avoids polluting
+ * the undo stack on every keystroke. Remounted (via `key`) whenever the target
+ * changes — e.g. when the workout transitions from executing to resting.
+ */
+function RpeAndNotes({
+  target,
+  exerciseIndex,
+  onCommit,
+}: {
+  target: LoggedSet;
+  exerciseIndex: number;
+  onCommit: (
+    exerciseIndex: number,
+    setId: string,
+    patch: Partial<Pick<LoggedSet, "rpe" | "notes">>,
+  ) => void;
+}) {
+  const t = useDictionary();
+  const [notesLocal, setNotesLocal] = useState(target.notes ?? "");
+
+  return (
+    <div className="space-y-3">
+      <RPESelector
+        value={target.rpe}
+        onChange={(v) => onCommit(exerciseIndex, target.id, { rpe: v })}
+        label={t.activeWorkout.rpeFor.replace("{n}", String(target.setNumber))}
+      />
+      <div className="space-y-1.5">
+        <Label htmlFor={`notes-${target.id}`} className="text-xs text-muted-foreground">
+          {t.activeWorkout.notesFor.replace("{n}", String(target.setNumber))}
+        </Label>
+        <Input
+          id={`notes-${target.id}`}
+          value={notesLocal}
+          onChange={(e) => setNotesLocal(e.target.value)}
+          onBlur={() => {
+            if (notesLocal !== (target.notes ?? "")) {
+              onCommit(exerciseIndex, target.id, { notes: notesLocal });
+            }
+          }}
+          placeholder={t.activeWorkout.notesPlaceholder}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SetLogger({ session }: { session: ActiveSession }) {
   const t = useDictionary();
   const editCurrentSet = useActiveSessionStore((s) => s.editCurrentSet);
+  const editSet = useActiveSessionStore((s) => s.editSet);
   const setRestForCurrentSet = useActiveSessionStore((s) => s.setRestForCurrentSet);
   const completeSet = useActiveSessionStore((s) => s.completeSet);
   const skipRest = useActiveSessionStore((s) => s.skipRest);
@@ -73,6 +131,7 @@ export function SetLogger({ session }: { session: ActiveSession }) {
   const reps = cur.actualReps ?? suggestedReps(cur.targetReps);
   const weight = cur.actualWeightKg ?? cur.targetWeightKg;
   const restSec = isResting ? session.restTargetSec : cur.restTargetSec;
+  const logTarget = loggingTarget(session);
 
   const lastPending = [...ex.sets].reverse().find((s) => s.status === "pending");
   const canRemove =
@@ -129,6 +188,15 @@ export function SetLogger({ session }: { session: ActiveSession }) {
         onDec={() => setRestForCurrentSet(restSec - 15)}
         onInc={() => setRestForCurrentSet(restSec + 15)}
       />
+
+      {logTarget ? (
+        <RpeAndNotes
+          key={logTarget.set.id}
+          target={logTarget.set}
+          exerciseIndex={logTarget.exerciseIndex}
+          onCommit={editSet}
+        />
+      ) : null}
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">{t.activeWorkout.set}</span>

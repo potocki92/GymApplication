@@ -14,6 +14,10 @@ export interface ExerciseHistoryRecord {
   oneRMKg: number;
   /** Epoch milliseconds — when the set was completed. */
   completedAt: number;
+  /** Rate of Perceived Exertion 1-10 captured during the set. */
+  rpe?: number;
+  /** Optional free-form notes the user recorded with the set. */
+  notes?: string;
 }
 
 /** Bumped when `ExerciseHistoryRecord` shape changes incompatibly. */

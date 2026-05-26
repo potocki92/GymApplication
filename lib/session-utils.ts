@@ -33,6 +33,8 @@ export function makeLoggedSet(ex: WorkoutExercise, setNumber: number): LoggedSet
     restTargetSec: ex.restSec,
     startedAt: null,
     completedAt: null,
+    rpe: null,
+    notes: null,
   };
 }
 
@@ -75,6 +77,46 @@ export function currentExercise(session: ActiveSession): ActiveExercise | undefi
 
 export function currentSet(session: ActiveSession): LoggedSet | undefined {
   return currentExercise(session)?.sets[session.currentSetIndex];
+}
+
+/**
+ * The set just before the cursor — i.e. the most recent set that the user
+ * actually finished. Used during `resting` so the UI can attach RPE/notes to the
+ * lift the user just performed (not the upcoming pending one).
+ */
+export function previousSet(
+  session: ActiveSession,
+): { exerciseIndex: number; set: LoggedSet } | null {
+  if (session.currentSetIndex > 0) {
+    const ex = session.exercises[session.currentExerciseIndex];
+    const set = ex?.sets[session.currentSetIndex - 1];
+    if (set) return { exerciseIndex: session.currentExerciseIndex, set };
+  }
+  for (let e = session.currentExerciseIndex - 1; e >= 0; e -= 1) {
+    const ex = session.exercises[e];
+    if (ex && ex.sets.length > 0) {
+      return { exerciseIndex: e, set: ex.sets[ex.sets.length - 1] };
+    }
+  }
+  return null;
+}
+
+/**
+ * The set the user should be logging metadata for right now. During `executing`
+ * that's the active set; during `resting` it's the one just completed. Other
+ * states have no logging target.
+ */
+export function loggingTarget(
+  session: ActiveSession,
+): { exerciseIndex: number; set: LoggedSet } | null {
+  if (session.status === "executing") {
+    const set = currentSet(session);
+    return set ? { exerciseIndex: session.currentExerciseIndex, set } : null;
+  }
+  if (session.status === "resting") {
+    return previousSet(session);
+  }
+  return null;
 }
 
 /** Total / completed set counts across the whole session. */

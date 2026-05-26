@@ -26,6 +26,8 @@ export function completedSessionToHistoryRecords(
         weightKg,
         oneRMKg: calculate1RM(weightKg, reps),
         completedAt: set.completedAt ?? completed.finishedAt,
+        rpe: set.rpe ?? undefined,
+        notes: set.notes ?? undefined,
       });
     }
   }
