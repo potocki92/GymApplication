@@ -21,12 +21,20 @@ interface HistoryState {
   clear: () => Promise<void>;
 }
 
+/**
+ * Returns the authenticated user when Supabase is configured AND signed-in,
+ * otherwise null. The store treats "configured but no user" the same as
+ * "not configured" — falling back to IndexedDB — so a write isn't silently
+ * dropped during auth init or after sign-out.
+ */
+function activeUser() {
+  if (!isSupabaseConfigured()) return null;
+  return useAuthStore.getState().user;
+}
+
 async function loadInitial(): Promise<ExerciseHistoryRecord[]> {
-  if (isSupabaseConfigured()) {
-    const user = useAuthStore.getState().user;
-    if (!user) return [];
-    return loadHistoryFromSupabase(user.id);
-  }
+  const user = activeUser();
+  if (user) return loadHistoryFromSupabase(user.id);
   return loadAllHistory();
 }
 
@@ -48,21 +56,15 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   appendMany: async (records) => {
     if (records.length === 0) return;
     set((s) => ({ records: [...s.records, ...records] }));
-    if (isSupabaseConfigured()) {
-      const user = useAuthStore.getState().user;
-      if (user) await appendHistoryToSupabase(records, user.id);
-    } else {
-      await appendHistory(records);
-    }
+    const user = activeUser();
+    if (user) await appendHistoryToSupabase(records, user.id);
+    else await appendHistory(records);
   },
 
   clear: async () => {
     set({ records: [] });
-    if (isSupabaseConfigured()) {
-      const user = useAuthStore.getState().user;
-      if (user) await clearHistoryFromSupabase(user.id);
-    } else {
-      await clearAllHistory();
-    }
+    const user = activeUser();
+    if (user) await clearHistoryFromSupabase(user.id);
+    else await clearAllHistory();
   },
 }));

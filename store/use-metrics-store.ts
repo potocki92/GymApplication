@@ -29,13 +29,23 @@ interface MetricsState {
   setGoal: (goal: BodyMetricGoal | null) => Promise<void>;
 }
 
+/**
+ * Returns the authenticated user when Supabase is configured AND signed-in,
+ * otherwise null. Configured-but-no-user is treated the same as not-configured
+ * so the store always has a place to put writes (IndexedDB) instead of
+ * silently dropping them during auth init.
+ */
+function activeUser() {
+  if (!isSupabaseConfigured()) return null;
+  return useAuthStore.getState().user;
+}
+
 async function loadInitial(): Promise<{
   records: BodyMetricRecord[];
   goal: BodyMetricGoal | null;
 }> {
-  if (isSupabaseConfigured()) {
-    const user = useAuthStore.getState().user;
-    if (!user) return { records: [], goal: null };
+  const user = activeUser();
+  if (user) {
     const [records, goal] = await Promise.all([
       loadMetricsFromSupabase(user.id),
       loadGoalFromSupabase(user.id),
@@ -71,31 +81,22 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
           : [...s.records, record];
       return { records: next };
     });
-    if (isSupabaseConfigured()) {
-      const user = useAuthStore.getState().user;
-      if (user) await upsertMetricToSupabase(record, user.id);
-    } else {
-      await putMetric(record);
-    }
+    const user = activeUser();
+    if (user) await upsertMetricToSupabase(record, user.id);
+    else await putMetric(record);
   },
 
   remove: async (id) => {
     set((s) => ({ records: s.records.filter((r) => r.id !== id) }));
-    if (isSupabaseConfigured()) {
-      const user = useAuthStore.getState().user;
-      if (user) await deleteMetricFromSupabase(id, user.id);
-    } else {
-      await deleteMetric(id);
-    }
+    const user = activeUser();
+    if (user) await deleteMetricFromSupabase(id, user.id);
+    else await deleteMetric(id);
   },
 
   setGoal: async (goal) => {
     set({ goal });
-    if (isSupabaseConfigured()) {
-      const user = useAuthStore.getState().user;
-      if (user) await saveGoalToSupabase(goal, user.id);
-    } else {
-      await saveGoal(goal);
-    }
+    const user = activeUser();
+    if (user) await saveGoalToSupabase(goal, user.id);
+    else await saveGoal(goal);
   },
 }));

@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { useAuthStore, useHistoryStore, useMetricsStore } from "@/store";
+import {
+  useAuthStore,
+  useHistoryStore,
+  useMetricsStore,
+  usePlanStore,
+} from "@/store";
 
 /**
  * Reads the current Supabase user once on mount, subscribes to auth state
@@ -31,15 +36,28 @@ export function AuthHydrationGate() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // INITIAL_SESSION fires on mount and would race the getUser() above —
+      // skip it so we don't double-fetch user data.
+      if (event === "INITIAL_SESSION") return;
+
       const prevUserId = useAuthStore.getState().user?.id ?? null;
       const nextUserId = session?.user?.id ?? null;
       useAuthStore.getState().setUser(session?.user ?? null);
-      if (prevUserId !== nextUserId) {
-        // Identity changed (sign-in, sign-out, or account switch) — pull fresh
-        // server data into the local Zustand caches.
+      if (prevUserId === nextUserId) return;
+
+      // Identity changed (sign-in, sign-out, account switch) — re-pull each
+      // store but only if it already finished its initial load. Stores that
+      // are mid-hydrate will pick up the new user themselves once hydrate()
+      // resolves.
+      if (useHistoryStore.getState().hydrated) {
         void useHistoryStore.getState().rehydrate?.();
+      }
+      if (useMetricsStore.getState().hydrated) {
         void useMetricsStore.getState().rehydrate?.();
+      }
+      if (usePlanStore.getState().hydrated) {
+        void usePlanStore.getState().rehydrate?.();
       }
     });
 
