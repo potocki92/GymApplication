@@ -116,27 +116,38 @@ export function ExerciseHistoryView({ exerciseId }: { exerciseId: string }) {
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
-            <div className="grid grid-cols-[1.4fr_1fr_0.7fr_0.9fr] gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div className="grid grid-cols-[1.4fr_1fr_0.6fr_0.6fr_0.8fr] gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <span>{t.exercises.detail.columns.date}</span>
               <span className="text-right">{t.exercises.detail.columns.weight}</span>
               <span className="text-right">{t.exercises.detail.columns.reps}</span>
+              <span className="text-right">{t.exercises.detail.columns.rpe}</span>
               <span className="text-right">{t.exercises.detail.columns.oneRM}</span>
             </div>
             {recent.map((r) => (
               <div
                 key={r.id}
-                className="grid grid-cols-[1.4fr_1fr_0.7fr_0.9fr] gap-2 border-t border-border/60 px-3 py-2 text-sm tabular-nums first:border-t-0"
+                className="border-t border-border/60 px-3 py-2 text-sm first:border-t-0"
               >
-                <span className="truncate">
-                  {formatShortWeekdayDatePL(epochToISODate(r.completedAt))}
-                </span>
-                <span className="text-right">
-                  {r.weightKg} {t.units.kg}
-                </span>
-                <span className="text-right">{r.reps}</span>
-                <span className="text-right text-muted-foreground">
-                  {r.oneRMKg}
-                </span>
+                <div className="grid grid-cols-[1.4fr_1fr_0.6fr_0.6fr_0.8fr] gap-2 tabular-nums">
+                  <span className="truncate">
+                    {formatShortWeekdayDatePL(epochToISODate(r.completedAt))}
+                  </span>
+                  <span className="text-right">
+                    {r.weightKg} {t.units.kg}
+                  </span>
+                  <span className="text-right">{r.reps}</span>
+                  <span className="text-right text-muted-foreground">
+                    {r.rpe ?? "—"}
+                  </span>
+                  <span className="text-right text-muted-foreground">
+                    {r.oneRMKg}
+                  </span>
+                </div>
+                {r.notes ? (
+                  <p className="mt-1 line-clamp-2 text-xs italic text-muted-foreground">
+                    {r.notes}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>

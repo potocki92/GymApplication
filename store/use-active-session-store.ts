@@ -57,6 +57,11 @@ interface ActiveSessionState {
   editCurrentSet: (
     patch: Partial<Pick<LoggedSet, "actualReps" | "actualWeightKg">>,
   ) => void;
+  editSet: (
+    exerciseIndex: number,
+    setId: string,
+    patch: Partial<Pick<LoggedSet, "actualReps" | "actualWeightKg" | "rpe" | "notes">>,
+  ) => void;
   setRestForCurrentSet: (sec: number) => void;
   addSet: (exerciseIndex: number) => void;
   removeSet: (exerciseIndex: number, setId: string) => void;
@@ -214,6 +219,29 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         }
       }),
 
+    editSet: (exerciseIndex, setId, patch) =>
+      commit(true, (s) => {
+        const ex = s.exercises[exerciseIndex];
+        const target = ex?.sets.find((x) => x.id === setId);
+        if (!target) return false;
+        if (patch.actualReps != null) {
+          target.actualReps = Math.max(0, Math.round(patch.actualReps));
+        }
+        if (patch.actualWeightKg != null) {
+          target.actualWeightKg = Math.max(0, patch.actualWeightKg);
+        }
+        if (patch.rpe !== undefined) {
+          target.rpe =
+            patch.rpe == null
+              ? null
+              : Math.max(1, Math.min(10, Math.round(patch.rpe)));
+        }
+        if (patch.notes !== undefined) {
+          const trimmed = patch.notes?.trim() ?? "";
+          target.notes = trimmed === "" ? null : trimmed;
+        }
+      }),
+
     setRestForCurrentSet: (sec) =>
       commit(true, (s) => {
         const clamped = Math.max(0, Math.round(sec));
@@ -244,6 +272,8 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           restTargetSec: last?.restTargetSec ?? 0,
           startedAt: null,
           completedAt: null,
+          rpe: null,
+          notes: null,
         });
       }),
 

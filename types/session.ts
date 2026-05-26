@@ -26,6 +26,10 @@ export interface LoggedSet {
   restTargetSec: number; // planned rest AFTER this set (editable mid-workout)
   startedAt: number | null; // epoch ms
   completedAt: number | null; // epoch ms
+  /** Rate of Perceived Exertion 1-10. Null until the user picks it. */
+  rpe: number | null;
+  /** Free-form notes about this set. */
+  notes: string | null;
 }
 
 /** Execution-time snapshot of one `WorkoutExercise`. */
@@ -72,4 +76,4 @@ export interface CompletedSession {
 }
 
 /** Bumped when `ActiveSession` shape changes incompatibly. */
-export const SESSION_SCHEMA_VERSION = 1;
+export const SESSION_SCHEMA_VERSION = 2;

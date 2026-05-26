@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
+import { CategoryFilter, type CategoryFilterValue } from "@/components/shared/category-filter";
 import { MuscleFilter, type MuscleFilterValue } from "@/components/shared/muscle-filter";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Input } from "@/components/ui/input";
@@ -13,16 +14,18 @@ import { ExerciseList } from "./components/exercise-list";
 export function ExercisesView() {
   const t = useDictionary();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<MuscleFilterValue>("all");
+  const [muscleFilter, setMuscleFilter] = useState<MuscleFilterValue>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>("all");
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     return EXERCISES.filter(
       (ex) =>
-        (filter === "all" || ex.muscleGroup === filter) &&
+        (muscleFilter === "all" || ex.muscleGroup === muscleFilter) &&
+        (categoryFilter === "all" || ex.category === categoryFilter) &&
         (q === "" || ex.name.toLowerCase().includes(q)),
     );
-  }, [query, filter]);
+  }, [query, muscleFilter, categoryFilter]);
 
   return (
     <div className="space-y-6">
@@ -38,7 +41,8 @@ export function ExercisesView() {
             className="h-10 pl-9"
           />
         </div>
-        <MuscleFilter value={filter} onChange={setFilter} />
+        <MuscleFilter value={muscleFilter} onChange={setMuscleFilter} />
+        <CategoryFilter value={categoryFilter} onChange={setCategoryFilter} />
       </div>
 
       <p className="text-sm text-muted-foreground">
