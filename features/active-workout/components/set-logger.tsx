@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, Check, ChevronRight, Minus, Plus } from "lucide-react";
+import { Calculator, Minus, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,15 @@ import { useActiveSessionStore } from "@/store";
 import type { ActiveSession, LoggedSet } from "@/types";
 import { PlateCalculatorDialog } from "./plate-calculator-dialog";
 import { RPESelector } from "./rpe-selector";
+
+function tapHaptic(): void {
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.vibrate === "function"
+  ) {
+    navigator.vibrate(10);
+  }
+}
 
 function Stepper({
   label,
@@ -37,26 +46,34 @@ function Stepper({
       <div className="flex items-center justify-between gap-1 rounded-lg border border-input bg-card px-1 py-1">
         <Button
           type="button"
-          size="icon"
+          size="icon-lg"
           variant="ghost"
-          onClick={onDec}
+          className="size-11"
+          onClick={() => {
+            tapHaptic();
+            onDec();
+          }}
           disabled={disabled}
           aria-label={`${label} -`}
         >
-          <Minus className="size-4" />
+          <Minus className="size-5" />
         </Button>
-        <span className="min-w-0 flex-1 text-center text-base font-semibold tabular-nums">
+        <span className="min-w-0 flex-1 text-center text-lg font-semibold tabular-nums">
           {display}
         </span>
         <Button
           type="button"
-          size="icon"
+          size="icon-lg"
           variant="ghost"
-          onClick={onInc}
+          className="size-11"
+          onClick={() => {
+            tapHaptic();
+            onInc();
+          }}
           disabled={disabled}
           aria-label={`${label} +`}
         >
-          <Plus className="size-4" />
+          <Plus className="size-5" />
         </Button>
       </div>
     </div>
@@ -117,8 +134,6 @@ export function SetLogger({ session }: { session: ActiveSession }) {
   const editCurrentSet = useActiveSessionStore((s) => s.editCurrentSet);
   const editSet = useActiveSessionStore((s) => s.editSet);
   const setRestForCurrentSet = useActiveSessionStore((s) => s.setRestForCurrentSet);
-  const completeSet = useActiveSessionStore((s) => s.completeSet);
-  const skipRest = useActiveSessionStore((s) => s.skipRest);
   const addSet = useActiveSessionStore((s) => s.addSet);
   const removeSet = useActiveSessionStore((s) => s.removeSet);
 
@@ -127,10 +142,9 @@ export function SetLogger({ session }: { session: ActiveSession }) {
   const cur = currentSet(session);
   if (!ex || !cur) return null;
 
-  const isResting = session.status === "resting";
   const reps = cur.actualReps ?? suggestedReps(cur.targetReps);
   const weight = cur.actualWeightKg ?? cur.targetWeightKg;
-  const restSec = isResting ? session.restTargetSec : cur.restTargetSec;
+  const restSec = cur.restTargetSec;
   const logTarget = loggingTarget(session);
 
   const lastPending = [...ex.sets].reverse().find((s) => s.status === "pending");
@@ -222,18 +236,6 @@ export function SetLogger({ session }: { session: ActiveSession }) {
           </Button>
         </div>
       </div>
-
-      {isResting ? (
-        <Button className="h-12 w-full text-base" onClick={() => skipRest()}>
-          <ChevronRight className="size-5" />
-          {t.activeWorkout.nextSet}
-        </Button>
-      ) : (
-        <Button className="h-12 w-full text-base" onClick={() => completeSet()}>
-          <Check className="size-5" />
-          {t.activeWorkout.completeSet}
-        </Button>
-      )}
 
       <PlateCalculatorDialog
         open={plateDialogOpen}

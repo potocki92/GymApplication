@@ -19,9 +19,11 @@ import type { SessionStatus } from "@/types";
 export function SessionControls({
   status,
   onExit,
+  onAfterAction,
 }: {
   status: SessionStatus;
   onExit: () => void;
+  onAfterAction?: () => void;
 }) {
   const t = useDictionary();
   const pause = useActiveSessionStore((s) => s.pause);
@@ -37,11 +39,19 @@ export function SessionControls({
 
   const isPaused = status === "paused";
 
+  const wrap = (fn: () => void) => () => {
+    fn();
+    onAfterAction?.();
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         {isPaused ? (
-          <Button className="h-11 flex-1 text-base" onClick={() => resume()}>
+          <Button
+            className="h-11 flex-1 text-base"
+            onClick={wrap(() => resume())}
+          >
             <Play className="size-5" />
             {t.activeWorkout.resume}
           </Button>
@@ -49,7 +59,8 @@ export function SessionControls({
           <Button
             variant="outline"
             className="h-11 flex-1 text-base"
-            onClick={() => pause()}
+            onClick={wrap(() => pause())}
+            disabled={status !== "executing" && status !== "resting"}
           >
             <Pause className="size-5" />
             {t.activeWorkout.pause}
@@ -59,7 +70,7 @@ export function SessionControls({
           variant="ghost"
           size="icon-lg"
           aria-label={t.activeWorkout.undo}
-          onClick={() => undo()}
+          onClick={wrap(() => undo())}
           disabled={!canUndo}
         >
           <Undo2 className="size-5" />
@@ -68,7 +79,7 @@ export function SessionControls({
           variant="ghost"
           size="icon-lg"
           aria-label={t.activeWorkout.redo}
-          onClick={() => redo()}
+          onClick={wrap(() => redo())}
           disabled={!canRedo}
         >
           <Redo2 className="size-5" />
@@ -113,6 +124,7 @@ export function SessionControls({
               onClick={() => {
                 setConfirmFinish(false);
                 finishEarly();
+                onAfterAction?.();
               }}
             >
               {t.activeWorkout.finish}

@@ -26,10 +26,12 @@ import {
 } from "@/store";
 import { CurrentExercisePanel } from "./components/current-exercise-panel";
 import { HeartRatePanel } from "./components/heart-rate-panel";
-import { SessionControls } from "./components/session-controls";
+import { HeroTimer } from "./components/hero-timer";
+import { RestPanel } from "./components/rest-panel";
 import { SessionSummary } from "./components/session-summary";
 import { SetLogger } from "./components/set-logger";
-import { WorkoutTimers } from "./components/workout-timers";
+import { WorkoutActionBar } from "./components/workout-action-bar";
+import { WorkoutHeader } from "./components/workout-header";
 
 export function ActiveWorkoutView() {
   const t = useDictionary();
@@ -187,37 +189,38 @@ export function ActiveWorkoutView() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
-      <div className="text-center">
-        <h1 className="font-heading text-lg font-bold tracking-tight">
-          {session.workoutName}
-        </h1>
-        {status === "paused" ? (
-          <p className="text-sm font-medium text-primary">
-            {t.activeWorkout.paused}
-          </p>
-        ) : null}
+    <div className="mx-auto flex max-w-md flex-col">
+      <WorkoutHeader session={session} status={status} />
+
+      <div className="space-y-4 pt-4 pb-4">
+        <HeroTimer clock={clock} status={status} />
+
+        <HeartRatePanel heartRate={session.heartRate} />
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={status === "resting" ? "resting" : "executing"}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="space-y-4"
+          >
+            <CurrentExercisePanel session={session} />
+            {status === "resting" ? (
+              <RestPanel session={session} clock={clock} />
+            ) : (
+              <SetLogger session={session} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      <HeartRatePanel heartRate={session.heartRate} />
-
-      <WorkoutTimers clock={clock} status={status} />
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={status === "resting" ? "resting" : "executing"}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.18 }}
-          className="space-y-4"
-        >
-          <CurrentExercisePanel session={session} />
-          <SetLogger session={session} />
-        </motion.div>
-      </AnimatePresence>
-
-      <SessionControls status={status} onExit={exitToHome} />
+      <WorkoutActionBar
+        status={status}
+        session={session}
+        onExit={exitToHome}
+      />
     </div>
   );
 }
