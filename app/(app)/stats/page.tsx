@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { BarChart3 } from "lucide-react";
 
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { StatsView } from "@/features/stats/stats-view";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -9,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function StatsPage() {
-  return <ComingSoon title={getDictionary().nav.stats} icon={BarChart3} />;
+  return <StatsView />;
 }
