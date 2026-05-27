@@ -52,6 +52,7 @@ interface ActiveSessionState {
   // execution
   completeSet: () => void;
   skipRest: () => void;
+  skipToNextExercise: () => void;
 
   // in-flight editing
   editCurrentSet: (
@@ -153,6 +154,35 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       commit(true, (s) => {
         if (s.status !== "resting") return false;
         activateCurrentSet(s, Date.now());
+      }),
+
+    skipToNextExercise: () =>
+      commit(true, (s) => {
+        if (s.status !== "executing" && s.status !== "resting") return false;
+        const now = Date.now();
+        const ex = s.exercises[s.currentExerciseIndex];
+        if (!ex) return false;
+        // Skip every still-unfinished set in the current exercise.
+        for (const st of ex.sets) {
+          if (st.status === "pending" || st.status === "active") {
+            st.status = "skipped";
+          }
+        }
+        // Find the next exercise that has at least one set.
+        for (let e = s.currentExerciseIndex + 1; e < s.exercises.length; e += 1) {
+          if (s.exercises[e].sets.length > 0) {
+            s.currentExerciseIndex = e;
+            s.currentSetIndex = 0;
+            s.restStartedAt = null;
+            s.restTargetSec = 0;
+            activateCurrentSet(s, now);
+            return;
+          }
+        }
+        // No more exercises — the workout is over.
+        s.status = "finished";
+        s.finishedAt = now;
+        s.restStartedAt = null;
       }),
 
     pause: () =>
