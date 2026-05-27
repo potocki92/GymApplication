@@ -22,8 +22,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { useHistoryStore, useSessionHistoryStore } from "@/store";
+import { useGarminIntegrationStore, useHistoryStore, useSessionHistoryStore } from "@/store";
 import type { ExerciseHistoryRecord, SessionHistoryRecord } from "@/types";
+import { garminActivityToSessionRecord } from "@/lib/garmin/history-mapper";
 
 import { SessionCard } from "./session-card";
 import { SessionProgressChart } from "./session-progress-chart";
@@ -56,20 +57,27 @@ export function SessionHistoryView() {
   const remove = useSessionHistoryStore((s) => s.remove);
 
   const exerciseRecords = useHistoryStore((s) => s.records);
+  const garminActivities = useGarminIntegrationStore((s) => s.recentActivities);
+  const garminHydrated = useGarminIntegrationStore((s) => s.hydrated);
 
   const [query, setQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [page, setPage] = useState(1);
 
+  const combinedSessions = useMemo<SessionHistoryRecord[]>(() => {
+    const garmin = garminActivities.map(garminActivityToSessionRecord);
+    return [...sessions, ...garmin];
+  }, [sessions, garminActivities]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return sessions
+    return combinedSessions
       .filter((s) => matchesRating(s, ratingFilter))
       .filter((s) => matchesDateRange(s, dateRange))
       .filter((s) => (q ? s.workoutName.toLowerCase().includes(q) : true))
       .sort((a, b) => b.finishedAt - a.finishedAt);
-  }, [sessions, ratingFilter, dateRange, query]);
+  }, [combinedSessions, ratingFilter, dateRange, query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -100,14 +108,14 @@ export function SessionHistoryView() {
     <div className="space-y-6">
       <SectionHeader title={t.history.title} description={t.history.subtitle} />
 
-      {!hydrated ? (
+      {!hydrated || !garminHydrated ? (
         <div className="space-y-3">
           <Skeleton className="h-56 w-full" />
           <Skeleton className="h-10 w-full max-w-sm" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
-      ) : sessions.length === 0 ? (
+      ) : combinedSessions.length === 0 ? (
         <EmptyState
           icon={History}
           title={t.history.empty}

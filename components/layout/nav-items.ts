@@ -6,6 +6,7 @@ import {
   Dumbbell,
   History,
   LayoutDashboard,
+  Plug,
   Settings,
   TrendingUp,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export type NavKey =
   | "progress"
   | "progressPhotos"
   | "stats"
+  | "integrations"
   | "settings";
 
 export interface NavItem {
@@ -37,6 +39,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "progress", href: "/progress", icon: TrendingUp },
   { key: "progressPhotos", href: "/progress-photos", icon: Camera },
   { key: "stats", href: "/stats", icon: BarChart3 },
+  { key: "integrations", href: "/integrations", icon: Plug },
   { key: "settings", href: "/settings", icon: Settings },
 ];
 

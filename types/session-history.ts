@@ -22,6 +22,19 @@ export interface SessionHistoryRecord {
   note?: string;
   avgHrBpm?: number;
   maxHrBpm?: number;
+  /**
+   * Origin of the record. `undefined` is treated as `"manual"` by consumers,
+   * so existing rows don't need backfilling.
+   */
+  source?: "manual" | "garmin";
+  /** Original Garmin activity id (set only when `source === "garmin"`). */
+  externalActivityId?: string;
+  /** Activity type from Garmin ("running" | "cycling" | ...). Manual rows omit this. */
+  activityType?: string;
+  /** Meters — set only for Garmin cardio activities. */
+  distanceMeters?: number;
+  /** Total kcal — set only for Garmin activities. */
+  calories?: number;
 }
 
 export const SESSION_HISTORY_SCHEMA_VERSION = 1;

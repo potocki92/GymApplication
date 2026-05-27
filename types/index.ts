@@ -58,6 +58,19 @@ export type {
 export type { SessionHistoryRecord } from "./session-history";
 export { SESSION_HISTORY_SCHEMA_VERSION } from "./session-history";
 export type {
+  GarminActivity,
+  GarminHeartRateSample,
+  GarminSyncLog,
+  GarminSyncResult,
+  GarminSyncStatus,
+  GarminSyncTrigger,
+  HrZoneBreakdown,
+  IntegrationProvider,
+  IntegrationStatus,
+  UserIntegration,
+  UserIntegrationWithTokens,
+} from "./garmin";
+export type {
   ProgressPhotoDraft,
   ProgressPhotoRecord,
   ProgressPose,
