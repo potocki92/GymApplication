@@ -104,6 +104,7 @@ export const pl = {
     hantle: "Hantle",
     maszyna: "Maszyna",
     wyciag: "Wyciąg",
+    guma: "Guma",
     "masa-ciala": "Masa ciała",
     cardio: "Cardio",
   } satisfies Record<ExerciseCategory, string>,
