@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
-import { SectionHeader } from "@/components/shared/section-header";
-import { AccountCard } from "@/features/auth/account-card";
+import { SettingsView } from "@/features/settings/settings-view";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -9,11 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  const t = getDictionary();
-  return (
-    <div className="space-y-6">
-      <SectionHeader title={t.nav.settings} />
-      <AccountCard />
-    </div>
-  );
+  return <SettingsView />;
 }
