@@ -1,6 +1,7 @@
 import {
   BarChart3,
   CalendarDays,
+  Camera,
   ClipboardList,
   Dumbbell,
   History,
@@ -17,6 +18,7 @@ export type NavKey =
   | "exercises"
   | "history"
   | "progress"
+  | "progressPhotos"
   | "stats"
   | "settings";
 
@@ -33,6 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "exercises", href: "/exercises", icon: Dumbbell },
   { key: "history", href: "/history", icon: History },
   { key: "progress", href: "/progress", icon: TrendingUp },
+  { key: "progressPhotos", href: "/progress-photos", icon: Camera },
   { key: "stats", href: "/stats", icon: BarChart3 },
   { key: "settings", href: "/settings", icon: Settings },
 ];
