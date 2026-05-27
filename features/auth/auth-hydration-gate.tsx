@@ -8,6 +8,8 @@ import {
   useHistoryStore,
   useMetricsStore,
   usePlanStore,
+  useProfileStore,
+  useSessionHistoryStore,
 } from "@/store";
 
 /**
@@ -58,6 +60,16 @@ export function AuthHydrationGate() {
       }
       if (usePlanStore.getState().hydrated) {
         void usePlanStore.getState().rehydrate?.();
+      }
+      if (useProfileStore.getState().hydrated) {
+        void useProfileStore.getState().rehydrate();
+      } else if (nextUserId) {
+        void useProfileStore.getState().hydrate();
+      } else {
+        useProfileStore.getState().reset();
+      }
+      if (useSessionHistoryStore.getState().hydrated) {
+        void useSessionHistoryStore.getState().rehydrate();
       }
     });
 

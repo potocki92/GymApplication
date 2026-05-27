@@ -21,3 +21,21 @@ export type {
   BodyMetricRecord,
 } from "./body-metric";
 export { METRIC_SCHEMA_VERSION } from "./body-metric";
+export type {
+  Equipment,
+  ExperienceLevel,
+  Gender,
+  PreferredWorkoutType,
+  ThemePreference,
+  TrainingGoalKey,
+  UnitsLength,
+  UnitsWeight,
+  UserProfile,
+} from "./profile";
+export type {
+  HeartRateSample,
+  HeartRateSnapshot,
+  HeartRateZone,
+} from "./heart-rate";
+export type { SessionHistoryRecord } from "./session-history";
+export { SESSION_HISTORY_SCHEMA_VERSION } from "./session-history";

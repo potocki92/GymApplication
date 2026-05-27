@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ClipboardList,
   Dumbbell,
+  History,
   LayoutDashboard,
   Settings,
   TrendingUp,
@@ -14,6 +15,7 @@ export type NavKey =
   | "plan"
   | "calendar"
   | "exercises"
+  | "history"
   | "progress"
   | "stats"
   | "settings";
@@ -29,6 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "plan", href: "/plan", icon: ClipboardList },
   { key: "calendar", href: "/calendar", icon: CalendarDays },
   { key: "exercises", href: "/exercises", icon: Dumbbell },
+  { key: "history", href: "/history", icon: History },
   { key: "progress", href: "/progress", icon: TrendingUp },
   { key: "stats", href: "/stats", icon: BarChart3 },
   { key: "settings", href: "/settings", icon: Settings },

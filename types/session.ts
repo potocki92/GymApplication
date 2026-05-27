@@ -1,3 +1,5 @@
+import type { HeartRateSnapshot } from "./heart-rate";
+
 /** High-level state of a guided workout session (the FSM). */
 export type SessionStatus =
   | "idle" // no session
@@ -62,6 +64,8 @@ export interface ActiveSession {
   exercises: ActiveExercise[];
   version: number; // schema version, for recovery migration
   updatedAt: number;
+  /** Optional placeholder for streaming HR data (Etap 5/6). */
+  heartRate?: HeartRateSnapshot;
 }
 
 /** Emitted on finish — the input to history/PRs (Phase 2). */
@@ -73,6 +77,12 @@ export interface CompletedSession {
   finishedAt: number;
   totalActiveMs: number;
   exercises: ActiveExercise[];
+  /** User-supplied rating from the summary screen, 1-5. */
+  rating?: number;
+  /** User-supplied free-form note about the whole session. */
+  note?: string;
+  /** Aggregated HR readings captured during the session, if any. */
+  heartRate?: HeartRateSnapshot;
 }
 
 /** Bumped when `ActiveSession` shape changes incompatibly. */

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Dumbbell, Play } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,15 @@ import { useWakeLock } from "@/hooks/use-wake-lock";
 import { completedSessionToHistoryRecords } from "@/lib/history-utils";
 import { clearSession } from "@/lib/idb-session";
 import { setProgress } from "@/lib/session-utils";
-import { useActiveSessionStore, useHistoryStore } from "@/store";
+import { buildSessionHistoryRecord } from "@/lib/session-history-utils";
+import {
+  useActiveSessionStore,
+  useHistoryStore,
+  usePlanStore,
+  useSessionHistoryStore,
+} from "@/store";
 import { CurrentExercisePanel } from "./components/current-exercise-panel";
+import { HeartRatePanel } from "./components/heart-rate-panel";
 import { SessionControls } from "./components/session-controls";
 import { SessionSummary } from "./components/session-summary";
 import { SetLogger } from "./components/set-logger";
@@ -34,23 +42,67 @@ export function ActiveWorkoutView() {
   useWakeLock(status === "executing" || status === "resting");
   useRestAlarm(clock.restDone, { sound: true, vibration: true });
 
+  const [saving, setSaving] = useState(false);
+
   const exitToHome = () => {
     useActiveSessionStore.getState().abort();
     void clearSession();
     router.push("/");
   };
 
-  const handleSave = () => {
+  const persistCompletion = async (meta: { rating?: number; note?: string }) => {
     const completed = useActiveSessionStore.getState().save();
     void clearSession();
-    if (completed) {
-      const records = completedSessionToHistoryRecords(completed);
-      if (records.length > 0) {
-        void useHistoryStore.getState().appendMany(records);
-      }
+    if (!completed) return;
+
+    const completedWithMeta = { ...completed, ...meta };
+    const records = completedSessionToHistoryRecords(completedWithMeta);
+    const sessionRecord = buildSessionHistoryRecord(completedWithMeta);
+
+    await Promise.all([
+      records.length > 0
+        ? useHistoryStore.getState().appendMany(records)
+        : Promise.resolve(),
+      useSessionHistoryStore.getState().upsert(sessionRecord),
+    ]);
+  };
+
+  const handleSave = async (meta: { rating?: number; note?: string }) => {
+    setSaving(true);
+    try {
+      await persistCompletion(meta);
+      toast.success(t.activeWorkout.summary.saved);
+      router.push("/");
+    } catch (e) {
+      console.error(e);
+      toast.error(t.errors.unexpectedTitle);
+    } finally {
+      setSaving(false);
     }
-    toast.success(t.activeWorkout.summary.saved);
-    router.push("/");
+  };
+
+  const handleRepeat = async () => {
+    if (!session) return;
+    const workout = usePlanStore
+      .getState()
+      .plan.days.map((d) => d.workout)
+      .find((w) => w != null && w.id === session.workoutId);
+    if (!workout) {
+      toast.error(t.errors.unexpectedTitle);
+      return;
+    }
+    setSaving(true);
+    try {
+      // Save the current finished session before kicking off a fresh one — the
+      // user explicitly asked to repeat, not to abandon results.
+      await persistCompletion({});
+      useActiveSessionStore.getState().start(workout);
+    } catch (e) {
+      console.error(e);
+      toast.error(t.errors.unexpectedTitle);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!session) {
@@ -126,8 +178,10 @@ export function ActiveWorkoutView() {
     return (
       <SessionSummary
         session={session}
-        onSave={handleSave}
+        onSave={(meta) => void handleSave(meta)}
         onDiscard={exitToHome}
+        onRepeat={() => void handleRepeat()}
+        saving={saving}
       />
     );
   }
@@ -144,6 +198,8 @@ export function ActiveWorkoutView() {
           </p>
         ) : null}
       </div>
+
+      <HeartRatePanel heartRate={session.heartRate} />
 
       <WorkoutTimers clock={clock} status={status} />
 

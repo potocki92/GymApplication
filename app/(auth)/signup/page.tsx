@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-export default function SignupPage() {
+function SignupBody() {
   const t = useDictionary();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -143,5 +143,13 @@ export default function SignupPage() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <div className="mx-auto w-full max-w-sm">
+      <SignupBody />
+    </div>
   );
 }

@@ -12,11 +12,13 @@ import { DashboardHeader } from "./components/dashboard-header";
 import { GoalCard } from "./components/goal-card";
 import { LastWorkoutCard } from "./components/last-workout-card";
 import { NextWorkoutCard } from "./components/next-workout-card";
+import { QuickActionsCard } from "./components/quick-actions-card";
 import { QuickAddWeightCard } from "@/features/metrics/quick-add-weight-card";
 import { StreakCard } from "./components/streak-card";
 import { TopPRsCard } from "./components/top-prs-card";
 import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
+import { WeightProgressCard } from "./components/weight-progress-card";
 
 export function DashboardView() {
   const t = useDictionary();
@@ -30,7 +32,15 @@ export function DashboardView() {
       <DashboardHeader user={CURRENT_USER} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="sm:col-span-2 lg:col-span-3">
+          <QuickActionsCard />
+        </div>
+
+        <div className="sm:col-span-2 lg:col-span-2">
+          <WeightProgressCard />
+        </div>
         <GoalCard goal={TRAINING_GOAL} />
+
         <WeeklyProgressCard
           done={WORKOUT_STATS.workoutsThisWeek}
           target={WORKOUT_STATS.workoutsTarget}
