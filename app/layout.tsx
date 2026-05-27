@@ -11,10 +11,28 @@ const inter = Inter({
   display: "swap",
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+const title = "FitFlow — Plan treningowy";
+const description =
+  "Nowoczesna aplikacja fitness do planowania treningów, śledzenia aktywności i osiągania celów.";
+
 export const metadata: Metadata = {
-  title: "FitFlow — Plan treningowy",
-  description:
-    "Nowoczesna aplikacja fitness do planowania treningów, śledzenia aktywności i osiągania celów.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    type: "website",
+    siteName: "FitFlow",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 export default function RootLayout({

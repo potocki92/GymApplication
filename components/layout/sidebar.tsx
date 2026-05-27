@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Logo } from "@/components/shared/logo";
 import {
   Tooltip,
   TooltipContent,
@@ -26,9 +26,7 @@ export function Sidebar() {
         href="/"
         className="mb-4 flex items-center gap-3 rounded-xl px-2.5 py-1.5 lg:px-2"
       >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/30">
-          <Activity className="size-5" />
-        </span>
+        <Logo size={40} priority className="rounded-xl" />
         <span className="hidden text-lg font-semibold tracking-tight lg:block">
           {t.app.name}
         </span>
