@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   fetchProfileFromSupabase,
@@ -24,6 +25,23 @@ interface ProfileState {
 function activeUserId(): string | null {
   if (!isSupabaseConfigured()) return null;
   return useAuthStore.getState().user?.id ?? null;
+}
+
+/**
+ * Resolves the current user id, falling back to `supabase.auth.getUser()` when
+ * the auth store hasn't been populated. This matters on the onboarding page,
+ * whose `(auth)` layout historically did not mount `AuthHydrationGate` — the
+ * supabase cookies are valid but the Zustand store is empty, so a sync read
+ * would have returned null and silently dropped the submit.
+ */
+async function resolveUserId(): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+  const fromStore = useAuthStore.getState().user?.id ?? null;
+  if (fromStore) return fromStore;
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -56,8 +74,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   },
 
   update: async (patch) => {
-    const userId = activeUserId();
-    if (!userId) return null;
+    const userId = await resolveUserId();
+    if (!userId) {
+      set({ error: "not_signed_in" });
+      return null;
+    }
 
     const previous = get().profile;
     if (previous) {
@@ -78,7 +99,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   },
 
   markOnboardingComplete: async () => {
-    const userId = activeUserId();
+    const userId = await resolveUserId();
     if (!userId) return null;
     return get().update({ onboardingCompletedAt: new Date().toISOString() });
   },
