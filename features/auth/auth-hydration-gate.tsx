@@ -8,6 +8,7 @@ import {
   useHistoryStore,
   useMetricsStore,
   usePlanStore,
+  useProfileStore,
 } from "@/store";
 
 /**
@@ -58,6 +59,13 @@ export function AuthHydrationGate() {
       }
       if (usePlanStore.getState().hydrated) {
         void usePlanStore.getState().rehydrate?.();
+      }
+      if (useProfileStore.getState().hydrated) {
+        void useProfileStore.getState().rehydrate();
+      } else if (nextUserId) {
+        void useProfileStore.getState().hydrate();
+      } else {
+        useProfileStore.getState().reset();
       }
     });
 

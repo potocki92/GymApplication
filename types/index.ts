@@ -21,3 +21,14 @@ export type {
   BodyMetricRecord,
 } from "./body-metric";
 export { METRIC_SCHEMA_VERSION } from "./body-metric";
+export type {
+  Equipment,
+  ExperienceLevel,
+  Gender,
+  PreferredWorkoutType,
+  ThemePreference,
+  TrainingGoalKey,
+  UnitsLength,
+  UnitsWeight,
+  UserProfile,
+} from "./profile";

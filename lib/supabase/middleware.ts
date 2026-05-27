@@ -5,6 +5,14 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./config"
 
 const AUTH_ROUTES = new Set(["/login", "/signup"]);
 const PUBLIC_PREFIXES = ["/auth/"]; // OAuth callback etc.
+const ONBOARDING_PATH = "/onboarding";
+/** Paths skipped by the onboarding gate even when the user is signed in. */
+const ONBOARDING_EXEMPT_PREFIXES = [
+  "/onboarding",
+  "/auth/",
+  "/api/",
+  "/_next/",
+];
 
 /**
  * Runs on every request: refreshes the Supabase session, rewrites cookies, and
@@ -66,6 +74,35 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     url.pathname = "/";
     url.search = "";
     return redirectKeepingSession(url);
+  }
+
+  if (user) {
+    const isExemptForOnboarding = ONBOARDING_EXEMPT_PREFIXES.some((p) =>
+      pathname.startsWith(p),
+    );
+    // A single lightweight column read keyed on the row's PK is RLS-protected
+    // and indexed — fast enough to run per request.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const onboarded = Boolean(profile?.onboarding_completed_at);
+
+    if (!onboarded && !isExemptForOnboarding) {
+      const url = request.nextUrl.clone();
+      url.pathname = ONBOARDING_PATH;
+      url.search = "";
+      return redirectKeepingSession(url);
+    }
+
+    if (onboarded && pathname === ONBOARDING_PATH) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return redirectKeepingSession(url);
+    }
   }
 
   return response;
