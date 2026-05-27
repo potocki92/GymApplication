@@ -25,6 +25,7 @@ export type {
   Equipment,
   ExperienceLevel,
   Gender,
+  HrZoneMethod,
   PreferredWorkoutType,
   ThemePreference,
   TrainingGoalKey,
@@ -35,7 +36,24 @@ export type {
 export type {
   HeartRateSample,
   HeartRateSnapshot,
+  HeartRateSource,
   HeartRateZone,
+  HeartRateZoneDefinition,
+  HeartRateZoneId,
+  HighHeartRateAlert,
+  HRConnectionState,
 } from "./heart-rate";
+export type { HRDevice } from "./heart-rate-device";
+export type {
+  HRRealtimeEvent,
+  HRRealtimeEventOf,
+  HRRealtimeEventType,
+} from "./heart-rate-events";
+export type {
+  HeartRateTransport,
+  HRRealtimeEventHandler,
+  HRTransportMode,
+  HRUnsubscribe,
+} from "./heart-rate-transport";
 export type { SessionHistoryRecord } from "./session-history";
 export { SESSION_HISTORY_SCHEMA_VERSION } from "./session-history";

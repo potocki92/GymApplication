@@ -513,8 +513,27 @@ export const pl = {
       avg: "Średnie",
       max: "Maksymalne",
       zone: "Strefa",
+      device: "Urządzenie",
+      signalLost: "Brak sygnału",
+      reconnecting: "Łączenie",
       connectGarmin: "Połącz Garmin, aby widzieć tętno na żywo.",
       noData: "Brak danych tętna w tej sesji.",
+      zones: {
+        z1: "Z1",
+        z2: "Z2",
+        z3: "Z3",
+        z4: "Z4",
+        z5: "Z5",
+      },
+      chart: {
+        window5m: "Ostatnie 5 minut",
+        empty: "Czekam na dane z czujnika…",
+      },
+      alert: {
+        title: "Wysokie tętno",
+        description: "{bpm} bpm — powyżej progu {threshold} bpm. Zwolnij tempo.",
+        ack: "OK",
+      },
     },
   },
 

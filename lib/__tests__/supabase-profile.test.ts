@@ -44,4 +44,18 @@ describe("profilePatchToRow", () => {
   it("returns an empty object for empty patch", () => {
     expect(profilePatchToRow({})).toEqual({});
   });
+
+  it("maps HR-zone fields to their snake_case columns", () => {
+    const row = profilePatchToRow({
+      maxHrBpm: 190,
+      restingHrBpm: 58,
+      hrZoneMethod: "percent_mhr",
+    });
+
+    expect(row).toEqual({
+      max_hr_bpm: 190,
+      resting_hr_bpm: 58,
+      hr_zone_method: "percent_mhr",
+    });
+  });
 });
