@@ -3,11 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type {
   Equipment,
+  ExperienceLevel,
   Gender,
+  HrZoneMethod,
   PreferredWorkoutType,
   ThemePreference,
   TrainingGoalKey,
-  ExperienceLevel,
   UnitsLength,
   UnitsWeight,
   UserProfile,
@@ -32,6 +33,9 @@ interface ProfileRow {
   units_weight: string | null;
   units_length: string | null;
   theme_preference: string | null;
+  max_hr_bpm: number | null;
+  resting_hr_bpm: number | null;
+  hr_zone_method: string | null;
   notifications_enabled: boolean | null;
   notifications_workout_reminders: boolean | null;
   notifications_progress_updates: boolean | null;
@@ -120,6 +124,13 @@ function mapRowToProfile(row: ProfileRow): UserProfile {
         ["dark", "light", "system"],
         "dark",
       ) ?? "dark",
+    maxHrBpm: num(row.max_hr_bpm),
+    restingHrBpm: num(row.resting_hr_bpm),
+    hrZoneMethod: asEnum<HrZoneMethod>(
+      row.hr_zone_method,
+      ["percent_mhr", "karvonen"],
+      null,
+    ),
     notificationsEnabled: row.notifications_enabled ?? true,
     notificationsWorkoutReminders: row.notifications_workout_reminders ?? true,
     notificationsProgressUpdates: row.notifications_progress_updates ?? true,
@@ -145,6 +156,9 @@ const COLUMN_MAP: Record<keyof Omit<UserProfile, "id" | "email" | "updatedAt">, 
   unitsWeight: "units_weight",
   unitsLength: "units_length",
   themePreference: "theme_preference",
+  maxHrBpm: "max_hr_bpm",
+  restingHrBpm: "resting_hr_bpm",
+  hrZoneMethod: "hr_zone_method",
   notificationsEnabled: "notifications_enabled",
   notificationsWorkoutReminders: "notifications_workout_reminders",
   notificationsProgressUpdates: "notifications_progress_updates",
