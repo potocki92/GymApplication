@@ -32,3 +32,10 @@ export type {
   UnitsWeight,
   UserProfile,
 } from "./profile";
+export type {
+  HeartRateSample,
+  HeartRateSnapshot,
+  HeartRateZone,
+} from "./heart-rate";
+export type { SessionHistoryRecord } from "./session-history";
+export { SESSION_HISTORY_SCHEMA_VERSION } from "./session-history";
