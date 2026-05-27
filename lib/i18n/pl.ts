@@ -455,6 +455,25 @@ export const pl = {
     deleteConfirmTitle: "Usunąć tę sesję?",
     deleteConfirmDesc: "Sesja zostanie trwale usunięta wraz z zapisem ćwiczeń.",
     deleteCta: "Usuń",
+    range: {
+      all: "Cały okres",
+      last7: "Ostatnie 7 dni",
+      last30: "Ostatnie 30 dni",
+      last90: "Ostatnie 90 dni",
+    },
+    pagination: {
+      label: "Paginacja",
+      prev: "Poprzednia",
+      next: "Następna",
+      status: "Strona {page} z {total}",
+    },
+    chart: {
+      title: "Progres siłowy",
+      volume: "Objętość sesji",
+      trend: "Trend (3 sesje)",
+      empty: "Za mało danych do wykresu",
+      emptyHint: "Wykonaj kilka treningów, aby zobaczyć trend.",
+    },
   },
 
   errors: {
