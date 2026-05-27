@@ -102,12 +102,14 @@ export function OnboardingFlow() {
         unitsLength: values.unitsLength,
       });
       if (!saved) {
-        toast.error(t.onboarding.error);
+        const storeError = useProfileStore.getState().error;
+        toast.error(storeError ?? t.onboarding.error);
         return;
       }
       const done = await markComplete();
       if (!done) {
-        toast.error(t.onboarding.error);
+        const storeError = useProfileStore.getState().error;
+        toast.error(storeError ?? t.onboarding.error);
         return;
       }
       toast.success(t.onboarding.completed);

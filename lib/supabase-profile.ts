@@ -184,6 +184,10 @@ export async function fetchProfileFromSupabase(
  * Upserts the patch. We use `upsert` (not `update`) so that an existing user who
  * predates the on-signup trigger still gets a row created; the RLS `insert own`
  * policy added in the profile-expansion migration is what allows this.
+ *
+ * Throws on Supabase errors so callers can surface the real failure reason
+ * (RLS denial, constraint violation, network) instead of a generic "save
+ * failed" toast.
  */
 export async function upsertProfileToSupabase(
   userId: string,
@@ -197,6 +201,7 @@ export async function upsertProfileToSupabase(
     .upsert({ id: userId, ...row }, { onConflict: "id" })
     .select("*")
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) throw new Error(error.message);
+  if (!data) return null;
   return mapRowToProfile(data as ProfileRow);
 }
