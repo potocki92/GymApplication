@@ -15,6 +15,7 @@ export type ExerciseCategory =
   | "hantle"
   | "maszyna"
   | "wyciag"
+  | "guma"
   | "masa-ciala"
   | "cardio";
 

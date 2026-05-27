@@ -30,6 +30,7 @@ export const EXERCISE_CATEGORY_ORDER: ExerciseCategory[] = [
   "hantle",
   "maszyna",
   "wyciag",
+  "guma",
   "masa-ciala",
   "cardio",
 ];
