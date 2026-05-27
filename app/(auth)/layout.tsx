@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           {APP_NAME}
         </span>
       </div>
-      <div className="w-full max-w-sm">{children}</div>
+      <div className="w-full">{children}</div>
     </div>
   );
 }

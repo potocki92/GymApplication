@@ -10,8 +10,10 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
+    <div className="mx-auto w-full max-w-sm">
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
+    </div>
   );
 }
