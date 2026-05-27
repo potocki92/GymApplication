@@ -6,6 +6,7 @@ import { SessionHistoryHydrationGate } from "@/features/exercise-history/session
 import { MetricsHydrationGate } from "@/features/metrics/metrics-hydration-gate";
 import { PlanHydrationGate } from "@/features/plan/plan-hydration-gate";
 import { ProfileHydrationGate } from "@/features/profile/profile-hydration-gate";
+import { ProgressPhotosHydrationGate } from "@/features/progress-photos/progress-photos-hydration-gate";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <HistoryHydrationGate />
       <SessionHistoryHydrationGate />
       <MetricsHydrationGate />
+      <ProgressPhotosHydrationGate />
       <SessionRecoveryGate />
     </AppShell>
   );

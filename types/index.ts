@@ -57,3 +57,12 @@ export type {
 } from "./heart-rate-transport";
 export type { SessionHistoryRecord } from "./session-history";
 export { SESSION_HISTORY_SCHEMA_VERSION } from "./session-history";
+export type {
+  ProgressPhotoDraft,
+  ProgressPhotoRecord,
+  ProgressPose,
+} from "./progress-photo";
+export {
+  PROGRESS_POSES,
+  PROGRESS_PHOTO_SCHEMA_VERSION,
+} from "./progress-photo";
