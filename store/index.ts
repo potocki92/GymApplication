@@ -26,3 +26,7 @@ export {
   selectChartData as selectHeartRateChartData,
   selectCurrentSnapshot as selectHeartRateSnapshot,
 } from "./use-heart-rate-store";
+export {
+  useGarminIntegrationStore,
+  selectGarminConnected,
+} from "./use-garmin-integration-store";

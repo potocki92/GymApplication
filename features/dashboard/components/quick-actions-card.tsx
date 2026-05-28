@@ -30,8 +30,8 @@ export function QuickActionsCard() {
             {t.dashboardWidgets.quickLogWeight}
           </Link>
         </Button>
-        <Button asChild variant="outline" className="h-auto justify-start py-3" disabled>
-          <Link href="/settings" aria-disabled>
+        <Button asChild variant="outline" className="h-auto justify-start py-3">
+          <Link href="/integrations">
             <Watch className="size-4" />
             {t.dashboardWidgets.quickConnectGarmin}
           </Link>

@@ -14,6 +14,7 @@ import {
   Weight,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +27,7 @@ import {
 import { getExerciseById } from "@/data";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatClock, formatVolume, formatWeekdayDatePL } from "@/lib/format";
+import { formatDistance } from "@/lib/garmin/format";
 import { cn } from "@/lib/utils";
 import type { ExerciseHistoryRecord, SessionHistoryRecord } from "@/types";
 
@@ -47,6 +49,7 @@ export function SessionCard({
   const t = useDictionary();
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const isGarmin = session.source === "garmin";
 
   // Bucket records by exerciseId, keep insertion order.
   const byExercise = new Map<string, ExerciseHistoryRecord[]>();
@@ -61,9 +64,16 @@ export function SessionCard({
       <header className="space-y-2 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h3 className="line-clamp-1 font-heading text-base font-semibold">
-              {session.workoutName}
-            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="line-clamp-1 font-heading text-base font-semibold">
+                {session.workoutName}
+              </h3>
+              {isGarmin ? (
+                <Badge variant="outline" className="text-[0.65rem] uppercase">
+                  {t.history.source.garmin}
+                </Badge>
+              ) : null}
+            </div>
             <p className="text-xs text-muted-foreground">
               {formatWeekdayDatePL(epochToISODate(session.finishedAt))}
             </p>
@@ -92,26 +102,46 @@ export function SessionCard({
             label={t.history.cardLabels.duration}
             value={formatClock(session.totalActiveMs)}
           />
-          <Stat
-            icon={<Weight className="size-3.5" />}
-            label={t.history.cardLabels.volume}
-            value={formatVolume(session.totalVolumeKg)}
-          />
-          <Stat
-            icon={<Layers className="size-3.5" />}
-            label={t.history.cardLabels.sets}
-            value={String(session.setsCompleted)}
-          />
-          <Stat
-            icon={<Repeat className="size-3.5" />}
-            label={t.history.cardLabels.reps}
-            value={String(session.repsCompleted)}
-          />
-          <Stat
-            icon={<Dumbbell className="size-3.5" />}
-            label={t.history.cardLabels.exercises}
-            value={String(session.exercisesCount)}
-          />
+          {isGarmin && session.distanceMeters != null ? (
+            <Stat
+              icon={<Repeat className="size-3.5" />}
+              label={t.history.cardLabels.distance}
+              value={formatDistance(session.distanceMeters) ?? "—"}
+            />
+          ) : (
+            <Stat
+              icon={<Weight className="size-3.5" />}
+              label={t.history.cardLabels.volume}
+              value={formatVolume(session.totalVolumeKg)}
+            />
+          )}
+          {isGarmin && session.calories != null ? (
+            <Stat
+              icon={<Weight className="size-3.5" />}
+              label={t.history.cardLabels.calories}
+              value={`${session.calories} kcal`}
+            />
+          ) : (
+            <Stat
+              icon={<Layers className="size-3.5" />}
+              label={t.history.cardLabels.sets}
+              value={String(session.setsCompleted)}
+            />
+          )}
+          {!isGarmin ? (
+            <>
+              <Stat
+                icon={<Repeat className="size-3.5" />}
+                label={t.history.cardLabels.reps}
+                value={String(session.repsCompleted)}
+              />
+              <Stat
+                icon={<Dumbbell className="size-3.5" />}
+                label={t.history.cardLabels.exercises}
+                value={String(session.exercisesCount)}
+              />
+            </>
+          ) : null}
           {session.avgHrBpm != null ? (
             <Stat
               icon={<HeartPulse className="size-3.5" />}
@@ -149,7 +179,7 @@ export function SessionCard({
               </>
             )}
           </Button>
-          {onDelete ? (
+          {onDelete && !isGarmin ? (
             <Button
               variant="ghost"
               size="xs"
