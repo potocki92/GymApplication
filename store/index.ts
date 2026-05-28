@@ -18,6 +18,7 @@ export {
   selectLatestPerMonth,
 } from "./use-progress-photos-store";
 export { useAuthStore } from "./use-auth-store";
+export { useAccessStore } from "./use-access-store";
 export { useProfileStore, selectIsOnboarded } from "./use-profile-store";
 export { useSessionHistoryStore } from "./use-session-history-store";
 export {

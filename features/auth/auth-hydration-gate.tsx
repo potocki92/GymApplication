@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
+  useAccessStore,
   useAuthStore,
   useHistoryStore,
   useMetricsStore,
@@ -34,6 +35,11 @@ export function AuthHydrationGate() {
       if (cancelled) return;
       auth.setUser(data.user);
       auth.setInitialized();
+      if (data.user) {
+        void useAccessStore.getState().hydrate();
+      } else {
+        useAccessStore.getState().reset();
+      }
     });
 
     const {
@@ -52,6 +58,11 @@ export function AuthHydrationGate() {
       // store but only if it already finished its initial load. Stores that
       // are mid-hydrate will pick up the new user themselves once hydrate()
       // resolves.
+      if (nextUserId) {
+        void useAccessStore.getState().rehydrate();
+      } else {
+        useAccessStore.getState().reset();
+      }
       if (useHistoryStore.getState().hydrated) {
         void useHistoryStore.getState().rehydrate?.();
       }
