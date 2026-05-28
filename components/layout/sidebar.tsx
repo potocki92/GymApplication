@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Logo } from "@/components/shared/logo";
+import { Logo, Wordmark } from "@/components/shared/logo";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CURRENT_USER } from "@/data";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { cn } from "@/lib/utils";
 import { isNavActive, NAV_ITEMS } from "./nav-items";
@@ -18,6 +18,7 @@ import { isNavActive, NAV_ITEMS } from "./nav-items";
 export function Sidebar() {
   const pathname = usePathname();
   const t = useDictionary();
+  const user = useCurrentUser();
 
   return (
     <aside className="sticky top-0 hidden h-screen shrink-0 flex-col gap-2 bg-sidebar px-3 py-5 text-sidebar-foreground md:flex md:w-[4.75rem] lg:w-64">
@@ -26,10 +27,8 @@ export function Sidebar() {
         href="/"
         className="mb-4 flex items-center gap-3 rounded-xl px-2.5 py-1.5 lg:px-2"
       >
-        <Logo size={40} priority className="rounded-xl" />
-        <span className="hidden text-lg font-semibold tracking-tight lg:block">
-          {t.app.name}
-        </span>
+        <Logo size={40} priority alt="" className="rounded-xl" />
+        <Wordmark withTagline className="hidden lg:flex" />
       </Link>
 
       {/* Navigation */}
@@ -70,11 +69,11 @@ export function Sidebar() {
       >
         <Avatar className="size-9 shrink-0">
           <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold">
-            {CURRENT_USER.initials}
+            {user.initials}
           </AvatarFallback>
         </Avatar>
         <span className="hidden min-w-0 flex-col lg:flex">
-          <span className="truncate text-sm font-medium">{CURRENT_USER.name}</span>
+          <span className="truncate text-sm font-medium">{user.name}</span>
           <span className="truncate text-xs text-sidebar-foreground/60">
             {t.nav.viewProfile}
           </span>

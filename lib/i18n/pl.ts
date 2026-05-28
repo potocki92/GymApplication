@@ -2,8 +2,8 @@ import type { ExerciseCategory, MuscleGroup, Weekday } from "@/types";
 
 export const pl = {
   app: {
-    name: "FitFlow",
-    tagline: "Twój inteligentny plan treningowy",
+    name: "REPIFY",
+    tagline: "TRAIN SMARTER",
   },
 
   nav: {
@@ -20,6 +20,7 @@ export const pl = {
     profile: "Profil",
     viewProfile: "Zobacz profil",
     add: "Dodaj",
+    menu: "Menu",
   },
 
   auth: {
@@ -608,7 +609,7 @@ export const pl = {
   },
 
   onboarding: {
-    welcomeTitle: "Witaj w FitFlow",
+    welcomeTitle: "Witaj w REPIFY",
     welcomeSub:
       "Odpowiedz na kilka pytań, abyśmy dopasowali plan treningowy do Twoich celów.",
     start: "Zaczynamy",

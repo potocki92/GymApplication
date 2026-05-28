@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏋️ GymApplication
+# 🏋️ REPIFY
 
 <p>
   <em>Train smarter. Track everything. Stay consistent.</em>
@@ -41,7 +41,7 @@
 
 ## 1) Description
 
-**GymApplication** is a modern, production-style fitness web app that combines workout planning, live session tracking, progress analytics, and body transformation journaling in one cohesive product.
+**REPIFY** is a modern, production-style fitness web app that combines workout planning, live session tracking, progress analytics, and body transformation journaling in one cohesive product.
 
 It is designed around two execution modes:
 

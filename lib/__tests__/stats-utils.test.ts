@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildActivityCalendar,
   buildMeasurementDeltas,
   buildStrengthProgress,
   buildTimeline,
   buildWeeklyActivity,
+  buildWeeklyTotals,
   buildWeightSummary,
   buildWorkoutCounts,
+  buildWorkoutStreak,
   pickMotivation,
 } from "@/lib/stats-utils";
 import type {
@@ -148,6 +151,95 @@ describe("buildWeeklyActivity", () => {
     ];
     const out = buildWeeklyActivity(sessions, 4, now);
     expect(out.at(-1)?.count).toBe(2);
+  });
+});
+
+describe("buildWorkoutStreak", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = new Date("2024-05-15T12:00:00Z"); // Wed
+
+  it("counts consecutive days ending today", () => {
+    const sessions = [
+      session({ id: "1", finishedAt: now.getTime() }),
+      session({ id: "2", finishedAt: now.getTime() - DAY }),
+      session({ id: "3", finishedAt: now.getTime() - 2 * DAY }),
+    ];
+    expect(buildWorkoutStreak(sessions, now)).toBe(3);
+  });
+
+  it("stops at the first missing day", () => {
+    const sessions = [
+      session({ id: "1", finishedAt: now.getTime() }),
+      session({ id: "3", finishedAt: now.getTime() - 2 * DAY }), // gap on day -1
+    ];
+    expect(buildWorkoutStreak(sessions, now)).toBe(1);
+  });
+
+  it("still counts when today has no workout yet but yesterday did", () => {
+    const sessions = [session({ id: "1", finishedAt: now.getTime() - DAY })];
+    expect(buildWorkoutStreak(sessions, now)).toBe(1);
+  });
+
+  it("returns 0 when the latest workout is older than yesterday", () => {
+    const sessions = [session({ id: "1", finishedAt: now.getTime() - 5 * DAY })];
+    expect(buildWorkoutStreak(sessions, now)).toBe(0);
+  });
+
+  it("returns 0 for an empty history", () => {
+    expect(buildWorkoutStreak([], now)).toBe(0);
+  });
+});
+
+describe("buildWeeklyTotals", () => {
+  it("sums only the current ISO week and converts duration to minutes", () => {
+    const now = new Date("2024-05-15T12:00:00Z"); // Wed, week starts Mon 05-13
+    const sessions = [
+      session({ id: "1", finishedAt: now.getTime() }),
+      session({
+        id: "2",
+        finishedAt: new Date("2024-05-13T12:00:00Z").getTime(),
+        calories: 500,
+      }),
+      session({ id: "3", finishedAt: new Date("2024-05-10T12:00:00Z").getTime() }), // prev week
+    ];
+    const totals = buildWeeklyTotals(sessions, now);
+    expect(totals.workouts).toBe(2);
+    expect(totals.durationMin).toBe(2); // 2 × 60_000ms
+    expect(totals.volumeKg).toBe(2000); // 2 × 1000kg
+    expect(totals.kcal).toBe(500);
+  });
+});
+
+describe("buildActivityCalendar", () => {
+  const now = new Date("2024-05-15T12:00:00Z");
+
+  it("emits a dense Monday→Sunday grid of weeks×7 days", () => {
+    const days = buildActivityCalendar([], 2, now);
+    expect(days).toHaveLength(14);
+    expect(days[0].date).toBe("2024-05-06"); // Monday
+    expect(days.at(-1)?.date).toBe("2024-05-19"); // Sunday
+    expect(days.every((d) => d.level === 0)).toBe(true);
+  });
+
+  it("maps daily session counts to heat levels", () => {
+    const day = new Date("2024-05-15T12:00:00Z").getTime();
+    const single = buildActivityCalendar(
+      [session({ id: "1", finishedAt: day })],
+      2,
+      now,
+    ).find((d) => d.date === "2024-05-15");
+    expect(single?.level).toBe(2);
+
+    const triple = buildActivityCalendar(
+      [
+        session({ id: "1", finishedAt: day }),
+        session({ id: "2", finishedAt: day }),
+        session({ id: "3", finishedAt: day }),
+      ],
+      2,
+      now,
+    ).find((d) => d.date === "2024-05-15");
+    expect(triple?.level).toBe(4);
   });
 });
 

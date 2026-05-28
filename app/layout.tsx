@@ -15,9 +15,9 @@ const inter = Inter({
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-const title = "FitFlow — Plan treningowy";
+const title = "REPIFY — TRAIN SMARTER";
 const description =
-  "Nowoczesna aplikacja fitness do planowania treningów, śledzenia aktywności i osiągania celów.";
+  "Trenuj mądrzej z REPIFY — planuj treningi, śledź aktywność i osiągaj swoje cele.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title,
     description,
     type: "website",
-    siteName: "FitFlow",
+    siteName: "REPIFY",
   },
   twitter: {
     card: "summary_large_image",
