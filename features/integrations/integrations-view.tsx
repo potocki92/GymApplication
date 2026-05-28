@@ -16,6 +16,7 @@ export function IntegrationsView() {
   const t = useDictionary();
   const hydrated = useGarminIntegrationStore((s) => s.hydrated);
   const demoMode = useGarminIntegrationStore((s) => s.demoMode);
+  const garminAvailable = useGarminIntegrationStore((s) => s.available);
   const searchParams = useSearchParams();
   const consumedRef = useRef(false);
 
@@ -65,11 +66,11 @@ export function IntegrationsView() {
 
       {!hydrated ? (
         <Skeleton className="h-64 w-full" />
-      ) : (
+      ) : garminAvailable ? (
         <div className="grid gap-4">
           <GarminCard />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

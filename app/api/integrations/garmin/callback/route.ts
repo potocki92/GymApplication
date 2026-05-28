@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
+import { canUseGarminIntegration } from "@/lib/garmin/access";
 import { exchangeCodeForToken } from "@/lib/garmin/oauth-client";
 import { getUserId } from "@/lib/garmin/api-client";
 import { getServerSupabaseClient } from "@/lib/supabase/server";
@@ -44,6 +45,11 @@ export async function GET(request: NextRequest) {
   if (authError || !user) {
     clear();
     return NextResponse.redirect(`${origin}/login?next=/integrations`);
+  }
+
+  if (!(await canUseGarminIntegration(supabase, user))) {
+    clear();
+    return NextResponse.redirect(`${origin}/integrations?error=forbidden`);
   }
 
   try {

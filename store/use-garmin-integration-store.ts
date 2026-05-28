@@ -12,6 +12,7 @@ interface StatusResponse {
   recentActivities: GarminActivity[];
   recentLogs: GarminSyncLog[];
   demoMode: boolean;
+  available: boolean;
 }
 
 interface GarminIntegrationState {
@@ -19,6 +20,7 @@ interface GarminIntegrationState {
   recentActivities: GarminActivity[];
   recentLogs: GarminSyncLog[];
   demoMode: boolean;
+  available: boolean;
   hydrated: boolean;
   loading: boolean;
   syncing: boolean;
@@ -37,7 +39,7 @@ async function fetchStatus(): Promise<StatusResponse | null> {
       cache: "no-store",
       credentials: "same-origin",
     });
-    if (res.status === 401 || res.status === 503) return null;
+    if (res.status === 401 || res.status === 403 || res.status === 503) return null;
     if (!res.ok) throw new Error(`status_failed:${res.status}`);
     return (await res.json()) as StatusResponse;
   } catch {
@@ -50,6 +52,7 @@ export const useGarminIntegrationStore = create<GarminIntegrationState>((set, ge
   recentActivities: [],
   recentLogs: [],
   demoMode: false,
+  available: false,
   hydrated: false,
   loading: false,
   syncing: false,
@@ -65,11 +68,12 @@ export const useGarminIntegrationStore = create<GarminIntegrationState>((set, ge
         recentActivities: data.recentActivities,
         recentLogs: data.recentLogs,
         demoMode: data.demoMode,
+        available: data.available,
         hydrated: true,
         loading: false,
       });
     } else {
-      set({ hydrated: true, loading: false });
+      set({ available: false, hydrated: true, loading: false });
     }
   },
 
@@ -82,10 +86,11 @@ export const useGarminIntegrationStore = create<GarminIntegrationState>((set, ge
         recentActivities: data.recentActivities,
         recentLogs: data.recentLogs,
         demoMode: data.demoMode,
+        available: data.available,
         loading: false,
       });
     } else {
-      set({ loading: false });
+      set({ available: false, loading: false });
     }
   },
 
@@ -137,6 +142,7 @@ export const useGarminIntegrationStore = create<GarminIntegrationState>((set, ge
     recentActivities: [],
     recentLogs: [],
     demoMode: false,
+    available: false,
     hydrated: false,
     loading: false,
     syncing: false,
