@@ -2,7 +2,7 @@
 
 import type { ComponentType, SVGProps } from "react";
 
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import type { OptionDef } from "@/lib/profile/options";
 
 interface ChipMultiSelectProps<T extends string> {
@@ -29,22 +29,14 @@ export function ChipMultiSelect<T extends string>({
           | undefined;
         const selected = value.includes(opt.value);
         return (
-          <button
+          <ToggleChip
             key={opt.value}
-            type="button"
-            role="checkbox"
-            aria-checked={selected}
+            selected={selected}
             onClick={() => toggle(opt.value)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-              selected
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-card text-foreground hover:bg-muted",
-            )}
           >
             {Icon ? <Icon className="size-3.5" /> : null}
             {opt.label}
-          </button>
+          </ToggleChip>
         );
       })}
     </div>

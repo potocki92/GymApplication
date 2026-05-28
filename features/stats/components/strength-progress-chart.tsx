@@ -1,15 +1,14 @@
 "use client";
 
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 
+import { ChartContainer } from "@/components/shared/chart/chart-container";
+import {
+  CHART_AXIS_PROPS,
+  CHART_COLORS,
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_PROPS,
+} from "@/components/shared/chart/chart-theme";
 import {
   Card,
   CardContent,
@@ -37,58 +36,39 @@ export function StrengthProgressChart({
         <CardDescription>{t.stats.strength.subtitle}</CardDescription>
       </CardHeader>
       <CardContent>
-        {data.length < 2 ? (
-          <div className="flex h-56 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-center">
-            <p className="text-sm font-medium">{t.stats.strength.empty}</p>
-            <p className="text-xs text-muted-foreground">
-              {t.stats.strength.emptyHint}
-            </p>
-          </div>
-        ) : (
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(iso: string) => formatShortWeekdayDatePL(iso)}
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-                  stroke="rgba(255,255,255,0.2)"
-                  minTickGap={24}
-                />
-                <YAxis
-                  domain={["auto", "auto"]}
-                  tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-                  stroke="rgba(255,255,255,0.2)"
-                  width={42}
-                />
-                <Tooltip
-                  formatter={(value) => [`${value} kg`, t.stats.strength.seriesName]}
-                  labelFormatter={(label) =>
-                    typeof label === "string" ? formatShortWeekdayDatePL(label) : ""
-                  }
-                  contentStyle={{
-                    borderRadius: 8,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: "#1a1a1a",
-                    color: "#ffffff",
-                    fontSize: 12,
-                  }}
-                  labelStyle={{ color: "rgba(255,255,255,0.7)" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="topOneRMKg"
-                  name={t.stats.strength.seriesName}
-                  stroke="var(--chart-2)"
-                  strokeWidth={2.5}
-                  dot={{ r: 2.5, fill: "var(--chart-2)" }}
-                  activeDot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <ChartContainer
+          heightClass="h-56"
+          isEmpty={data.length < 2}
+          emptyTitle={t.stats.strength.empty}
+          emptyDescription={t.stats.strength.emptyHint}
+        >
+          <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+            <CartesianGrid {...CHART_GRID_PROPS} />
+            <XAxis
+              {...CHART_AXIS_PROPS}
+              dataKey="date"
+              tickFormatter={(iso: string) => formatShortWeekdayDatePL(iso)}
+              minTickGap={24}
+            />
+            <YAxis {...CHART_AXIS_PROPS} domain={["auto", "auto"]} width={42} />
+            <Tooltip
+              {...CHART_TOOLTIP_PROPS}
+              formatter={(value) => [`${value} kg`, t.stats.strength.seriesName]}
+              labelFormatter={(label) =>
+                typeof label === "string" ? formatShortWeekdayDatePL(label) : ""
+              }
+            />
+            <Line
+              type="monotone"
+              dataKey="topOneRMKg"
+              name={t.stats.strength.seriesName}
+              stroke={CHART_COLORS.secondary}
+              strokeWidth={2.5}
+              dot={{ r: 2.5, fill: CHART_COLORS.secondary }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

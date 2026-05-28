@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Stepper } from "@/components/ui/stepper";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { calculatePlates, DEFAULT_BAR_KG } from "@/lib/plate-utils";
 
@@ -38,59 +37,18 @@ function PlateCalculatorBody({ initialWeightKg }: { initialWeightKg: number }) {
       </DialogHeader>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <span className="text-xs text-muted-foreground">{t.plates.target}</span>
-          <div className="flex items-center justify-between gap-1 rounded-lg border border-input bg-card px-1 py-1">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => setWeight((w) => Math.max(0, w - 2.5))}
-              aria-label="-"
-            >
-              <Minus className="size-4" />
-            </Button>
-            <span className="min-w-0 flex-1 text-center text-base font-semibold tabular-nums">
-              {weight} {t.units.kg}
-            </span>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => setWeight((w) => w + 2.5)}
-              aria-label="+"
-            >
-              <Plus className="size-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <span className="text-xs text-muted-foreground">{t.plates.bar}</span>
-          <div className="flex items-center justify-between gap-1 rounded-lg border border-input bg-card px-1 py-1">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => setBar((b) => Math.max(0, b - 5))}
-              aria-label="-"
-            >
-              <Minus className="size-4" />
-            </Button>
-            <span className="min-w-0 flex-1 text-center text-base font-semibold tabular-nums">
-              {bar} {t.units.kg}
-            </span>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => setBar((b) => b + 5)}
-              aria-label="+"
-            >
-              <Plus className="size-4" />
-            </Button>
-          </div>
-        </div>
+        <Stepper
+          label={t.plates.target}
+          display={`${weight} ${t.units.kg}`}
+          onDecrement={() => setWeight((w) => Math.max(0, w - 2.5))}
+          onIncrement={() => setWeight((w) => w + 2.5)}
+        />
+        <Stepper
+          label={t.plates.bar}
+          display={`${bar} ${t.units.kg}`}
+          onDecrement={() => setBar((b) => Math.max(0, b - 5))}
+          onIncrement={() => setBar((b) => b + 5)}
+        />
       </div>
 
       {result.belowBar ? (

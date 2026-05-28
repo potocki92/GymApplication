@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +47,10 @@ export function MetricsView() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
+      <PageHeader
         title={t.metrics.title}
         description={t.metrics.subtitle}
-        action={
+        actions={
           <Button onClick={openNew}>
             <Plus className="size-4" />
             {t.metrics.addMeasurement}

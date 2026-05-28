@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { SectionHeader } from "@/components/shared/section-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
   buildMeasurementDeltas,
@@ -66,7 +66,7 @@ export function StatsView() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title={t.stats.title} description={t.stats.subtitle} />
+      <PageHeader title={t.stats.title} description={t.stats.subtitle} />
 
       <MotivationalBanner message={motivation} />
 

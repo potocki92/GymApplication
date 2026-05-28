@@ -1,7 +1,7 @@
 "use client";
 
+import { ToggleChip } from "@/components/ui/toggle-chip";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { cn } from "@/lib/utils";
 import type { BodyMetricKey } from "@/types";
 
 export const METRIC_KEYS: BodyMetricKey[] = [
@@ -27,20 +27,14 @@ export function MetricSelector({
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((key) => (
-        <button
+        <ToggleChip
           key={key}
-          type="button"
+          size="sm"
+          selected={value === key}
           onClick={() => onChange(key)}
-          className={cn(
-            "rounded-full border border-border bg-card px-3 py-1 text-xs font-medium transition-colors",
-            value === key
-              ? "border-primary/40 bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-          aria-pressed={value === key}
         >
           {t.metrics.metricSelector[key]}
-        </button>
+        </ToggleChip>
       ))}
     </div>
   );
