@@ -6,6 +6,7 @@ import { Calculator, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Stepper } from "@/components/ui/stepper";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
   currentExercise,
@@ -17,68 +18,6 @@ import { useActiveSessionStore } from "@/store";
 import type { ActiveSession, LoggedSet } from "@/types";
 import { PlateCalculatorDialog } from "./plate-calculator-dialog";
 import { RPESelector } from "./rpe-selector";
-
-function tapHaptic(): void {
-  if (
-    typeof navigator !== "undefined" &&
-    typeof navigator.vibrate === "function"
-  ) {
-    navigator.vibrate(10);
-  }
-}
-
-function Stepper({
-  label,
-  display,
-  onDec,
-  onInc,
-  disabled,
-}: {
-  label: string;
-  display: string;
-  onDec: () => void;
-  onInc: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="flex items-center justify-between gap-1 rounded-lg border border-input bg-card px-1 py-1">
-        <Button
-          type="button"
-          size="icon-lg"
-          variant="ghost"
-          className="size-11"
-          onClick={() => {
-            tapHaptic();
-            onDec();
-          }}
-          disabled={disabled}
-          aria-label={`${label} -`}
-        >
-          <Minus className="size-5" />
-        </Button>
-        <span className="min-w-0 flex-1 text-center text-lg font-semibold tabular-nums">
-          {display}
-        </span>
-        <Button
-          type="button"
-          size="icon-lg"
-          variant="ghost"
-          className="size-11"
-          onClick={() => {
-            tapHaptic();
-            onInc();
-          }}
-          disabled={disabled}
-          aria-label={`${label} +`}
-        >
-          <Plus className="size-5" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 /**
  * RPE + notes block bound to the "logging target" (the set we should be capturing
@@ -171,16 +110,18 @@ export function SetLogger({ session }: { session: ActiveSession }) {
 
       <div className="grid grid-cols-2 gap-3">
         <Stepper
+          size="lg"
           label={t.activeWorkout.reps}
           display={String(reps)}
-          onDec={() => editCurrentSet({ actualReps: reps - 1 })}
-          onInc={() => editCurrentSet({ actualReps: reps + 1 })}
+          onDecrement={() => editCurrentSet({ actualReps: reps - 1 })}
+          onIncrement={() => editCurrentSet({ actualReps: reps + 1 })}
         />
         <Stepper
+          size="lg"
           label={`${t.activeWorkout.weight} (${t.units.kg})`}
           display={String(weight)}
-          onDec={() => editCurrentSet({ actualWeightKg: weight - 2.5 })}
-          onInc={() => editCurrentSet({ actualWeightKg: weight + 2.5 })}
+          onDecrement={() => editCurrentSet({ actualWeightKg: weight - 2.5 })}
+          onIncrement={() => editCurrentSet({ actualWeightKg: weight + 2.5 })}
         />
       </div>
 
@@ -197,10 +138,11 @@ export function SetLogger({ session }: { session: ActiveSession }) {
       </div>
 
       <Stepper
+        size="lg"
         label={`${t.activeWorkout.rest} (${t.units.sec})`}
         display={String(restSec)}
-        onDec={() => setRestForCurrentSet(restSec - 15)}
-        onInc={() => setRestForCurrentSet(restSec + 15)}
+        onDecrement={() => setRestForCurrentSet(restSec - 15)}
+        onIncrement={() => setRestForCurrentSet(restSec + 15)}
       />
 
       {logTarget ? (

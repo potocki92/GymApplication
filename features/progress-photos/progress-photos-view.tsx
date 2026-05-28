@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Camera, Plus } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
-import { SectionHeader } from "@/components/shared/section-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -53,10 +53,10 @@ export function ProgressPhotosView() {
 
   return (
     <div className="space-y-6 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-      <SectionHeader
+      <PageHeader
         title={t.progressPhotos.title}
         description={t.progressPhotos.subtitle}
-        action={
+        actions={
           <Button onClick={() => setUploadOpen(true)}>
             <Plus className="size-4" />
             {t.progressPhotos.addPhoto}

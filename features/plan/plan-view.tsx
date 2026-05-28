@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
-import { SectionHeader } from "@/components/shared/section-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { WeeklyPlan } from "./components/weekly-plan";
@@ -13,10 +13,10 @@ export function PlanView() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
+      <PageHeader
         title={t.plan.title}
         description={t.plan.subtitle}
-        action={
+        actions={
           <Button asChild size="lg" className="h-10">
             <Link href="/plan/new">
               <Plus className="size-4" />

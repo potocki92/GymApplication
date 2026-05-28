@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
+import { PageHeader } from "@/components/shared/page-header";
 import { CategoryFilter, type CategoryFilterValue } from "@/components/shared/category-filter";
 import { MuscleFilter, type MuscleFilterValue } from "@/components/shared/muscle-filter";
 import { Input } from "@/components/ui/input";
@@ -26,21 +27,9 @@ export function ExercisesView() {
     );
   }, [query, muscleFilter, categoryFilter]);
 
-  const titleParts = t.exercises.title.trim().split(/\s+/);
-  const titleLead = titleParts.slice(0, -1).join(" ");
-  const titleAccent = titleParts[titleParts.length - 1];
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">
-          {titleLead ? <span>{titleLead} </span> : null}
-          <span className="text-primary">{titleAccent}</span>
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t.exercises.subtitle}
-        </p>
-      </div>
+      <PageHeader title={t.exercises.title} description={t.exercises.subtitle} />
 
       <div className="space-y-3">
         <div className="relative max-w-md">
@@ -49,7 +38,8 @@ export function ExercisesView() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t.exercises.search}
-            className="h-10 pl-9"
+            size="lg"
+            className="pl-9"
           />
         </div>
         <MuscleFilter value={muscleFilter} onChange={setMuscleFilter} />

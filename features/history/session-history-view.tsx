@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
-import { SectionHeader } from "@/components/shared/section-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -106,7 +106,7 @@ export function SessionHistoryView() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title={t.history.title} description={t.history.subtitle} />
+      <PageHeader title={t.history.title} description={t.history.subtitle} />
 
       {!hydrated || !garminHydrated ? (
         <div className="space-y-3">

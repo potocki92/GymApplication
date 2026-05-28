@@ -7,7 +7,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SectionHeader } from "@/components/shared/section-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { AccountCard } from "@/features/auth/account-card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -26,7 +26,7 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title={t.settings.title} />
+      <PageHeader title={t.settings.title} />
 
       {!supabaseReady ? (
         <p className="rounded-md border border-dashed border-border bg-card/40 p-4 text-sm text-muted-foreground">

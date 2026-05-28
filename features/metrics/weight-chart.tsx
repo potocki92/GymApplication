@@ -1,17 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
+import {
+  ProgressChart,
+  type ProgressChartPoint,
+} from "@/components/shared/progress-chart";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatShortWeekdayDatePL } from "@/lib/format";
 import { sma7, sortRecords } from "@/lib/metrics-utils";
@@ -25,12 +19,6 @@ const UNIT_BY_METRIC: Record<BodyMetricKey, string> = {
   bodyFatPct: "%",
 };
 
-interface ChartPoint {
-  date: string;
-  value: number | null;
-  sma: number | null;
-}
-
 export function WeightChart({
   records,
   metric,
@@ -42,7 +30,7 @@ export function WeightChart({
 }) {
   const t = useDictionary();
 
-  const data = useMemo<ChartPoint[]>(() => {
+  const data = useMemo<ProgressChartPoint[]>(() => {
     const sorted = sortRecords(records).filter(
       (r) => typeof r[metric] === "number" && Number.isFinite(r[metric]),
     );
@@ -54,86 +42,25 @@ export function WeightChart({
     }));
   }, [records, metric]);
 
-  const showGoalLine = metric === "weightKg" && goal != null;
-  const unit = UNIT_BY_METRIC[metric];
-
-  if (data.length === 0) {
-    return (
-      <div className="flex h-72 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-center">
-        <p className="text-sm font-medium">{t.metrics.noData}</p>
-        <p className="text-xs text-muted-foreground">{t.metrics.noDataHint}</p>
-      </div>
-    );
-  }
+  const showGoal = metric === "weightKg" && goal != null;
 
   return (
-    <div className="h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-          <XAxis
-            dataKey="date"
-            tickFormatter={(iso: string) => formatShortWeekdayDatePL(iso)}
-            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-            stroke="rgba(255,255,255,0.2)"
-            minTickGap={24}
-          />
-          <YAxis
-            domain={["auto", "auto"]}
-            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-            stroke="rgba(255,255,255,0.2)"
-            width={42}
-            tickFormatter={(v: number) => `${v}`}
-          />
-          <Tooltip
-            formatter={(value, name) => [`${value} ${unit}`, String(name)]}
-            labelFormatter={(label) =>
-              typeof label === "string" ? formatShortWeekdayDatePL(label) : ""
+    <ProgressChart
+      data={data}
+      rawLabel={t.metrics.raw}
+      trendLabel={t.metrics.sma7}
+      unit={UNIT_BY_METRIC[metric]}
+      goal={
+        showGoal && goal
+          ? {
+              value: goal.targetKg,
+              label: `${t.metrics.goal}: ${goal.targetKg} ${t.units.kg}`,
             }
-            contentStyle={{
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "#1a1a1a",
-              color: "#ffffff",
-              fontSize: 12,
-            }}
-            labelStyle={{ color: "rgba(255,255,255,0.7)" }}
-          />
-          {showGoalLine && goal ? (
-            <ReferenceLine
-              y={goal.targetKg}
-              stroke="#4CAF50"
-              strokeDasharray="4 4"
-              label={{
-                value: `${t.metrics.goal}: ${goal.targetKg} ${t.units.kg}`,
-                position: "insideTopRight",
-                fontSize: 11,
-                fill: "#4CAF50",
-              }}
-            />
-          ) : null}
-          <Line
-            type="monotone"
-            dataKey="value"
-            name={t.metrics.raw}
-            stroke="rgba(255,255,255,0.45)"
-            strokeWidth={1.5}
-            dot={{ r: 3, fill: "rgba(255,255,255,0.6)" }}
-            activeDot={{ r: 5, fill: "#ffffff" }}
-            connectNulls
-          />
-          <Line
-            type="monotone"
-            dataKey="sma"
-            name={t.metrics.sma7}
-            stroke="#C6FF3D"
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={false}
-            connectNulls
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+          : null
+      }
+      formatDate={formatShortWeekdayDatePL}
+      emptyTitle={t.metrics.noData}
+      emptyDescription={t.metrics.noDataHint}
+    />
   );
 }
