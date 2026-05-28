@@ -31,6 +31,7 @@ interface PlanState {
   removeWorkout: (weekday: Weekday) => void;
   setRest: (weekday: Weekday) => void;
   toggleCompleted: (weekday: Weekday) => void;
+  setWorkoutCompleted: (workoutId: string, completed: boolean) => void;
 }
 
 function replaceDay(plan: WeeklyPlan, weekday: Weekday, next: WorkoutDay): WeeklyPlan {
@@ -137,6 +138,28 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       if (userId) void setCompletedInSupabase(weekday, userId, nextCompleted);
     }
   },
+
+  setWorkoutCompleted: (workoutId, completed) => {
+    let changedWeekday: Weekday | null = null;
+
+    set((state) => {
+      const day = state.plan.days.find((d) => d.workout?.id === workoutId);
+      if (!day?.workout || day.workout.completed === completed) return state;
+
+      changedWeekday = day.weekday;
+      return {
+        plan: replaceDay(state.plan, day.weekday, {
+          ...day,
+          workout: { ...day.workout, completed },
+        }),
+      };
+    });
+
+    if (changedWeekday !== null) {
+      const userId = activeUserId();
+      if (userId) void setCompletedInSupabase(changedWeekday, userId, completed);
+    }
+  },
 }));
 
 /* ----------------------------- selectors ----------------------------- */
@@ -161,7 +184,7 @@ export function selectLastWorkout(plan: WeeklyPlan): Workout | undefined {
 export function selectNextWorkout(plan: WeeklyPlan): Workout | undefined {
   return selectTrainingDays(plan)
     .map((d) => d.workout!)
-    .filter((w) => (w.date ?? "") >= REFERENCE_TODAY)
+    .filter((w) => !w.completed && (w.date ?? "") >= REFERENCE_TODAY)
     .sort((a, b) => (a.date! < b.date! ? -1 : 1))[0];
 }
 
