@@ -1,6 +1,6 @@
 import type { ExerciseCategory, MuscleGroup, Weekday } from "@/types";
 
-export const APP_NAME = "FitFlow";
+export const APP_NAME = "REPIFY";
 
 export const WEEKDAY_ORDER: Weekday[] = [
   "monday",

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "FitFlow — Plan treningowy";
+export const alt = "REPIFY — TRAIN SMARTER";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -47,15 +47,16 @@ export default function OpengraphImage() {
             letterSpacing: "-0.02em",
           }}
         >
-          FitFlow
+          REPIFY
         </div>
         <div
           style={{
             fontSize: 36,
             color: "rgba(255,255,255,0.7)",
+            letterSpacing: "0.3em",
           }}
         >
-          Plan treningowy
+          TRAIN SMARTER
         </div>
       </div>
     ),

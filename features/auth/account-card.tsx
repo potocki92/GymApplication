@@ -1,8 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { LogOut, UserCircle } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { useSignOut } from "@/hooks/use-sign-out";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store";
 
 /**
@@ -22,20 +21,11 @@ import { useAuthStore } from "@/store";
  */
 export function AccountCard() {
   const t = useDictionary();
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const initialized = useAuthStore((s) => s.initialized);
+  const handleSignOut = useSignOut();
 
   if (!isSupabaseConfigured()) return null;
-
-  const handleSignOut = async () => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    toast.success(t.auth.signedOut);
-    router.push("/login");
-    router.refresh();
-  };
 
   return (
     <Card>

@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { SectionHeader } from "@/components/shared/section-header";
-import { ACTIVITY, CURRENT_USER, TRAINING_GOAL, WORKOUT_STATS } from "@/data";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { selectLastWorkout, selectNextWorkout, usePlanStore } from "@/store";
+import {
+  buildActivityCalendar,
+  buildWeeklyTotals,
+  buildWorkoutCounts,
+  buildWorkoutStreak,
+} from "@/lib/stats-utils";
+import {
+  selectLastWorkout,
+  selectNextWorkout,
+  usePlanStore,
+  useProfileStore,
+  useSessionHistoryStore,
+} from "@/store";
 import { WeeklyPlan } from "@/features/plan/components/weekly-plan";
 import { ActivityHeatmap } from "./components/activity-heatmap";
 import { DashboardHeader } from "./components/dashboard-header";
@@ -20,16 +32,34 @@ import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
 import { WeightProgressCard } from "./components/weight-progress-card";
 
+/** Week-columns rendered in the activity heatmap. */
+const ACTIVITY_WEEKS = 18;
+/** Sensible default weekly target until the user sets one in their profile. */
+const DEFAULT_WEEKLY_TARGET = 4;
+
 export function DashboardView() {
   const t = useDictionary();
   const plan = usePlanStore((s) => s.plan);
+  const sessions = useSessionHistoryStore((s) => s.sessions);
+  const profile = useProfileStore((s) => s.profile);
 
   const lastWorkout = selectLastWorkout(plan);
   const nextWorkout = selectNextWorkout(plan);
 
+  // Pin "now" per mount so every derived widget agrees on the week boundary.
+  const now = useMemo(() => new Date(), []);
+  const counts = useMemo(() => buildWorkoutCounts(sessions, now), [sessions, now]);
+  const streak = useMemo(() => buildWorkoutStreak(sessions, now), [sessions, now]);
+  const weekly = useMemo(() => buildWeeklyTotals(sessions, now), [sessions, now]);
+  const activity = useMemo(
+    () => buildActivityCalendar(sessions, ACTIVITY_WEEKS, now),
+    [sessions, now],
+  );
+  const weeklyTarget = profile?.trainingDaysPerWeek ?? DEFAULT_WEEKLY_TARGET;
+
   return (
     <div className="space-y-6">
-      <DashboardHeader user={CURRENT_USER} />
+      <DashboardHeader />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="sm:col-span-2 lg:col-span-3">
@@ -39,24 +69,26 @@ export function DashboardView() {
         <div className="sm:col-span-2 lg:col-span-2">
           <WeightProgressCard />
         </div>
-        <GoalCard goal={TRAINING_GOAL} />
+        <GoalCard />
 
-        <WeeklyProgressCard
-          done={WORKOUT_STATS.workoutsThisWeek}
-          target={WORKOUT_STATS.workoutsTarget}
-        />
+        <WeeklyProgressCard done={counts.thisWeek} target={weeklyTarget} />
         <div className="sm:col-span-2 lg:col-span-1">
-          <StreakCard days={WORKOUT_STATS.currentStreakDays} />
+          <StreakCard days={streak} />
         </div>
 
         <div className="sm:col-span-2 lg:col-span-3">
-          <ActivityHeatmap activity={ACTIVITY} />
+          <ActivityHeatmap activity={activity} />
         </div>
 
         <LastWorkoutCard workout={lastWorkout} />
         <NextWorkoutCard workout={nextWorkout} />
         <div className="sm:col-span-2 lg:col-span-1">
-          <WeeklyStatsCard stats={WORKOUT_STATS} />
+          <WeeklyStatsCard
+            workouts={weekly.workouts}
+            durationMin={weekly.durationMin}
+            volumeKg={weekly.volumeKg}
+            kcal={weekly.kcal}
+          />
         </div>
 
         <QuickAddWeightCard />

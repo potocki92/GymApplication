@@ -4,9 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/shared/stat-card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatDurationLong, formatKcal, formatVolume } from "@/lib/format";
-import type { WorkoutStats } from "@/types";
 
-export function WeeklyStatsCard({ stats }: { stats: WorkoutStats }) {
+export function WeeklyStatsCard({
+  workouts,
+  durationMin,
+  volumeKg,
+  kcal,
+}: {
+  workouts: number;
+  durationMin: number;
+  volumeKg: number;
+  kcal: number;
+}) {
   const t = useDictionary();
 
   return (
@@ -20,22 +29,22 @@ export function WeeklyStatsCard({ stats }: { stats: WorkoutStats }) {
         <StatCard
           icon={Dumbbell}
           label={t.dashboard.stats.workouts}
-          value={String(stats.workoutsThisWeek)}
+          value={String(workouts)}
         />
         <StatCard
           icon={Clock}
           label={t.dashboard.stats.time}
-          value={formatDurationLong(stats.totalDurationMin)}
+          value={formatDurationLong(durationMin)}
         />
         <StatCard
           icon={Weight}
           label={t.dashboard.stats.volume}
-          value={formatVolume(stats.totalVolumeKg)}
+          value={formatVolume(volumeKg)}
         />
         <StatCard
           icon={Flame}
           label={t.dashboard.stats.calories}
-          value={formatKcal(stats.totalKcal)}
+          value={formatKcal(kcal)}
         />
       </CardContent>
     </Card>

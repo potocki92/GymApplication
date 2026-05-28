@@ -5,7 +5,7 @@ import { ComingSoon } from "@/components/shared/coming-soon";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: `${getDictionary().nav.calendar} — FitFlow`,
+  title: `${getDictionary().nav.calendar} — REPIFY`,
 };
 
 export default function CalendarPage() {

@@ -19,7 +19,7 @@ test.skip(
 );
 
 const PUBLIC_ROUTES = [
-  { path: "/", expect: "FitFlow" },
+  { path: "/", expect: "REPIFY" },
   { path: "/plan", expect: "Plan treningowy" },
   { path: "/exercises", expect: "Biblioteka ćwiczeń" },
   { path: "/progress", expect: "Postępy ciała" },

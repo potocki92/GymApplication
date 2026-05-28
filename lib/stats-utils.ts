@@ -1,4 +1,6 @@
 import type {
+  ActivityDay,
+  ActivityLevel,
   BodyMetricGoal,
   BodyMetricKey,
   BodyMetricRecord,
@@ -178,6 +180,106 @@ export function buildWeeklyActivity(
     const label = `${d.getUTCDate()} ${months[d.getUTCMonth()]}`;
     return { weekStart, label, count };
   });
+}
+
+function utcDayKey(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/**
+ * Count of consecutive days (UTC) ending today — or yesterday, if today has no
+ * session yet — on which at least one workout was completed. Returns 0 when the
+ * most recent workout is older than yesterday.
+ */
+export function buildWorkoutStreak(
+  sessions: SessionHistoryRecord[],
+  now: Date = new Date(),
+): number {
+  if (sessions.length === 0) return 0;
+  const days = new Set(sessions.map((s) => utcDayKey(s.finishedAt)));
+
+  const cursor = new Date(now);
+  cursor.setUTCHours(0, 0, 0, 0);
+  if (!days.has(cursor.toISOString().slice(0, 10))) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  let streak = 0;
+  while (days.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+}
+
+export interface WeeklyTotals {
+  workouts: number;
+  durationMin: number;
+  volumeKg: number;
+  kcal: number;
+}
+
+/** Aggregates the current ISO week's sessions into the dashboard stat tiles. */
+export function buildWeeklyTotals(
+  sessions: SessionHistoryRecord[],
+  now: Date = new Date(),
+): WeeklyTotals {
+  const weekStart = startOfISOWeek(now).getTime();
+  let workouts = 0;
+  let activeMs = 0;
+  let volumeKg = 0;
+  let kcal = 0;
+  for (const s of sessions) {
+    if (s.finishedAt < weekStart) continue;
+    workouts += 1;
+    activeMs += s.totalActiveMs;
+    volumeKg += s.totalVolumeKg;
+    kcal += s.calories ?? 0;
+  }
+  return {
+    workouts,
+    durationMin: Math.round(activeMs / 60000),
+    volumeKg: Math.round(volumeKg),
+    kcal: Math.round(kcal),
+  };
+}
+
+function activityLevelFromCount(count: number): ActivityLevel {
+  if (count <= 0) return 0;
+  if (count === 1) return 2;
+  if (count === 2) return 3;
+  return 4;
+}
+
+/**
+ * Builds a GitHub-style contribution grid for the last N weeks. The series is
+ * dense (every day present) and starts on a Monday / ends on a Sunday so the
+ * heatmap's 7-row weekday columns line up.
+ */
+export function buildActivityCalendar(
+  sessions: SessionHistoryRecord[],
+  weeks: number,
+  now: Date = new Date(),
+): ActivityDay[] {
+  const end = startOfISOWeek(now);
+  end.setUTCDate(end.getUTCDate() + 6);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (weeks * 7 - 1));
+
+  const counts = new Map<string, number>();
+  for (const s of sessions) {
+    const key = utcDayKey(s.finishedAt);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const days: ActivityDay[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const key = cursor.toISOString().slice(0, 10);
+    days.push({ date: key, level: activityLevelFromCount(counts.get(key) ?? 0) });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
 }
 
 export interface MeasurementDelta {

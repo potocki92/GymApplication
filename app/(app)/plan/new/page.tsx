@@ -5,7 +5,7 @@ import { WorkoutFormView } from "@/features/workout-form/workout-form-view";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: `${getDictionary().workoutForm.titleNew} — FitFlow`,
+  title: `${getDictionary().workoutForm.titleNew} — REPIFY`,
 };
 
 export default function NewWorkoutPage() {

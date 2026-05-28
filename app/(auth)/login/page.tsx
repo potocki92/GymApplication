@@ -5,7 +5,7 @@ import { LoginForm } from "@/features/auth/login-form";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: `${getDictionary().auth.loginTitle} — FitFlow`,
+  title: `${getDictionary().auth.loginTitle} — REPIFY`,
 };
 
 export default function LoginPage() {

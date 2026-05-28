@@ -4,7 +4,7 @@ import { OnboardingFlow } from "@/features/onboarding/onboarding-flow";
 import { getDictionary } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  title: `${getDictionary().onboarding.welcomeTitle} — FitFlow`,
+  title: `${getDictionary().onboarding.welcomeTitle} — REPIFY`,
 };
 
 export default function OnboardingPage() {

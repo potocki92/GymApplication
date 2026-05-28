@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const ex = getExerciseById(id);
   const t = getDictionary();
-  return { title: `${ex?.name ?? t.exercises.detail.notFound} — FitFlow` };
+  return { title: `${ex?.name ?? t.exercises.detail.notFound} — REPIFY` };
 }
 
 export default async function ExerciseDetailPage({ params }: PageProps) {
