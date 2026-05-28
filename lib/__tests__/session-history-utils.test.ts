@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSessionHistoryRecord,
   buildSessionHistoryRecordsFromSets,
+  mergeSessionHistoryRecords,
 } from "@/lib/session-history-utils";
 import type { CompletedSession } from "@/types";
 
@@ -172,5 +173,58 @@ describe("buildSessionHistoryRecordsFromSets", () => {
       setsCompleted: 2,
       repsCompleted: 18,
     });
+  });
+});
+
+describe("mergeSessionHistoryRecords", () => {
+  it("keeps workout_sessions data for duplicates and includes reconstructed-only sessions", () => {
+    const reconstructed = [
+      {
+        id: "old-only",
+        workoutId: "w-old",
+        workoutName: "Trening",
+        startedAt: 1_000,
+        finishedAt: 2_000,
+        totalActiveMs: 1_000,
+        totalVolumeKg: 500,
+        exercisesCount: 1,
+        setsCompleted: 1,
+        repsCompleted: 10,
+      },
+      {
+        id: "with-header",
+        workoutId: "w-header",
+        workoutName: "Trening",
+        startedAt: 3_000,
+        finishedAt: 4_000,
+        totalActiveMs: 1_000,
+        totalVolumeKg: 700,
+        exercisesCount: 1,
+        setsCompleted: 1,
+        repsCompleted: 10,
+      },
+    ];
+    const fromWorkoutSessions = [
+      {
+        ...reconstructed[1],
+        workoutName: "Push — z oceną",
+        rating: 5,
+        note: "Dobry trening",
+      },
+    ];
+
+    const merged = mergeSessionHistoryRecords(
+      fromWorkoutSessions,
+      reconstructed,
+    );
+
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toMatchObject({
+      id: "with-header",
+      workoutName: "Push — z oceną",
+      rating: 5,
+      note: "Dobry trening",
+    });
+    expect(merged[1]).toMatchObject({ id: "old-only", workoutId: "w-old" });
   });
 });

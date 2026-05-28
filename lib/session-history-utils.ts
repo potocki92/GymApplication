@@ -102,3 +102,20 @@ export function buildSessionHistoryRecordsFromSets(
     .filter((record): record is SessionHistoryRecord => record != null)
     .sort((a, b) => b.finishedAt - a.finishedAt);
 }
+
+export function mergeSessionHistoryRecords(
+  primary: SessionHistoryRecord[],
+  fallback: SessionHistoryRecord[],
+): SessionHistoryRecord[] {
+  const byId = new Map<string, SessionHistoryRecord>();
+
+  for (const record of fallback) {
+    byId.set(record.id, record);
+  }
+
+  for (const record of primary) {
+    byId.set(record.id, record);
+  }
+
+  return Array.from(byId.values()).sort((a, b) => b.finishedAt - a.finishedAt);
+}

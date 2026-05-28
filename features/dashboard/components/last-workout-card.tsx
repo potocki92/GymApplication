@@ -37,7 +37,7 @@ export function LastWorkoutCard({
         {session ? (
           <CardAction className="text-xs text-muted-foreground">
             {formatWeekdayDatePL(
-              new Date(session.finishedAt).toISOString().slice(0, 10),
+              new Date(session.finishedAt).toLocaleDateString("sv-SE"),
             )}
           </CardAction>
         ) : null}

@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapRowToRecord, type HistoryRow } from "@/lib/supabase-history";
-import { buildSessionHistoryRecordsFromSets } from "@/lib/session-history-utils";
+import {
+  buildSessionHistoryRecordsFromSets,
+  mergeSessionHistoryRecords,
+} from "@/lib/session-history-utils";
 import type { ExerciseHistoryRecord, SessionHistoryRecord } from "@/types";
 
 interface WorkoutNameRow {
@@ -107,22 +110,53 @@ async function loadSessionsFromSetHistory(
   return buildSessionHistoryRecordsFromSets(records, workoutNames);
 }
 
+function backfillMissingSessions(
+  supabase: SupabaseClient,
+  sessions: SessionHistoryRecord[],
+  userId: string,
+): void {
+  if (sessions.length === 0) return;
+
+  void supabase
+    .from("workout_sessions")
+    .upsert(
+      sessions.map((session) => sessionToRow(session, userId)),
+      { onConflict: "id" },
+    )
+    .then(({ error }) => {
+      if (error)
+        console.error("Failed to backfill workout session history", error);
+    });
+}
+
 export async function loadSessionsFromSupabase(
   userId: string,
 ): Promise<SessionHistoryRecord[]> {
   const supabase = getClient();
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from("workout_sessions")
-    .select("*")
-    .eq("user_id", userId)
-    .order("finished_at", { ascending: false });
 
-  if (!error && data && data.length > 0) {
-    return (data as SessionRow[]).map(mapRowToSession);
-  }
+  const [sessionsRes, historySessions] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("finished_at", { ascending: false }),
+    loadSessionsFromSetHistory(supabase, userId),
+  ]);
 
-  return loadSessionsFromSetHistory(supabase, userId);
+  const dbSessions =
+    !sessionsRes.error && sessionsRes.data
+      ? (sessionsRes.data as SessionRow[]).map(mapRowToSession)
+      : [];
+  const merged = mergeSessionHistoryRecords(dbSessions, historySessions);
+  const dbSessionIds = new Set(dbSessions.map((session) => session.id));
+  const missingSessions = historySessions.filter(
+    (session) => !dbSessionIds.has(session.id),
+  );
+
+  backfillMissingSessions(supabase, missingSessions, userId);
+
+  return merged;
 }
 
 export async function upsertSessionToSupabase(
