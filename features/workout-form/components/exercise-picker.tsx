@@ -41,27 +41,27 @@ export function ExercisePicker() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t.workoutForm.searchExercise}
-          className="h-10 pl-9"
+          className="h-11 pl-9 sm:h-10"
         />
       </div>
 
       <MuscleFilter value={filter} onChange={setFilter} />
 
-      <ScrollArea className="h-[22rem] pr-3">
+      <ScrollArea className="h-[18rem] pr-2 sm:h-[22rem] sm:pr-3">
         <div className="space-y-2">
           {results.map((ex) => {
             const added = addedIds.has(ex.id);
             return (
               <div
                 key={ex.id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-2.5"
+                className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5 sm:gap-3"
               >
                 <ExerciseIcon
                   muscleGroup={ex.muscleGroup}
                   category={ex.category}
                   image={ex.image}
                   name={ex.name}
-                  className="size-9"
+                  className="size-10 sm:size-9"
                   iconClassName="size-4.5"
                 />
                 <div className="min-w-0 flex-1">
@@ -71,9 +71,17 @@ export function ExercisePicker() {
                   </p>
                 </div>
                 {added ? (
-                  <Button type="button" size="sm" variant="ghost" disabled className="text-success">
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    disabled
+                    className="text-success sm:h-7 sm:w-auto sm:px-2.5"
+                  >
                     <Check className="size-4" />
-                    {t.workoutForm.alreadyAdded}
+                    <span className="sr-only sm:not-sr-only">
+                      {t.workoutForm.alreadyAdded}
+                    </span>
                   </Button>
                 ) : (
                   <Button

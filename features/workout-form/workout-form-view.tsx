@@ -8,7 +8,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import { usePlanStore, useWorkoutDraftStore } from "@/store";
@@ -59,19 +58,25 @@ export function WorkoutFormView() {
   const title = editingId ? t.workoutForm.titleEdit : t.workoutForm.titleNew;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" aria-label={t.common.back}>
+    <div className="space-y-4 pb-24 sm:space-y-6 sm:pb-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-lg"
+            className="-ml-2 mt-0.5 sm:mt-0"
+            aria-label={t.common.back}
+          >
             <Link href="/plan">
               <ArrowLeft className="size-5" />
             </Link>
           </Button>
-          <div>
+          <div className="min-w-0">
             <h1 className="font-heading text-xl font-bold tracking-tight sm:text-2xl">
               {title}
             </h1>
-            <p className="hidden text-sm text-muted-foreground sm:block">
+            <p className="mt-1 max-w-prose text-sm text-muted-foreground">
               {t.workoutForm.subtitle}
             </p>
           </div>
@@ -82,42 +87,17 @@ export function WorkoutFormView() {
         </Button>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="space-y-5">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.workoutForm.titleNew}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <WorkoutForm />
-              <Separator />
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-medium">{t.workoutForm.selectedExercises}</h3>
-                  <span className="text-xs text-muted-foreground">{exercises.length}</span>
-                </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)] lg:gap-5">
+        <Card className="order-1 lg:col-start-1 lg:row-start-1">
+          <CardHeader>
+            <CardTitle>{t.workoutForm.titleNew}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WorkoutForm />
+          </CardContent>
+        </Card>
 
-                {exercises.length === 0 ? (
-                  <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-10 text-center">
-                    <Dumbbell className="size-6 text-muted-foreground" />
-                    <p className="text-sm font-medium">{t.workoutForm.noExercises}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t.workoutForm.noExercisesHint}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {exercises.map((we) => (
-                      <SelectedExerciseRow key={we.id} workoutExercise={we} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <div className="order-2 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <Card>
             <CardHeader>
               <CardTitle>{t.workoutForm.addExerciseToWorkout}</CardTitle>
@@ -127,12 +107,40 @@ export function WorkoutFormView() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="order-3 lg:col-start-1 lg:row-start-2">
+          <CardHeader className="flex-row items-center justify-between gap-3">
+            <CardTitle>{t.workoutForm.selectedExercises}</CardTitle>
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+              {exercises.length}
+            </span>
+          </CardHeader>
+          <CardContent>
+            {exercises.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-8 text-center sm:py-10">
+                <Dumbbell className="size-6 text-muted-foreground" />
+                <p className="text-sm font-medium">{t.workoutForm.noExercises}</p>
+                <p className="max-w-xs text-xs text-muted-foreground">
+                  {t.workoutForm.noExercisesHint}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {exercises.map((we) => (
+                  <SelectedExerciseRow key={we.id} workoutExercise={we} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Button onClick={handleSave} className="h-11 w-full sm:hidden">
-        <Check className="size-4" />
-        {t.workoutForm.save}
-      </Button>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl shadow-background/80 backdrop-blur sm:hidden">
+        <Button onClick={handleSave} className="h-12 w-full text-base">
+          <Check className="size-4" />
+          {t.workoutForm.save}
+        </Button>
+      </div>
     </div>
   );
 }
