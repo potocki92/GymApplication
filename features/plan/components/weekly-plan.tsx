@@ -31,8 +31,8 @@ export function WeeklyPlan({ gridClassName }: { gridClassName?: string }) {
           key={day.weekday}
           day={day}
           completed={
-            (day.workout?.completed ?? false) ||
-            (day.workout ? completedWorkoutIds.has(day.workout.id) : false)
+            !!day.workout &&
+            (day.workout.completed || completedWorkoutIds.has(day.workout.id))
           }
         />
       ))}

@@ -215,7 +215,13 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     if (changedWeekday !== null) {
       const userId = activeUserId();
-      if (userId) await setCompletedInSupabase(changedWeekday, userId, completed);
+      if (userId) {
+        try {
+          await setCompletedInSupabase(changedWeekday, userId, completed);
+        } catch (error) {
+          console.error("Failed to sync workout completion", error);
+        }
+      }
     }
   },
 }));
