@@ -126,7 +126,7 @@ export function ActiveWorkoutView() {
       useSessionHistoryStore.getState().upsert(sessionRecord),
     ]);
 
-    usePlanStore.getState().setWorkoutCompleted(completed.workoutId, true);
+    await usePlanStore.getState().setWorkoutCompleted(completed.workoutId, true);
   };
 
   const handleSave = async (meta: { rating?: number; note?: string }) => {

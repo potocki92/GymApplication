@@ -1,11 +1,23 @@
 "use client";
 
-import { usePlanStore } from "@/store";
+import { useMemo } from "react";
+
+import {
+  completedWorkoutIdsForWeek,
+  usePlanStore,
+  useSessionHistoryStore,
+} from "@/store";
 import { cn } from "@/lib/utils";
 import { DayTrainingCard } from "./day-training-card";
 
 export function WeeklyPlan({ gridClassName }: { gridClassName?: string }) {
   const plan = usePlanStore((s) => s.plan);
+  const sessions = useSessionHistoryStore((s) => s.sessions);
+  const now = useMemo(() => new Date(), []);
+  const completedWorkoutIds = useMemo(
+    () => completedWorkoutIdsForWeek(sessions, now),
+    [sessions, now],
+  );
 
   return (
     <div
@@ -15,7 +27,14 @@ export function WeeklyPlan({ gridClassName }: { gridClassName?: string }) {
       )}
     >
       {plan.days.map((day) => (
-        <DayTrainingCard key={day.weekday} day={day} />
+        <DayTrainingCard
+          key={day.weekday}
+          day={day}
+          completed={
+            (day.workout?.completed ?? false) ||
+            (day.workout ? completedWorkoutIds.has(day.workout.id) : false)
+          }
+        />
       ))}
     </div>
   );

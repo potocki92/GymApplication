@@ -10,8 +10,66 @@ import {
   setRestInSupabase,
   upsertWorkoutToSupabase,
 } from "@/lib/supabase-plan";
-import type { Weekday, WeeklyPlan, Workout, WorkoutDay } from "@/types";
+import type {
+  SessionHistoryRecord,
+  Weekday,
+  WeeklyPlan,
+  Workout,
+  WorkoutDay,
+} from "@/types";
 import { useAuthStore } from "./use-auth-store";
+
+function parseLocalDate(iso: string): Date {
+  return new Date(`${iso}T00:00:00`);
+}
+
+function toLocalISODate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysISO(iso: string, days: number): string {
+  const date = parseLocalDate(iso);
+  date.setDate(date.getDate() + days);
+  return toLocalISODate(date);
+}
+
+function weekStartISO(referenceDate: Date): string {
+  const start = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+  );
+  const mondayBasedDay = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - mondayBasedDay);
+  return toLocalISODate(start);
+}
+
+function weekdayIndexFromISO(iso: string): number {
+  return (parseLocalDate(iso).getDay() + 6) % 7;
+}
+
+export function currentLocalISODate(referenceDate = new Date()): string {
+  return toLocalISODate(referenceDate);
+}
+
+export function completedWorkoutIdsForWeek(
+  sessions: SessionHistoryRecord[],
+  referenceDate = new Date(),
+): ReadonlySet<string> {
+  const start = weekStartISO(referenceDate);
+  const end = addDaysISO(start, 7);
+  return new Set(
+    sessions
+      .filter((session) => {
+        const finishedDate = toLocalISODate(new Date(session.finishedAt));
+        return finishedDate >= start && finishedDate < end;
+      })
+      .map((session) => session.workoutId),
+  );
+}
 
 /** ISO date for a given weekday within the plan's week (Monday-based). */
 export function weekdayToISO(weekStart: string, weekday: Weekday): string {
@@ -31,7 +89,7 @@ interface PlanState {
   removeWorkout: (weekday: Weekday) => void;
   setRest: (weekday: Weekday) => void;
   toggleCompleted: (weekday: Weekday) => void;
-  setWorkoutCompleted: (workoutId: string, completed: boolean) => void;
+  setWorkoutCompleted: (workoutId: string, completed: boolean) => Promise<void>;
 }
 
 function replaceDay(plan: WeeklyPlan, weekday: Weekday, next: WorkoutDay): WeeklyPlan {
@@ -139,7 +197,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     }
   },
 
-  setWorkoutCompleted: (workoutId, completed) => {
+  setWorkoutCompleted: async (workoutId, completed) => {
     let changedWeekday: Weekday | null = null;
 
     set((state) => {
@@ -157,7 +215,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     if (changedWeekday !== null) {
       const userId = activeUserId();
-      if (userId) void setCompletedInSupabase(changedWeekday, userId, completed);
+      if (userId) await setCompletedInSupabase(changedWeekday, userId, completed);
     }
   },
 }));
@@ -180,12 +238,36 @@ export function selectLastWorkout(plan: WeeklyPlan): Workout | undefined {
     .sort((a, b) => (a.date! < b.date! ? 1 : -1))[0];
 }
 
-/** First upcoming (non-rest) workout on or after the reference date. */
-export function selectNextWorkout(plan: WeeklyPlan): Workout | undefined {
-  return selectTrainingDays(plan)
-    .map((d) => d.workout!)
-    .filter((w) => !w.completed && (w.date ?? "") >= REFERENCE_TODAY)
-    .sort((a, b) => (a.date! < b.date! ? -1 : 1))[0];
+/** First upcoming workout on or after the reference date, ignoring already completed sessions. */
+export function selectNextWorkout(
+  plan: WeeklyPlan,
+  completedWorkoutIds: ReadonlySet<string> = new Set(),
+  referenceDateISO = REFERENCE_TODAY,
+): Workout | undefined {
+  const referenceWeekStart = weekStartISO(parseLocalDate(referenceDateISO));
+  const todayIndex = weekdayIndexFromISO(referenceDateISO);
+
+  return plan.days
+    .map((day) => {
+      if (day.rest || !day.workout) return null;
+      const weekdayIndex = WEEKDAY_ORDER.indexOf(day.weekday);
+      return {
+        workout: {
+          ...day.workout,
+          date: addDaysISO(referenceWeekStart, weekdayIndex),
+        },
+        weekdayIndex,
+      };
+    })
+    .filter((item): item is { workout: Workout; weekdayIndex: number } => {
+      if (!item) return false;
+      return (
+        item.weekdayIndex >= todayIndex &&
+        !item.workout.completed &&
+        !completedWorkoutIds.has(item.workout.id)
+      );
+    })
+    .sort((a, b) => a.weekdayIndex - b.weekdayIndex)[0]?.workout;
 }
 
 /** Days that fall strictly after the reference date (for the "upcoming" list). */
