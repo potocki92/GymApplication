@@ -30,14 +30,14 @@ export function WorkoutForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t.workoutForm.namePlaceholder}
-          className="h-10"
+          className="h-11 sm:h-10"
         />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="workout-day">{t.workoutForm.dayLabel}</Label>
         <Select value={weekday} onValueChange={(v) => setWeekday(v as Weekday)}>
-          <SelectTrigger id="workout-day" className="h-10 w-full">
+          <SelectTrigger id="workout-day" className="h-11 w-full sm:h-10">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

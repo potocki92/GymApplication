@@ -15,7 +15,7 @@ export function ExerciseConfigPanel({
   const t = useDictionary();
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
       <Stepper
         size="sm"
         label={t.workoutForm.sets}
@@ -30,7 +30,7 @@ export function ExerciseConfigPanel({
           size="lg"
           value={value.reps}
           onChange={(e) => onChange({ reps: e.target.value })}
-          className="text-center"
+          className="h-10 text-center"
           aria-label={t.workoutForm.reps}
         />
       </div>

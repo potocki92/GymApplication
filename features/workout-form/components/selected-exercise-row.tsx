@@ -22,8 +22,8 @@ export function SelectedExerciseRow({
   if (!exercise) return null;
 
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-card p-3">
-      <div className="flex items-start gap-3">
+    <div className="space-y-3 rounded-xl border border-border bg-card p-3 sm:p-3.5">
+      <div className="flex items-start gap-2.5 sm:gap-3">
         <ExerciseIcon
           muscleGroup={exercise.muscleGroup}
           category={exercise.category}
@@ -36,7 +36,7 @@ export function SelectedExerciseRow({
         </div>
         <Button
           type="button"
-          size="icon-sm"
+          size="icon"
           variant="ghost"
           aria-label="Usuń ćwiczenie"
           onClick={() => removeExercise(workoutExercise.id)}
