@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Dumbbell, Play } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import { buildSessionHistoryRecord } from "@/lib/session-history-utils";
 import {
   selectHeartRateAggregate,
   selectHeartRateChartData,
-  selectHeartRateSnapshot,
   useActiveSessionStore,
   useHeartRateStore,
   useHistoryStore,
@@ -65,12 +65,26 @@ export function ActiveWorkoutView() {
     enabled: LIVE_HR_ENABLED,
   });
 
-  const liveSnapshot = useHeartRateStore(selectHeartRateSnapshot);
-  const liveChartSamples = useHeartRateStore((s) =>
-    selectHeartRateChartData(s, 300),
+  const liveHeartRate = useHeartRateStore(
+    useShallow((s) => ({
+      currentBpm: s.currentBpm ?? undefined,
+      avgBpm: s.avgBpm ?? undefined,
+      maxBpm: s.maxBpm ?? undefined,
+      currentZone: s.currentZone ?? undefined,
+      samples: s.samples,
+      source: s.device?.vendor ?? null,
+    })),
+  );
+  const liveChartSamples = useHeartRateStore(
+    useShallow((s) => selectHeartRateChartData(s, 300)),
   );
   const liveConnectionState = useHeartRateStore((s) => s.connectionState);
   const liveDevice = useHeartRateStore((s) => s.device);
+
+  const liveSnapshot = useMemo(
+    () => ({ ...liveHeartRate }),
+    [liveHeartRate],
+  );
 
   // Prefer the streaming snapshot once any sample has landed; otherwise fall
   // back to whatever was already attached to the session.
