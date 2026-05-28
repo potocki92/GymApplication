@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Target, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import Link from "next/link";
+import { Target } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,21 +12,23 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { latestForMetric, progressTier, progressToGoalPct } from "@/lib/metrics-utils";
+import { progressTier } from "@/lib/metrics-utils";
+import { buildWeightSummary } from "@/lib/stats-utils";
 import { cn } from "@/lib/utils";
-import { useMetricsStore } from "@/store";
-import { GoalEditorDialog } from "./goal-editor-dialog";
+import { useMetricsStore, useProfileStore } from "@/store";
 
 export function GoalProgressCard() {
   const t = useDictionary();
-  const goal = useMetricsStore((s) => s.goal);
   const records = useMetricsStore((s) => s.records);
-  const setGoal = useMetricsStore((s) => s.setGoal);
-  const [open, setOpen] = useState(false);
+  const profile = useProfileStore((s) => s.profile);
 
-  const latest = latestForMetric(records, "weightKg");
-  const currentKg = latest?.weightKg ?? goal?.startKg ?? 0;
-  const pct = goal ? progressToGoalPct(goal.startKg, currentKg, goal.targetKg) : 0;
+  const summary = buildWeightSummary(
+    records,
+    null,
+    profile?.currentWeightKg ?? null,
+    profile?.targetWeightKg ?? null,
+  );
+  const pct = summary.progressPct ?? 0;
   const tier = progressTier(pct);
 
   const tierColor: Record<string, string> = {
@@ -50,65 +51,65 @@ export function GoalProgressCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {goal ? (
+        {summary.targetKg != null ? (
           <>
             <div className="flex items-end justify-between gap-2">
               <div>
                 <p className="font-heading text-2xl font-bold tabular-nums">
-                  {currentKg} {t.units.kg}
+                  {summary.currentKg != null
+                    ? `${summary.currentKg.toFixed(1)} ${t.units.kg}`
+                    : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground tabular-nums">
-                  {goal.startKg} → {goal.targetKg} {t.units.kg}
+                  {summary.startKg != null
+                    ? `${summary.startKg.toFixed(1)}`
+                    : "—"}{" "}
+                  → {summary.targetKg.toFixed(1)} {t.units.kg}
                 </p>
               </div>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
-                  tierColor[tier],
-                )}
-              >
-                {pct}%
-              </span>
+              {summary.progressPct != null ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
+                    tierColor[tier],
+                  )}
+                >
+                  {summary.progressPct}%
+                </span>
+              ) : null}
             </div>
-            <Progress value={pct} className={cn("h-2", tierIndicator[tier])} />
-            <div className="flex items-center justify-between gap-2">
-              <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-                {t.metrics.goalSection.editGoal}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  void setGoal(null);
-                }}
-                aria-label={t.metrics.goalSection.removeGoal}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
+            {summary.progressPct != null ? (
+              <Progress
+                value={summary.progressPct}
+                className={cn("h-2", tierIndicator[tier])}
+              />
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              {t.metrics.goalSection.settingsSource}
+            </p>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/settings">
+                {t.metrics.goalSection.editInSettings}
+              </Link>
+            </Button>
           </>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
               {t.metrics.goalSection.noGoal}
             </p>
-            <Button size="sm" onClick={() => setOpen(true)}>
-              <Target className="size-4" />
-              {t.metrics.goalSection.setGoal}
+            <p className="text-xs text-muted-foreground">
+              {t.metrics.goalSection.settingsSource}
+            </p>
+            <Button asChild size="sm">
+              <Link href="/settings">
+                <Target className="size-4" />
+                {t.metrics.goalSection.setInSettings}
+              </Link>
             </Button>
           </>
         )}
       </CardContent>
-
-      <GoalEditorDialog
-        open={open}
-        onOpenChange={setOpen}
-        initial={goal}
-        onSubmit={(g) => {
-          void setGoal(g);
-          toast.success(t.metrics.goalSection.saved);
-        }}
-      />
     </Card>
   );
 }

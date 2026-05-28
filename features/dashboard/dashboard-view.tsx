@@ -21,7 +21,6 @@ import {
 } from "@/store";
 import { ActivityHeatmap } from "./components/activity-heatmap";
 import { DashboardHeader } from "./components/dashboard-header";
-import { GoalCard } from "./components/goal-card";
 import { LastWorkoutCard } from "./components/last-workout-card";
 import { NextWorkoutCard } from "./components/next-workout-card";
 import { QuickActionsCard } from "./components/quick-actions-card";
@@ -77,10 +76,9 @@ export function DashboardView() {
           <QuickActionsCard />
         </div>
 
-        <div className="sm:col-span-2 lg:col-span-2">
+        <div className="sm:col-span-2 lg:col-span-3">
           <WeightProgressCard />
         </div>
-        <GoalCard />
 
         <WeeklyProgressCard done={counts.thisWeek} target={weeklyTarget} />
         <div className="sm:col-span-2 lg:col-span-1">
