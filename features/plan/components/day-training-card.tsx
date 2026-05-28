@@ -12,7 +12,13 @@ import { cn } from "@/lib/utils";
 import { useActiveSessionStore } from "@/store";
 import type { WorkoutDay } from "@/types";
 
-export function DayTrainingCard({ day }: { day: WorkoutDay }) {
+export function DayTrainingCard({
+  day,
+  completed = day.workout?.completed ?? false,
+}: {
+  day: WorkoutDay;
+  completed?: boolean;
+}) {
   const t = useDictionary();
   const router = useRouter();
   const startSession = useActiveSessionStore((s) => s.start);
@@ -38,7 +44,7 @@ export function DayTrainingCard({ day }: { day: WorkoutDay }) {
             {t.weekdays.full[weekday]}
           </span>
           {workout ? (
-            workout.completed ? (
+            completed ? (
               <CircleCheckBig className="size-5 shrink-0 text-success" />
             ) : (
               <span className="size-4 shrink-0 rounded-full border-2 border-muted-foreground/30" />
@@ -66,7 +72,7 @@ export function DayTrainingCard({ day }: { day: WorkoutDay }) {
               {t.plan.exercises}: {workout.exercises.length} ·{" "}
               {formatMinutes(workout.estimatedDurationMin)}
             </p>
-            {!workout.completed ? (
+            {!completed ? (
               <Button size="sm" className="w-full" onClick={handleStart}>
                 <Play className="size-4" />
                 {t.activeWorkout.start}

@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import { REFERENCE_TODAY } from "@/data";
-import { selectNextWorkout } from "@/store/use-plan-store";
-import type { Weekday, WeeklyPlan, Workout } from "@/types";
+import {
+  completedWorkoutIdsForWeek,
+  selectNextWorkout,
+} from "@/store/use-plan-store";
+import type {
+  SessionHistoryRecord,
+  Weekday,
+  WeeklyPlan,
+  Workout,
+} from "@/types";
 
-function workout(partial: Partial<Workout> & Pick<Workout, "id" | "date" | "completed">): Workout {
+function workout(
+  partial: Partial<Workout> & Pick<Workout, "id" | "date" | "completed">,
+): Workout {
   return {
     id: partial.id,
     name: partial.name ?? partial.id,
@@ -22,6 +32,23 @@ function day(weekday: Weekday, workoutItem?: Workout) {
     : { weekday, rest: true };
 }
 
+function session(
+  partial: Pick<SessionHistoryRecord, "id" | "workoutId" | "finishedAt">,
+): SessionHistoryRecord {
+  return {
+    id: partial.id,
+    workoutId: partial.workoutId,
+    workoutName: partial.workoutId,
+    startedAt: partial.finishedAt - 60_000,
+    finishedAt: partial.finishedAt,
+    totalActiveMs: 60_000,
+    totalVolumeKg: 0,
+    exercisesCount: 0,
+    setsCompleted: 0,
+    repsCompleted: 0,
+  };
+}
+
 describe("selectNextWorkout", () => {
   it("skips completed workouts scheduled for today", () => {
     const plan: WeeklyPlan = {
@@ -33,7 +60,11 @@ describe("selectNextWorkout", () => {
         day("wednesday"),
         day(
           "thursday",
-          workout({ id: "completed-today", completed: true, date: REFERENCE_TODAY }),
+          workout({
+            id: "completed-today",
+            completed: true,
+            date: REFERENCE_TODAY,
+          }),
         ),
         day(
           "friday",
@@ -45,5 +76,80 @@ describe("selectNextWorkout", () => {
     };
 
     expect(selectNextWorkout(plan)?.id).toBe("next-open");
+  });
+
+  it("skips workouts completed in session history for the current week", () => {
+    const completedIds = new Set(["completed-in-history"]);
+    const plan: WeeklyPlan = {
+      id: "plan-test",
+      weekStart: "2024-05-20",
+      days: [
+        day("monday"),
+        day("tuesday"),
+        day("wednesday"),
+        day(
+          "thursday",
+          workout({
+            id: "completed-in-history",
+            completed: false,
+            date: REFERENCE_TODAY,
+          }),
+        ),
+        day(
+          "friday",
+          workout({ id: "next-open", completed: false, date: "2024-05-24" }),
+        ),
+        day("saturday"),
+        day("sunday"),
+      ],
+    };
+
+    expect(selectNextWorkout(plan, completedIds)?.id).toBe("next-open");
+  });
+
+  it("returns workout dates anchored to the active calendar week", () => {
+    const plan: WeeklyPlan = {
+      id: "plan-test",
+      weekStart: "2024-05-20",
+      days: [
+        day("monday"),
+        day("tuesday"),
+        day("wednesday"),
+        day("thursday"),
+        day(
+          "friday",
+          workout({ id: "friday", completed: false, date: "2024-05-24" }),
+        ),
+        day("saturday"),
+        day("sunday"),
+      ],
+    };
+
+    expect(selectNextWorkout(plan, new Set(), "2026-05-28")?.date).toBe(
+      "2026-05-29",
+    );
+  });
+});
+
+describe("completedWorkoutIdsForWeek", () => {
+  it("includes only sessions finished in the same Monday-based week", () => {
+    const ids = completedWorkoutIdsForWeek(
+      [
+        session({
+          id: "previous",
+          workoutId: "old",
+          finishedAt: new Date("2026-05-24T12:00:00").getTime(),
+        }),
+        session({
+          id: "current",
+          workoutId: "current",
+          finishedAt: new Date("2026-05-28T12:00:00").getTime(),
+        }),
+      ],
+      new Date("2026-05-28T10:00:00"),
+    );
+
+    expect(ids.has("old")).toBe(false);
+    expect(ids.has("current")).toBe(true);
   });
 });

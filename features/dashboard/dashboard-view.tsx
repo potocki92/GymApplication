@@ -14,6 +14,8 @@ import {
   buildWorkoutStreak,
 } from "@/lib/stats-utils";
 import {
+  completedWorkoutIdsForWeek,
+  currentLocalISODate,
   selectNextWorkout,
   usePlanStore,
   useProfileStore,
@@ -46,10 +48,17 @@ export function DashboardView() {
     () => [...sessions].sort((a, b) => b.finishedAt - a.finishedAt)[0],
     [sessions],
   );
-  const nextWorkout = selectNextWorkout(plan);
-
   // Pin "now" per mount so every derived widget agrees on the week boundary.
   const now = useMemo(() => new Date(), []);
+  const completedWorkoutIds = useMemo(
+    () => completedWorkoutIdsForWeek(sessions, now),
+    [sessions, now],
+  );
+  const nextWorkout = selectNextWorkout(
+    plan,
+    completedWorkoutIds,
+    currentLocalISODate(now),
+  );
   const counts = useMemo(
     () => buildWorkoutCounts(sessions, now),
     [sessions, now],
