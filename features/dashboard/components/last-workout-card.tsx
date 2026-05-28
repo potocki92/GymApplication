@@ -1,11 +1,16 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatMinutes, formatVolume, formatWeekdayDatePL } from "@/lib/format";
-import { getWorkoutVolume } from "@/lib/workout-utils";
-import type { Workout } from "@/types";
+import type { SessionHistoryRecord } from "@/types";
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
@@ -16,7 +21,11 @@ function Meta({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function LastWorkoutCard({ workout }: { workout?: Workout }) {
+export function LastWorkoutCard({
+  session,
+}: {
+  session?: SessionHistoryRecord;
+}) {
   const t = useDictionary();
 
   return (
@@ -25,27 +34,42 @@ export function LastWorkoutCard({ workout }: { workout?: Workout }) {
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {t.dashboard.lastWorkout}
         </CardTitle>
-        {workout?.date ? (
+        {session ? (
           <CardAction className="text-xs text-muted-foreground">
-            {formatWeekdayDatePL(workout.date)}
+            {formatWeekdayDatePL(
+              new Date(session.finishedAt).toLocaleDateString("sv-SE"),
+            )}
           </CardAction>
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col">
-        {workout ? (
+        {session ? (
           <>
-            <p className="font-heading text-base font-semibold">{workout.name}</p>
+            <p className="font-heading text-base font-semibold">
+              {session.workoutName}
+            </p>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <Meta label={t.dashboard.workoutMeta.exercises} value={String(workout.exercises.length)} />
-              <Meta label={t.dashboard.workoutMeta.time} value={formatMinutes(workout.estimatedDurationMin)} />
-              <Meta label={t.dashboard.workoutMeta.volume} value={formatVolume(getWorkoutVolume(workout))} />
+              <Meta
+                label={t.dashboard.workoutMeta.exercises}
+                value={String(session.exercisesCount)}
+              />
+              <Meta
+                label={t.dashboard.workoutMeta.time}
+                value={formatMinutes(Math.round(session.totalActiveMs / 60000))}
+              />
+              <Meta
+                label={t.dashboard.workoutMeta.volume}
+                value={formatVolume(session.totalVolumeKg)}
+              />
             </div>
             <Button asChild variant="outline" className="mt-5 h-10 w-full">
-              <Link href="/plan">{t.common.seeDetails}</Link>
+              <Link href="/history">{t.common.seeDetails}</Link>
             </Button>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">{t.dashboard.noLastWorkout}</p>
+          <p className="text-sm text-muted-foreground">
+            {t.dashboard.noLastWorkout}
+          </p>
         )}
       </CardContent>
     </Card>

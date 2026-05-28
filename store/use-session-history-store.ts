@@ -30,57 +30,82 @@ function activeUser() {
   return useAuthStore.getState().user;
 }
 
+async function waitForAuthInitialization(): Promise<void> {
+  if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
+
+  await new Promise<void>((resolve) => {
+    const subscription: { unsubscribe?: () => void } = {};
+    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+      if (!state.initialized) return;
+      subscription.unsubscribe?.();
+      resolve();
+    });
+
+    if (useAuthStore.getState().initialized) {
+      subscription.unsubscribe();
+      resolve();
+    }
+  });
+}
+
+async function activeUserAfterAuth() {
+  await waitForAuthInitialization();
+  return activeUser();
+}
+
 async function loadInitial(): Promise<SessionHistoryRecord[]> {
-  const user = activeUser();
+  const user = await activeUserAfterAuth();
   if (user) return loadSessionsFromSupabase(user.id);
   return loadAllSessions();
 }
 
-export const useSessionHistoryStore = create<SessionHistoryState>((set, get) => ({
-  sessions: [],
-  hydrated: false,
+export const useSessionHistoryStore = create<SessionHistoryState>(
+  (set, get) => ({
+    sessions: [],
+    hydrated: false,
 
-  hydrate: async () => {
-    if (get().hydrated) return;
-    const sessions = await loadInitial();
-    set({ sessions, hydrated: true });
-  },
+    hydrate: async () => {
+      if (get().hydrated) return;
+      const sessions = await loadInitial();
+      set({ sessions, hydrated: true });
+    },
 
-  rehydrate: async () => {
-    const sessions = await loadInitial();
-    set({ sessions, hydrated: true });
-  },
+    rehydrate: async () => {
+      const sessions = await loadInitial();
+      set({ sessions, hydrated: true });
+    },
 
-  upsert: async (record) => {
-    set((s) => {
-      const idx = s.sessions.findIndex((x) => x.id === record.id);
-      if (idx >= 0) {
-        const next = s.sessions.slice();
-        next[idx] = record;
-        return { sessions: next };
-      }
-      return { sessions: [record, ...s.sessions] };
-    });
-    const user = activeUser();
-    if (user) await upsertSessionToSupabase(record, user.id);
-    else await putSession(record);
-  },
+    upsert: async (record) => {
+      set((s) => {
+        const idx = s.sessions.findIndex((x) => x.id === record.id);
+        if (idx >= 0) {
+          const next = s.sessions.slice();
+          next[idx] = record;
+          return { sessions: next };
+        }
+        return { sessions: [record, ...s.sessions] };
+      });
+      const user = await activeUserAfterAuth();
+      if (user) await upsertSessionToSupabase(record, user.id);
+      else await putSession(record);
+    },
 
-  remove: async (id) => {
-    set((s) => ({ sessions: s.sessions.filter((x) => x.id !== id) }));
-    const user = activeUser();
-    if (user) await deleteSessionFromSupabase(id, user.id);
-    else await deleteSession(id);
-  },
+    remove: async (id) => {
+      set((s) => ({ sessions: s.sessions.filter((x) => x.id !== id) }));
+      const user = await activeUserAfterAuth();
+      if (user) await deleteSessionFromSupabase(id, user.id);
+      else await deleteSession(id);
+    },
 
-  clear: async () => {
-    set({ sessions: [] });
-    const user = activeUser();
-    if (user) {
+    clear: async () => {
       const ids = get().sessions.map((s) => s.id);
-      for (const id of ids) await deleteSessionFromSupabase(id, user.id);
-    } else {
-      await clearAllSessions();
-    }
-  },
-}));
+      set({ sessions: [] });
+      const user = await activeUserAfterAuth();
+      if (user) {
+        for (const id of ids) await deleteSessionFromSupabase(id, user.id);
+      } else {
+        await clearAllSessions();
+      }
+    },
+  }),
+);

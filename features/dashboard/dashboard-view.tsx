@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { SectionHeader } from "@/components/shared/section-header";
+import { QuickAddWeightCard } from "@/features/metrics/quick-add-weight-card";
+import { WeeklyPlan } from "@/features/plan/components/weekly-plan";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
   buildActivityCalendar,
@@ -12,20 +14,17 @@ import {
   buildWorkoutStreak,
 } from "@/lib/stats-utils";
 import {
-  selectLastWorkout,
   selectNextWorkout,
   usePlanStore,
   useProfileStore,
   useSessionHistoryStore,
 } from "@/store";
-import { WeeklyPlan } from "@/features/plan/components/weekly-plan";
 import { ActivityHeatmap } from "./components/activity-heatmap";
 import { DashboardHeader } from "./components/dashboard-header";
 import { GoalCard } from "./components/goal-card";
 import { LastWorkoutCard } from "./components/last-workout-card";
 import { NextWorkoutCard } from "./components/next-workout-card";
 import { QuickActionsCard } from "./components/quick-actions-card";
-import { QuickAddWeightCard } from "@/features/metrics/quick-add-weight-card";
 import { StreakCard } from "./components/streak-card";
 import { TopPRsCard } from "./components/top-prs-card";
 import { WeeklyProgressCard } from "./components/weekly-progress-card";
@@ -43,14 +42,26 @@ export function DashboardView() {
   const sessions = useSessionHistoryStore((s) => s.sessions);
   const profile = useProfileStore((s) => s.profile);
 
-  const lastWorkout = selectLastWorkout(plan);
+  const lastWorkout = useMemo(
+    () => [...sessions].sort((a, b) => b.finishedAt - a.finishedAt)[0],
+    [sessions],
+  );
   const nextWorkout = selectNextWorkout(plan);
 
   // Pin "now" per mount so every derived widget agrees on the week boundary.
   const now = useMemo(() => new Date(), []);
-  const counts = useMemo(() => buildWorkoutCounts(sessions, now), [sessions, now]);
-  const streak = useMemo(() => buildWorkoutStreak(sessions, now), [sessions, now]);
-  const weekly = useMemo(() => buildWeeklyTotals(sessions, now), [sessions, now]);
+  const counts = useMemo(
+    () => buildWorkoutCounts(sessions, now),
+    [sessions, now],
+  );
+  const streak = useMemo(
+    () => buildWorkoutStreak(sessions, now),
+    [sessions, now],
+  );
+  const weekly = useMemo(
+    () => buildWeeklyTotals(sessions, now),
+    [sessions, now],
+  );
   const activity = useMemo(
     () => buildActivityCalendar(sessions, ACTIVITY_WEEKS, now),
     [sessions, now],
@@ -80,7 +91,7 @@ export function DashboardView() {
           <ActivityHeatmap activity={activity} />
         </div>
 
-        <LastWorkoutCard workout={lastWorkout} />
+        <LastWorkoutCard session={lastWorkout} />
         <NextWorkoutCard workout={nextWorkout} />
         <div className="sm:col-span-2 lg:col-span-1">
           <WeeklyStatsCard
@@ -101,7 +112,10 @@ export function DashboardView() {
         <SectionHeader
           title={t.dashboard.weeklyPlan}
           action={
-            <Link href="/plan" className="text-sm font-medium text-primary hover:underline">
+            <Link
+              href="/plan"
+              className="text-sm font-medium text-primary hover:underline"
+            >
               {t.dashboard.seeFullPlan}
             </Link>
           }

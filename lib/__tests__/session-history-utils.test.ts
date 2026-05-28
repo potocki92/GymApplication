@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSessionHistoryRecord } from "@/lib/session-history-utils";
+import {
+  buildSessionHistoryRecord,
+  buildSessionHistoryRecordsFromSets,
+  mergeSessionHistoryRecords,
+} from "@/lib/session-history-utils";
 import type { CompletedSession } from "@/types";
 
 function set(
@@ -101,5 +105,126 @@ describe("buildSessionHistoryRecord", () => {
     const r = buildSessionHistoryRecord(makeCompleted());
     expect(r.avgHrBpm).toBeUndefined();
     expect(r.maxHrBpm).toBeUndefined();
+  });
+});
+
+describe("buildSessionHistoryRecordsFromSets", () => {
+  it("reconstructs session headers from exercise history records", () => {
+    const workoutNames = new Map([["w-1", "Push — test"]]);
+    const records = [
+      {
+        id: "r-2",
+        exerciseId: "ex-bench",
+        workoutId: "w-1",
+        sessionId: "s-1",
+        setNumber: 2,
+        reps: 8,
+        weightKg: 80,
+        oneRMKg: 100,
+        completedAt: 2_000,
+      },
+      {
+        id: "r-1",
+        exerciseId: "ex-bench",
+        workoutId: "w-1",
+        sessionId: "s-1",
+        setNumber: 1,
+        reps: 10,
+        weightKg: 75,
+        oneRMKg: 100,
+        completedAt: 1_000,
+      },
+      {
+        id: "r-3",
+        exerciseId: "ex-row",
+        workoutId: "w-2",
+        sessionId: "s-2",
+        setNumber: 1,
+        reps: 12,
+        weightKg: 50,
+        oneRMKg: 70,
+        completedAt: 3_000,
+      },
+    ];
+
+    const [latest, previous] = buildSessionHistoryRecordsFromSets(
+      records,
+      workoutNames,
+    );
+
+    expect(latest).toMatchObject({
+      id: "s-2",
+      workoutId: "w-2",
+      workoutName: "Trening",
+      totalVolumeKg: 600,
+      exercisesCount: 1,
+      setsCompleted: 1,
+      repsCompleted: 12,
+    });
+    expect(previous).toMatchObject({
+      id: "s-1",
+      workoutId: "w-1",
+      workoutName: "Push — test",
+      startedAt: 1_000,
+      finishedAt: 2_000,
+      totalActiveMs: 1_000,
+      totalVolumeKg: 1390,
+      exercisesCount: 1,
+      setsCompleted: 2,
+      repsCompleted: 18,
+    });
+  });
+});
+
+describe("mergeSessionHistoryRecords", () => {
+  it("keeps workout_sessions data for duplicates and includes reconstructed-only sessions", () => {
+    const reconstructed = [
+      {
+        id: "old-only",
+        workoutId: "w-old",
+        workoutName: "Trening",
+        startedAt: 1_000,
+        finishedAt: 2_000,
+        totalActiveMs: 1_000,
+        totalVolumeKg: 500,
+        exercisesCount: 1,
+        setsCompleted: 1,
+        repsCompleted: 10,
+      },
+      {
+        id: "with-header",
+        workoutId: "w-header",
+        workoutName: "Trening",
+        startedAt: 3_000,
+        finishedAt: 4_000,
+        totalActiveMs: 1_000,
+        totalVolumeKg: 700,
+        exercisesCount: 1,
+        setsCompleted: 1,
+        repsCompleted: 10,
+      },
+    ];
+    const fromWorkoutSessions = [
+      {
+        ...reconstructed[1],
+        workoutName: "Push — z oceną",
+        rating: 5,
+        note: "Dobry trening",
+      },
+    ];
+
+    const merged = mergeSessionHistoryRecords(
+      fromWorkoutSessions,
+      reconstructed,
+    );
+
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toMatchObject({
+      id: "with-header",
+      workoutName: "Push — z oceną",
+      rating: 5,
+      note: "Dobry trening",
+    });
+    expect(merged[1]).toMatchObject({ id: "old-only", workoutId: "w-old" });
   });
 });
