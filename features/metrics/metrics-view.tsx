@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { useMetricsStore } from "@/store";
+import { useMetricsStore, useProfileStore } from "@/store";
 import type { BodyMetricKey, BodyMetricRecord } from "@/types";
 import { ComparativeChart } from "./comparative-chart";
 import { GoalProgressCard } from "./goal-progress-card";
@@ -27,8 +27,8 @@ import { WeightChart } from "./weight-chart";
 export function MetricsView() {
   const t = useDictionary();
   const records = useMetricsStore((s) => s.records);
-  const goal = useMetricsStore((s) => s.goal);
   const upsert = useMetricsStore((s) => s.upsert);
+  const profile = useProfileStore((s) => s.profile);
 
   const [metric, setMetric] = useState<BodyMetricKey>("weightKg");
   const [primary, setPrimary] = useState<BodyMetricKey>("weightKg");
@@ -66,7 +66,19 @@ export function MetricsView() {
             </CardHeader>
             <CardContent className="space-y-3">
               <MetricSelector value={metric} onChange={setMetric} />
-              <WeightChart records={records} metric={metric} goal={goal} />
+              <WeightChart
+                records={records}
+                metric={metric}
+                goal={
+                  profile?.targetWeightKg != null
+                    ? {
+                        metric: "weightKg",
+                        startKg: profile.currentWeightKg ?? profile.targetWeightKg,
+                        targetKg: profile.targetWeightKg,
+                      }
+                    : null
+                }
+              />
             </CardContent>
           </Card>
         </div>
