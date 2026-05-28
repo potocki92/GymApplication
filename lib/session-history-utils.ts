@@ -1,6 +1,7 @@
 import type {
   ActiveExercise,
   CompletedSession,
+  ExerciseHistoryRecord,
   SessionHistoryRecord,
 } from "@/types";
 
@@ -48,4 +49,56 @@ export function buildSessionHistoryRecord(
     avgHrBpm: session.heartRate?.avgBpm,
     maxHrBpm: session.heartRate?.maxBpm,
   };
+}
+
+export function buildSessionHistoryRecordsFromSets(
+  records: ExerciseHistoryRecord[],
+  workoutNames: ReadonlyMap<string, string> = new Map(),
+): SessionHistoryRecord[] {
+  const grouped = new Map<string, ExerciseHistoryRecord[]>();
+
+  for (const record of records) {
+    const sessionRecords = grouped.get(record.sessionId) ?? [];
+    sessionRecords.push(record);
+    grouped.set(record.sessionId, sessionRecords);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([sessionId, sessionRecords]) => {
+      const sorted = [...sessionRecords].sort(
+        (a, b) => a.completedAt - b.completedAt,
+      );
+      const first = sorted[0];
+      const last = sorted.at(-1);
+
+      if (!first || !last) return null;
+
+      const workoutId = first.workoutId;
+      const totalVolumeKg = sessionRecords.reduce(
+        (sum, record) => sum + record.reps * record.weightKg,
+        0,
+      );
+      const repsCompleted = sessionRecords.reduce(
+        (sum, record) => sum + record.reps,
+        0,
+      );
+      const exercisesCount = new Set(
+        sessionRecords.map((record) => record.exerciseId),
+      ).size;
+
+      return {
+        id: sessionId,
+        workoutId,
+        workoutName: workoutNames.get(workoutId) ?? "Trening",
+        startedAt: first.completedAt,
+        finishedAt: last.completedAt,
+        totalActiveMs: Math.max(0, last.completedAt - first.completedAt),
+        totalVolumeKg: Math.round(totalVolumeKg * 100) / 100,
+        exercisesCount,
+        setsCompleted: sessionRecords.length,
+        repsCompleted,
+      } satisfies SessionHistoryRecord;
+    })
+    .filter((record): record is SessionHistoryRecord => record != null)
+    .sort((a, b) => b.finishedAt - a.finishedAt);
 }

@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { ExerciseHistoryRecord } from "@/types";
 
-interface HistoryRow {
+export interface HistoryRow {
   id: string;
   user_id: string;
   exercise_id: string;

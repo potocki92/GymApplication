@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
-import { appendHistory, clearAllHistory, loadAllHistory } from "@/lib/idb-history";
+import {
+  appendHistory,
+  clearAllHistory,
+  loadAllHistory,
+} from "@/lib/idb-history";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   appendHistoryToSupabase,
@@ -32,8 +36,30 @@ function activeUser() {
   return useAuthStore.getState().user;
 }
 
+async function waitForAuthInitialization(): Promise<void> {
+  if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
+
+  await new Promise<void>((resolve) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
+      if (!state.initialized) return;
+      unsubscribe();
+      resolve();
+    });
+
+    if (useAuthStore.getState().initialized) {
+      unsubscribe();
+      resolve();
+    }
+  });
+}
+
+async function activeUserAfterAuth() {
+  await waitForAuthInitialization();
+  return activeUser();
+}
+
 async function loadInitial(): Promise<ExerciseHistoryRecord[]> {
-  const user = activeUser();
+  const user = await activeUserAfterAuth();
   if (user) return loadHistoryFromSupabase(user.id);
   return loadAllHistory();
 }
@@ -56,14 +82,14 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   appendMany: async (records) => {
     if (records.length === 0) return;
     set((s) => ({ records: [...s.records, ...records] }));
-    const user = activeUser();
+    const user = await activeUserAfterAuth();
     if (user) await appendHistoryToSupabase(records, user.id);
     else await appendHistory(records);
   },
 
   clear: async () => {
     set({ records: [] });
-    const user = activeUser();
+    const user = await activeUserAfterAuth();
     if (user) await clearHistoryFromSupabase(user.id);
     else await clearAllHistory();
   },

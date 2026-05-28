@@ -1,7 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { SessionHistoryRecord } from "@/types";
+import { mapRowToRecord, type HistoryRow } from "@/lib/supabase-history";
+import { buildSessionHistoryRecordsFromSets } from "@/lib/session-history-utils";
+import type { ExerciseHistoryRecord, SessionHistoryRecord } from "@/types";
+
+interface WorkoutNameRow {
+  id: string;
+  name: string | null;
+}
 
 interface SessionRow {
   id: string;
@@ -73,6 +80,33 @@ function getClient(): SupabaseClient | null {
   return getSupabaseClient();
 }
 
+async function loadSessionsFromSetHistory(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<SessionHistoryRecord[]> {
+  const [historyRes, workoutsRes] = await Promise.all([
+    supabase
+      .from("exercise_history")
+      .select("*")
+      .eq("user_id", userId)
+      .order("completed_at", { ascending: false }),
+    supabase.from("workouts").select("id,name").eq("user_id", userId),
+  ]);
+
+  if (historyRes.error || !historyRes.data) return [];
+
+  const workoutNames = new Map(
+    ((workoutsRes.data as WorkoutNameRow[] | null) ?? [])
+      .filter((row) => row.name)
+      .map((row) => [row.id, row.name as string]),
+  );
+  const records: ExerciseHistoryRecord[] = (
+    historyRes.data as HistoryRow[]
+  ).map(mapRowToRecord);
+
+  return buildSessionHistoryRecordsFromSets(records, workoutNames);
+}
+
 export async function loadSessionsFromSupabase(
   userId: string,
 ): Promise<SessionHistoryRecord[]> {
@@ -83,8 +117,12 @@ export async function loadSessionsFromSupabase(
     .select("*")
     .eq("user_id", userId)
     .order("finished_at", { ascending: false });
-  if (error || !data) return [];
-  return (data as SessionRow[]).map(mapRowToSession);
+
+  if (!error && data && data.length > 0) {
+    return (data as SessionRow[]).map(mapRowToSession);
+  }
+
+  return loadSessionsFromSetHistory(supabase, userId);
 }
 
 export async function upsertSessionToSupabase(
