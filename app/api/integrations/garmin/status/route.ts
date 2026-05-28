@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { canUseGarminIntegration } from "@/lib/garmin/access";
 import { shouldUseMockGarmin } from "@/lib/garmin/config";
 import { getServerSupabaseClient } from "@/lib/supabase/server";
 import {
@@ -19,6 +20,10 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  if (!(await canUseGarminIntegration(supabase, user))) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   const [integration, recentActivities, recentLogs] = await Promise.all([
     fetchGarminIntegrationSafe(supabase, user.id),
     fetchRecentGarminActivities(supabase, user.id, 10),
@@ -30,5 +35,6 @@ export async function GET() {
     recentActivities,
     recentLogs,
     demoMode: shouldUseMockGarmin(),
+    available: true,
   });
 }

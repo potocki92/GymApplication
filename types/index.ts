@@ -77,3 +77,26 @@ export {
   PROGRESS_POSES,
   PROGRESS_PHOTO_SCHEMA_VERSION,
 } from "./progress-photo";
+
+export type {
+  AppAccessUser,
+  AssignedTrainingPlanRecord,
+  FeatureCategory,
+  FeatureDefinition,
+  FeatureKey,
+  FeatureVisibility,
+  OrganizationMemberRecord,
+  OrganizationMemberRole,
+  OrganizationRecord,
+  PlanDefinition,
+  SubscriptionPlanId,
+  SubscriptionRecord,
+  SubscriptionStatus,
+  TrainerClientRecord,
+  TrainerClientStatus,
+  TrainingPlanRecord,
+  TrainingPlanStatus,
+  UserFeatureGrant,
+  UserRole,
+  WorkoutResultRecord,
+} from "./access-control";

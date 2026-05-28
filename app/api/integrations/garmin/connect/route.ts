@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
+import { canUseGarminIntegration } from "@/lib/garmin/access";
 import { shouldUseMockGarmin } from "@/lib/garmin/config";
 import {
   buildAuthorizeUrl,
@@ -38,6 +39,10 @@ export async function GET(request: NextRequest) {
   }
 
   const { origin } = new URL(request.url);
+
+  if (!(await canUseGarminIntegration(supabase, user))) {
+    return NextResponse.redirect(`${origin}/integrations?error=forbidden`);
+  }
 
   if (shouldUseMockGarmin()) {
     await upsertGarminIntegration(supabase, user.id, {
