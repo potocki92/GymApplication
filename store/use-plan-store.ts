@@ -247,27 +247,31 @@ export function selectNextWorkout(
   const referenceWeekStart = weekStartISO(parseLocalDate(referenceDateISO));
   const todayIndex = weekdayIndexFromISO(referenceDateISO);
 
-  return plan.days
-    .map((day) => {
-      if (day.rest || !day.workout) return null;
-      const weekdayIndex = WEEKDAY_ORDER.indexOf(day.weekday);
-      return {
-        workout: {
-          ...day.workout,
-          date: addDaysISO(referenceWeekStart, weekdayIndex),
-        },
-        weekdayIndex,
-      };
-    })
-    .filter((item): item is { workout: Workout; weekdayIndex: number } => {
-      if (!item) return false;
-      return (
-        item.weekdayIndex >= todayIndex &&
-        !item.workout.completed &&
-        !completedWorkoutIds.has(item.workout.id)
-      );
-    })
-    .sort((a, b) => a.weekdayIndex - b.weekdayIndex)[0]?.workout;
+  let nextWorkout: { workout: Workout; weekdayIndex: number } | undefined;
+
+  for (const day of plan.days) {
+    if (day.rest || !day.workout) continue;
+
+    const weekdayIndex = WEEKDAY_ORDER.indexOf(day.weekday);
+    const workout: Workout = {
+      ...day.workout,
+      date: addDaysISO(referenceWeekStart, weekdayIndex),
+    };
+
+    if (
+      weekdayIndex < todayIndex ||
+      workout.completed ||
+      completedWorkoutIds.has(workout.id)
+    ) {
+      continue;
+    }
+
+    if (!nextWorkout || weekdayIndex < nextWorkout.weekdayIndex) {
+      nextWorkout = { workout, weekdayIndex };
+    }
+  }
+
+  return nextWorkout?.workout;
 }
 
 /** Days that fall strictly after the reference date (for the "upcoming" list). */
