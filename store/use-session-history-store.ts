@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
 import {
   clearAllSessions,
   deleteSession,
@@ -55,8 +56,14 @@ async function activeUserAfterAuth() {
 
 async function loadInitial(): Promise<SessionHistoryRecord[]> {
   const user = await activeUserAfterAuth();
-  if (user) return loadSessionsFromSupabase(user.id);
-  return loadAllSessions();
+  if (!user) return loadAllSessions();
+
+  const cached = readDashboardCache<SessionHistoryRecord[]>("sessions", user.id);
+  if (cached) return cached;
+
+  const sessions = await loadSessionsFromSupabase(user.id);
+  writeDashboardCache("sessions", user.id, sessions);
+  return sessions;
 }
 
 export const useSessionHistoryStore = create<SessionHistoryState>(
@@ -86,15 +93,23 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
         return { sessions: [record, ...s.sessions] };
       });
       const user = await activeUserAfterAuth();
-      if (user) await upsertSessionToSupabase(record, user.id);
-      else await putSession(record);
+      if (user) {
+        writeDashboardCache("sessions", user.id, get().sessions);
+        await upsertSessionToSupabase(record, user.id);
+      } else {
+        await putSession(record);
+      }
     },
 
     remove: async (id) => {
       set((s) => ({ sessions: s.sessions.filter((x) => x.id !== id) }));
       const user = await activeUserAfterAuth();
-      if (user) await deleteSessionFromSupabase(id, user.id);
-      else await deleteSession(id);
+      if (user) {
+        writeDashboardCache("sessions", user.id, get().sessions);
+        await deleteSessionFromSupabase(id, user.id);
+      } else {
+        await deleteSession(id);
+      }
     },
 
     clear: async () => {
@@ -102,6 +117,7 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
       set({ sessions: [] });
       const user = await activeUserAfterAuth();
       if (user) {
+        writeDashboardCache("sessions", user.id, []);
         for (const id of ids) await deleteSessionFromSupabase(id, user.id);
       } else {
         await clearAllSessions();

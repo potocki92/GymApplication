@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { REFERENCE_TODAY, WEEKLY_PLAN } from "@/data";
 import { WEEKDAY_ORDER } from "@/lib/constants";
+import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   loadPlanFromSupabase,
@@ -112,11 +113,41 @@ function activeUserId(): string | null {
   return useAuthStore.getState().user?.id ?? null;
 }
 
+async function waitForAuthInitialization(): Promise<void> {
+  if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
+
+  await new Promise<void>((resolve) => {
+    const subscription: { unsubscribe?: () => void } = {};
+    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+      if (!state.initialized) return;
+      subscription.unsubscribe?.();
+      resolve();
+    });
+
+    if (useAuthStore.getState().initialized) {
+      subscription.unsubscribe();
+      resolve();
+    }
+  });
+}
+
 async function loadInitialPlan(): Promise<WeeklyPlan> {
   if (!isSupabaseConfigured()) return WEEKLY_PLAN;
+  await waitForAuthInitialization();
   const userId = activeUserId();
   if (!userId) return emptyPlan();
-  return loadPlanFromSupabase(userId);
+
+  const cached = readDashboardCache<WeeklyPlan>("plan", userId);
+  if (cached) return cached;
+
+  const plan = await loadPlanFromSupabase(userId);
+  writeDashboardCache("plan", userId, plan);
+  return plan;
+}
+
+function cacheCurrentPlan(plan: WeeklyPlan): void {
+  const userId = activeUserId();
+  if (userId) writeDashboardCache("plan", userId, plan);
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -144,6 +175,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         workout: next,
       }),
     }));
+    cacheCurrentPlan(get().plan);
     const userId = activeUserId();
     if (userId) void upsertWorkoutToSupabase(weekday, next, userId);
   },
@@ -158,6 +190,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         workout: next,
       }),
     }));
+    cacheCurrentPlan(get().plan);
     const userId = activeUserId();
     if (userId) void upsertWorkoutToSupabase(weekday, next, userId);
   },
@@ -166,6 +199,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     set((state) => ({
       plan: replaceDay(state.plan, weekday, { weekday, rest: false }),
     }));
+    cacheCurrentPlan(get().plan);
     const userId = activeUserId();
     if (userId) void removeWorkoutFromSupabase(weekday, userId);
   },
@@ -174,6 +208,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     set((state) => ({
       plan: replaceDay(state.plan, weekday, { weekday, rest: true }),
     }));
+    cacheCurrentPlan(get().plan);
     const userId = activeUserId();
     if (userId) void setRestInSupabase(weekday, userId);
   },
@@ -192,6 +227,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       };
     });
     if (nextCompleted !== null) {
+      cacheCurrentPlan(get().plan);
       const userId = activeUserId();
       if (userId) void setCompletedInSupabase(weekday, userId, nextCompleted);
     }
@@ -214,6 +250,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     });
 
     if (changedWeekday !== null) {
+      cacheCurrentPlan(get().plan);
       const userId = activeUserId();
       if (userId) {
         try {

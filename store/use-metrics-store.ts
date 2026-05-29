@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
 import {
   deleteMetric,
   loadAllMetrics,
@@ -40,17 +41,50 @@ function activeUser() {
   return useAuthStore.getState().user;
 }
 
+async function waitForAuthInitialization(): Promise<void> {
+  if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
+
+  await new Promise<void>((resolve) => {
+    const subscription: { unsubscribe?: () => void } = {};
+    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+      if (!state.initialized) return;
+      subscription.unsubscribe?.();
+      resolve();
+    });
+
+    if (useAuthStore.getState().initialized) {
+      subscription.unsubscribe();
+      resolve();
+    }
+  });
+}
+
+interface MetricsCache {
+  records: BodyMetricRecord[];
+  goal: BodyMetricGoal | null;
+}
+
+function cacheCurrentMetrics(userId: string, data: MetricsCache): void {
+  writeDashboardCache("metrics", userId, data);
+}
+
 async function loadInitial(): Promise<{
   records: BodyMetricRecord[];
   goal: BodyMetricGoal | null;
 }> {
+  await waitForAuthInitialization();
   const user = activeUser();
   if (user) {
+    const cached = readDashboardCache<MetricsCache>("metrics", user.id);
+    if (cached) return cached;
+
     const [records, goal] = await Promise.all([
       loadMetricsFromSupabase(user.id),
       loadGoalFromSupabase(user.id),
     ]);
-    return { records, goal };
+    const data = { records, goal };
+    cacheCurrentMetrics(user.id, data);
+    return data;
   }
   const [records, goal] = await Promise.all([loadAllMetrics(), loadGoal()]);
   return { records, goal };
@@ -82,21 +116,33 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
       return { records: next };
     });
     const user = activeUser();
-    if (user) await upsertMetricToSupabase(record, user.id);
-    else await putMetric(record);
+    if (user) {
+      cacheCurrentMetrics(user.id, { records: get().records, goal: get().goal });
+      await upsertMetricToSupabase(record, user.id);
+    } else {
+      await putMetric(record);
+    }
   },
 
   remove: async (id) => {
     set((s) => ({ records: s.records.filter((r) => r.id !== id) }));
     const user = activeUser();
-    if (user) await deleteMetricFromSupabase(id, user.id);
-    else await deleteMetric(id);
+    if (user) {
+      cacheCurrentMetrics(user.id, { records: get().records, goal: get().goal });
+      await deleteMetricFromSupabase(id, user.id);
+    } else {
+      await deleteMetric(id);
+    }
   },
 
   setGoal: async (goal) => {
     set({ goal });
     const user = activeUser();
-    if (user) await saveGoalToSupabase(goal, user.id);
-    else await saveGoal(goal);
+    if (user) {
+      cacheCurrentMetrics(user.id, { records: get().records, goal });
+      await saveGoalToSupabase(goal, user.id);
+    } else {
+      await saveGoal(goal);
+    }
   },
 }));

@@ -29,33 +29,37 @@ function metric(partial: Partial<BodyMetricRecord> & { date: string }): BodyMetr
 }
 
 function session(partial: Partial<SessionHistoryRecord> & { id: string; finishedAt: number }): SessionHistoryRecord {
+  const { id, finishedAt, ...rest } = partial;
+
   return {
-    id: partial.id,
     workoutId: "w1",
     workoutName: "Test",
-    startedAt: partial.finishedAt - 60_000,
-    finishedAt: partial.finishedAt,
     totalActiveMs: 60_000,
     totalVolumeKg: 1000,
     exercisesCount: 3,
     setsCompleted: 9,
     repsCompleted: 90,
-    ...partial,
+    ...rest,
+    id,
+    startedAt: finishedAt - 60_000,
+    finishedAt,
   };
 }
 
 function exHistory(partial: Partial<ExerciseHistoryRecord> & { id: string; completedAt: number; oneRMKg: number; exerciseId: string }): ExerciseHistoryRecord {
+  const { id, exerciseId, completedAt, oneRMKg, ...rest } = partial;
+
   return {
-    id: partial.id,
-    exerciseId: partial.exerciseId,
     workoutId: "w1",
     sessionId: "s1",
     setNumber: 1,
     reps: 5,
     weightKg: 100,
-    completedAt: partial.completedAt,
-    oneRMKg: partial.oneRMKg,
-    ...partial,
+    ...rest,
+    id,
+    exerciseId,
+    completedAt,
+    oneRMKg,
   };
 }
 
