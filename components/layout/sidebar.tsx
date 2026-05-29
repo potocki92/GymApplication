@@ -25,14 +25,14 @@ export function Sidebar() {
       {/* Brand */}
       <Link
         href="/"
-        className="mb-4 flex items-center justify-center rounded-xl px-2.5 py-1.5 lg:justify-start lg:px-2"
+        className="mb-4 flex w-10 items-center justify-start overflow-hidden rounded-xl px-0 py-1.5 lg:w-36"
         aria-label="REPIFY"
       >
         <LogoText
           width={148}
           preload
           alt=""
-          className="w-full max-w-36 lg:w-36"
+          className="w-36 max-w-none"
         />
       </Link>
 
