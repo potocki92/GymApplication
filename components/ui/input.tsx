@@ -17,17 +17,28 @@ const inputVariants = cva(
   }
 )
 
+const nativeDateInputClassName =
+  "block max-w-full appearance-none [&::-webkit-date-and-time-value]:min-h-[1.5em] [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:inline-flex [&::-webkit-datetime-edit]:items-center [&::-webkit-datetime-edit-fields-wrapper]:p-0"
+
+const nativeDateInputTypes = new Set(["date", "datetime-local", "month", "time", "week"])
+
 function Input({
   className,
   type,
   size,
   ...props
 }: Omit<React.ComponentProps<"input">, "size"> & VariantProps<typeof inputVariants>) {
+  const isNativeDateInput = typeof type === "string" && nativeDateInputTypes.has(type)
+
   return (
     <input
       type={type}
       data-slot="input"
-      className={cn(inputVariants({ size, className }))}
+      className={cn(
+        inputVariants({ size }),
+        isNativeDateInput && nativeDateInputClassName,
+        className
+      )}
       {...props}
     />
   )
