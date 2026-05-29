@@ -362,6 +362,44 @@ export const EXERCISES: Exercise[] = [
     muscleGroup: "biceps",
     category: "guma",
     image: "/images/exercises/band/band_biceps_curl.webp",
+    animationUrl: "/images/exercises/band/band_biceps_curl.webp",
+    instructions: [
+      {
+        title: "Pozycja startowa",
+        description:
+          "Stań prosto, chwyć gumę oburącz i trzymaj łokcie blisko tułowia.",
+      },
+      {
+        title: "Faza ruchu",
+        description:
+          "Uginaj ramiona, prowadząc dłonie w stronę barków bez bujania tułowiem.",
+      },
+      {
+        title: "Powrót",
+        description:
+          "Opuszczaj dłonie powoli, utrzymując napięcie gumy do pozycji startowej.",
+      },
+      {
+        title: "Oddychanie",
+        description:
+          "Zrób wydech podczas uginania i spokojny wdech przy kontrolowanym opuszczaniu.",
+      },
+    ],
+    muscles: {
+      primary: ["Biceps"],
+      secondary: ["Przedramiona", "Mięśnie stabilizujące"],
+    },
+    tips: [
+      "Nie bujaj tułowiem.",
+      "Kontroluj ruch opuszczania.",
+      "Nie blokuj łokci.",
+      "Zachowaj pełny zakres ruchu.",
+    ],
+    mistakes: [
+      "Zbyt szybkie opuszczanie ciężaru.",
+      "Odchylanie pleców.",
+      "Niepełny zakres ruchu.",
+    ],
     defaultSets: 3,
     defaultReps: "12-15",
     defaultRestSec: 60,

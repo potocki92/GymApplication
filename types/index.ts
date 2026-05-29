@@ -1,4 +1,10 @@
-export type { Exercise, ExerciseCategory, MuscleGroup } from "./exercise";
+export type {
+  Exercise,
+  ExerciseCategory,
+  ExerciseTechniqueMuscles,
+  ExerciseTechniqueStep,
+  MuscleGroup,
+} from "./exercise";
 export type { Workout, WorkoutExercise, WorkoutType } from "./workout";
 export type { Weekday, WeeklyPlan, WorkoutDay } from "./plan";
 export type { ActivityDay, ActivityLevel } from "./stats";
