@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu } from "lucide-react";
 
-import { LogoLockup } from "@/components/shared/logo";
+import { Logo, Wordmark } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -34,16 +34,26 @@ export function MobileNavDrawer() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon-lg" aria-label={t.nav.menu} className="rounded-full">
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label={t.nav.menu}
+          className="rounded-full"
+        >
           <Menu className="size-5" />
         </Button>
       </SheetTrigger>
 
       <SheetContent side="left" className="w-72 gap-0 p-0">
-        <SheetHeader className="border-b border-border p-4">
+        <SheetHeader className="border-b border-border p-4 pr-12">
           <SheetTitle className="sr-only">REPIFY</SheetTitle>
-          <SheetDescription className="sr-only">{t.app.tagline}</SheetDescription>
-          <LogoLockup width={132} />
+          <SheetDescription className="sr-only">
+            {t.app.tagline}
+          </SheetDescription>
+          <div className="flex items-center gap-2.5" aria-hidden="true">
+            <Logo size={40} alt="" className="rounded-xl" />
+            <Wordmark withTagline />
+          </div>
         </SheetHeader>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
