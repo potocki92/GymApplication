@@ -30,9 +30,6 @@ const schema = profileSettingsSchema.pick({
   heightCm: true,
 });
 
-const birthDateInputClassName =
-  "block max-w-full appearance-none [&::-webkit-date-and-time-value]:min-h-[1.5em] [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:inline-flex [&::-webkit-datetime-edit]:items-center [&::-webkit-datetime-edit-fields-wrapper]:p-0";
-
 type FormValues = {
   displayName?: string;
   gender?: Gender;
@@ -125,7 +122,6 @@ export function ProfileSection({ profile }: { profile: UserProfile }) {
         <Input
           id="birthDate"
           type="date"
-          className={birthDateInputClassName}
           {...form.register("birthDate")}
         />
       </FormField>
