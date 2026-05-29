@@ -5,6 +5,7 @@ import { profilePatchToRow } from "@/lib/supabase-profile";
 describe("profilePatchToRow", () => {
   it("maps camelCase keys to snake_case columns", () => {
     const row = profilePatchToRow({
+      displayName: "Anna",
       heightCm: 180,
       trainingDaysPerWeek: 5,
       unitsWeight: "kg",
@@ -13,6 +14,7 @@ describe("profilePatchToRow", () => {
     });
 
     expect(row).toEqual({
+      display_name: "Anna",
       height_cm: 180,
       training_days_per_week: 5,
       units_weight: "kg",

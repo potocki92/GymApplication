@@ -89,6 +89,16 @@ describe("profileSettingsSchema", () => {
     expect(r.success).toBe(true);
   });
 
+  it("accepts a profile display name", () => {
+    const r = profileSettingsSchema.safeParse({ displayName: "Anna" });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects overly long profile display names", () => {
+    const r = profileSettingsSchema.safeParse({ displayName: "A".repeat(81) });
+    expect(r.success).toBe(false);
+  });
+
   it("still rejects invalid values when present", () => {
     const r = profileSettingsSchema.safeParse({ heightCm: 999 });
     expect(r.success).toBe(false);
