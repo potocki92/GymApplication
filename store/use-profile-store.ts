@@ -1,5 +1,9 @@
 import { create } from "zustand";
 
+import {
+  readDashboardCacheEntry,
+  writeDashboardCache,
+} from "@/lib/dashboard-cache";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
@@ -27,6 +31,31 @@ function activeUserId(): string | null {
   return useAuthStore.getState().user?.id ?? null;
 }
 
+async function waitForAuthInitialization(): Promise<void> {
+  if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
+
+  await new Promise<void>((resolve) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
+      if (!state.initialized) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
+async function loadCachedOrRemoteProfile(): Promise<UserProfile | null> {
+  await waitForAuthInitialization();
+  const userId = activeUserId();
+  if (!userId) return null;
+
+  const cached = readDashboardCacheEntry<UserProfile | null>("profile", userId);
+  if (cached) return cached.data;
+
+  const profile = await fetchProfileFromSupabase(userId);
+  writeDashboardCache("profile", userId, profile);
+  return profile;
+}
+
 /**
  * Resolves the current user id, falling back to `supabase.auth.getUser()` when
  * the auth store hasn't been populated. This matters on the onboarding page,
@@ -52,24 +81,14 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
   hydrate: async () => {
     if (get().hydrated) return;
-    const userId = activeUserId();
-    if (!userId) {
-      set({ profile: null, hydrated: true });
-      return;
-    }
     set({ loading: true, error: null });
-    const profile = await fetchProfileFromSupabase(userId);
+    const profile = await loadCachedOrRemoteProfile();
     set({ profile, hydrated: true, loading: false });
   },
 
   rehydrate: async () => {
-    const userId = activeUserId();
-    if (!userId) {
-      set({ profile: null, hydrated: true, loading: false });
-      return;
-    }
     set({ loading: true, error: null });
-    const profile = await fetchProfileFromSupabase(userId);
+    const profile = await loadCachedOrRemoteProfile();
     set({ profile, hydrated: true, loading: false });
   },
 
@@ -87,7 +106,10 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const next = await upsertProfileToSupabase(userId, patch);
-      if (next) set({ profile: next });
+      if (next) {
+        set({ profile: next });
+        writeDashboardCache("profile", userId, next);
+      }
       return next;
     } catch (e) {
       if (previous) set({ profile: previous });

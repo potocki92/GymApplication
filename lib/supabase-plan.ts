@@ -58,6 +58,10 @@ function getClient(): SupabaseClient | null {
   return getSupabaseClient();
 }
 
+function throwIfSupabaseError(error: { message?: string } | null): void {
+  if (error) throw new Error(error.message ?? "Supabase write failed");
+}
+
 function emptyPlan(): WeeklyPlan {
   return {
     id: "plan-user",
@@ -120,7 +124,7 @@ export async function upsertWorkoutToSupabase(
   const supabase = getClient();
   if (!supabase) return;
 
-  await supabase.from("workouts").upsert(
+  const { error: workoutError } = await supabase.from("workouts").upsert(
     {
       id: workout.id,
       user_id: userId,
@@ -137,9 +141,16 @@ export async function upsertWorkoutToSupabase(
 
   // Replace-all is cheap (a handful of rows per workout) and avoids tracking
   // per-exercise diffs against the previous state.
-  await supabase.from("workout_exercises").delete().eq("workout_id", workout.id);
+  throwIfSupabaseError(workoutError);
+
+  const { error: deleteExercisesError } = await supabase
+    .from("workout_exercises")
+    .delete()
+    .eq("workout_id", workout.id);
+  throwIfSupabaseError(deleteExercisesError);
+
   if (workout.exercises.length > 0) {
-    await supabase.from("workout_exercises").insert(
+    const { error: insertExercisesError } = await supabase.from("workout_exercises").insert(
       workout.exercises.map((ex, idx) => ({
         id: ex.id,
         workout_id: workout.id,
@@ -152,6 +163,7 @@ export async function upsertWorkoutToSupabase(
         rest_sec: ex.restSec,
       })),
     );
+    throwIfSupabaseError(insertExercisesError);
   }
 }
 
@@ -162,11 +174,12 @@ export async function removeWorkoutFromSupabase(
   const supabase = getClient();
   if (!supabase) return;
   // cascade on workout_exercises via FK
-  await supabase
+  const { error } = await supabase
     .from("workouts")
     .delete()
     .eq("user_id", userId)
     .eq("weekday", weekday);
+  throwIfSupabaseError(error);
 }
 
 export async function setRestInSupabase(
@@ -177,12 +190,14 @@ export async function setRestInSupabase(
   if (!supabase) return;
   // Delete any prior workout for this slot (drops exercises via cascade) and
   // upsert a marker row with rest=true.
-  await supabase
+  const { error: deleteError } = await supabase
     .from("workouts")
     .delete()
     .eq("user_id", userId)
     .eq("weekday", weekday);
-  await supabase.from("workouts").insert({
+  throwIfSupabaseError(deleteError);
+
+  const { error: insertError } = await supabase.from("workouts").insert({
     id: `rest-${userId}-${weekday}`,
     user_id: userId,
     weekday,
@@ -192,6 +207,7 @@ export async function setRestInSupabase(
     estimated_duration_min: 0,
     completed: false,
   });
+  throwIfSupabaseError(insertError);
 }
 
 export async function setCompletedInSupabase(
@@ -201,10 +217,11 @@ export async function setCompletedInSupabase(
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
-  await supabase
+  const { error } = await supabase
     .from("workouts")
     .update({ completed, updated_at: new Date().toISOString() })
     .eq("user_id", userId)
     .eq("weekday", weekday)
     .eq("rest", false);
+  throwIfSupabaseError(error);
 }

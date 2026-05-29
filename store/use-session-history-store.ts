@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
 import {
   clearAllSessions,
   deleteSession,
@@ -34,17 +35,11 @@ async function waitForAuthInitialization(): Promise<void> {
   if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
 
   await new Promise<void>((resolve) => {
-    const subscription: { unsubscribe?: () => void } = {};
-    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (!state.initialized) return;
-      subscription.unsubscribe?.();
+      unsubscribe();
       resolve();
     });
-
-    if (useAuthStore.getState().initialized) {
-      subscription.unsubscribe();
-      resolve();
-    }
   });
 }
 
@@ -55,8 +50,14 @@ async function activeUserAfterAuth() {
 
 async function loadInitial(): Promise<SessionHistoryRecord[]> {
   const user = await activeUserAfterAuth();
-  if (user) return loadSessionsFromSupabase(user.id);
-  return loadAllSessions();
+  if (!user) return loadAllSessions();
+
+  const cached = readDashboardCache<SessionHistoryRecord[]>("sessions", user.id);
+  if (cached) return cached;
+
+  const sessions = await loadSessionsFromSupabase(user.id);
+  writeDashboardCache("sessions", user.id, sessions);
+  return sessions;
 }
 
 export const useSessionHistoryStore = create<SessionHistoryState>(
@@ -86,15 +87,29 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
         return { sessions: [record, ...s.sessions] };
       });
       const user = await activeUserAfterAuth();
-      if (user) await upsertSessionToSupabase(record, user.id);
-      else await putSession(record);
+      if (user) {
+        const syncedSessions = get().sessions;
+        await upsertSessionToSupabase(record, user.id);
+        if (get().sessions === syncedSessions) {
+          writeDashboardCache("sessions", user.id, syncedSessions);
+        }
+      } else {
+        await putSession(record);
+      }
     },
 
     remove: async (id) => {
       set((s) => ({ sessions: s.sessions.filter((x) => x.id !== id) }));
       const user = await activeUserAfterAuth();
-      if (user) await deleteSessionFromSupabase(id, user.id);
-      else await deleteSession(id);
+      if (user) {
+        const syncedSessions = get().sessions;
+        await deleteSessionFromSupabase(id, user.id);
+        if (get().sessions === syncedSessions) {
+          writeDashboardCache("sessions", user.id, syncedSessions);
+        }
+      } else {
+        await deleteSession(id);
+      }
     },
 
     clear: async () => {
@@ -103,6 +118,9 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
       const user = await activeUserAfterAuth();
       if (user) {
         for (const id of ids) await deleteSessionFromSupabase(id, user.id);
+        if (get().sessions.length === 0) {
+          writeDashboardCache("sessions", user.id, []);
+        }
       } else {
         await clearAllSessions();
       }

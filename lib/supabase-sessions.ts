@@ -83,6 +83,10 @@ function getClient(): SupabaseClient | null {
   return getSupabaseClient();
 }
 
+function throwIfSupabaseError(error: { message?: string } | null): void {
+  if (error) throw new Error(error.message ?? "Supabase write failed");
+}
+
 async function loadSessionsFromSetHistory(
   supabase: SupabaseClient,
   userId: string,
@@ -165,9 +169,10 @@ export async function upsertSessionToSupabase(
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
-  await supabase
+  const { error } = await supabase
     .from("workout_sessions")
     .upsert(sessionToRow(record, userId), { onConflict: "id" });
+  throwIfSupabaseError(error);
 }
 
 export async function deleteSessionFromSupabase(
@@ -176,9 +181,10 @@ export async function deleteSessionFromSupabase(
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
-  await supabase
+  const { error } = await supabase
     .from("workout_sessions")
     .delete()
     .eq("id", id)
     .eq("user_id", userId);
+  throwIfSupabaseError(error);
 }
