@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, History, Trophy } from "lucide-react";
+import { ArrowLeft, BookOpen, History, Trophy } from "lucide-react";
 
 import { ExerciseIcon } from "@/components/shared/exercise-icon";
 import { MuscleBadge } from "@/components/shared/muscle-badge";
@@ -12,6 +13,8 @@ import { formatShortWeekdayDatePL } from "@/lib/format";
 import { bestPRForExercise, recentRecordsForExercise } from "@/lib/pr-utils";
 import { useHistoryStore } from "@/store";
 
+import { ExerciseTechniqueSheet } from "./components/exercise-technique-sheet";
+
 function epochToISODate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
@@ -20,6 +23,7 @@ export function ExerciseHistoryView({ exerciseId }: { exerciseId: string }) {
   const t = useDictionary();
   const exercise = getExerciseById(exerciseId);
   const records = useHistoryStore((s) => s.records);
+  const [isTechniqueOpen, setIsTechniqueOpen] = useState(false);
 
   if (!exercise) {
     return (
@@ -70,7 +74,23 @@ export function ExerciseHistoryView({ exerciseId }: { exerciseId: string }) {
             </span>
           </div>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          onClick={() => setIsTechniqueOpen(true)}
+        >
+          <BookOpen className="size-3.5" aria-hidden="true" />
+          {t.exercises.detail.technique}
+        </Button>
       </div>
+
+      <ExerciseTechniqueSheet
+        exercise={exercise}
+        isOpen={isTechniqueOpen}
+        onClose={() => setIsTechniqueOpen(false)}
+      />
 
       <div className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
         <div className="flex items-center gap-3">
