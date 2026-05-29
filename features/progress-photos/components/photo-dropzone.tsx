@@ -47,8 +47,8 @@ export function PhotoDropzone({ onFile, disabled, hasFile }: PhotoDropzoneProps)
         id={id}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-        // `capture` is a hint to mobile browsers to open the rear camera.
-        capture="environment"
+        // Do not set `capture`: on iOS Safari it can force the camera instead of
+        // presenting the system picker with the photo library option.
         className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
