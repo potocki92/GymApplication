@@ -146,8 +146,8 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
             <PhotoDropzone onFile={handleFile} disabled={uploading} hasFile={!!file} />
             {file ? <PhotoPreview file={file} /> : null}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="min-w-0 space-y-1.5">
                 <Label htmlFor="pp-date">{t.progressPhotos.fields.date}</Label>
                 <Input
                   id="pp-date"
@@ -158,10 +158,10 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
                   required
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label htmlFor="pp-pose">{t.progressPhotos.fields.pose}</Label>
                 <Select value={pose} onValueChange={(v) => setPose(v as ProgressPose)}>
-                  <SelectTrigger id="pp-pose">
+                  <SelectTrigger id="pp-pose" className="w-full min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
