@@ -106,3 +106,11 @@ export type {
   UserRole,
   WorkoutResultRecord,
 } from "./access-control";
+export type {
+  ActiveWorkoutSessionRecord,
+  AppendWorkoutSessionEventInput,
+  StartWorkoutSessionInput,
+  WorkoutSessionEventRecord,
+  WorkoutSessionJson,
+  WorkoutSessionPersistenceStatus,
+} from "./workout-session-event";
