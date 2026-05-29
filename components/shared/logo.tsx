@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import logoTextImage from "@/public/logo_text.webp";
 import { cn } from "@/lib/utils";
 
 /** The REPIFY sygnet (lime "R" + dumbbell on black) — used wherever a compact,
@@ -44,9 +45,7 @@ export function Logo({
 }
 
 const LOCKUP_RATIO = 728 / 760;
-const LOGO_TEXT_WIDTH = 2031;
-const LOGO_TEXT_HEIGHT = 774;
-const LOGO_TEXT_RATIO = LOGO_TEXT_HEIGHT / LOGO_TEXT_WIDTH;
+const LOGO_TEXT_RATIO = logoTextImage.height / logoTextImage.width;
 
 /** Horizontal REPIFY brand asset with text from public/logo_text.webp.
  *  Intended for app chrome placements where the logo should include the wordmark. */
@@ -63,7 +62,7 @@ export function LogoText({
 }) {
   return (
     <Image
-      src="/logo_text.webp"
+      src={logoTextImage}
       alt={alt}
       width={width}
       height={Math.round(width * LOGO_TEXT_RATIO)}

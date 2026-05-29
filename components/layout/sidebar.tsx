@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Logo, Wordmark } from "@/components/shared/logo";
+import { LogoText } from "@/components/shared/logo";
 import {
   Tooltip,
   TooltipContent,
@@ -25,11 +25,15 @@ export function Sidebar() {
       {/* Brand */}
       <Link
         href="/"
-        className="mb-4 flex items-center justify-center gap-3 rounded-xl px-2 py-1.5 lg:justify-start"
+        className="mb-4 flex w-10 items-center justify-start overflow-hidden rounded-xl px-0 py-1.5 lg:w-36"
         aria-label="REPIFY"
       >
-        <Logo size={40} alt="" className="size-10" />
-        <Wordmark withTagline className="hidden lg:flex" />
+        <LogoText
+          width={148}
+          preload
+          alt=""
+          className="w-36 max-w-none"
+        />
       </Link>
 
       {/* Navigation */}
