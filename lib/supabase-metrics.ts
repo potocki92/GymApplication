@@ -77,6 +77,10 @@ function getClient(): SupabaseClient | null {
   return getSupabaseClient();
 }
 
+function throwIfSupabaseError(error: { message?: string } | null): void {
+  if (error) throw new Error(error.message ?? "Supabase write failed");
+}
+
 export async function loadMetricsFromSupabase(
   userId: string,
 ): Promise<BodyMetricRecord[]> {
@@ -97,9 +101,10 @@ export async function upsertMetricToSupabase(
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
-  await supabase
+  const { error } = await supabase
     .from("body_metrics")
     .upsert(metricToRow(record, userId), { onConflict: "id" });
+  throwIfSupabaseError(error);
 }
 
 export async function deleteMetricFromSupabase(
@@ -108,7 +113,12 @@ export async function deleteMetricFromSupabase(
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
-  await supabase.from("body_metrics").delete().eq("id", id).eq("user_id", userId);
+  const { error } = await supabase
+    .from("body_metrics")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  throwIfSupabaseError(error);
 }
 
 export async function loadGoalFromSupabase(
@@ -137,10 +147,14 @@ export async function saveGoalToSupabase(
   const supabase = getClient();
   if (!supabase) return;
   if (goal == null) {
-    await supabase.from("body_metric_goals").delete().eq("user_id", userId);
+    const { error } = await supabase
+      .from("body_metric_goals")
+      .delete()
+      .eq("user_id", userId);
+    throwIfSupabaseError(error);
     return;
   }
-  await supabase
+  const { error } = await supabase
     .from("body_metric_goals")
     .upsert(
       {
@@ -152,4 +166,5 @@ export async function saveGoalToSupabase(
       },
       { onConflict: "user_id" },
     );
+  throwIfSupabaseError(error);
 }

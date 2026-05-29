@@ -117,17 +117,11 @@ async function waitForAuthInitialization(): Promise<void> {
   if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
 
   await new Promise<void>((resolve) => {
-    const subscription: { unsubscribe?: () => void } = {};
-    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (!state.initialized) return;
-      subscription.unsubscribe?.();
+      unsubscribe();
       resolve();
     });
-
-    if (useAuthStore.getState().initialized) {
-      subscription.unsubscribe();
-      resolve();
-    }
   });
 }
 
@@ -145,9 +139,21 @@ async function loadInitialPlan(): Promise<WeeklyPlan> {
   return plan;
 }
 
-function cacheCurrentPlan(plan: WeeklyPlan): void {
-  const userId = activeUserId();
-  if (userId) writeDashboardCache("plan", userId, plan);
+function cacheSyncedPlan(userId: string, plan: WeeklyPlan): void {
+  if (usePlanStore.getState().plan === plan) {
+    writeDashboardCache("plan", userId, plan);
+  }
+}
+
+function cachePlanAfterSync(
+  userId: string,
+  plan: WeeklyPlan,
+  sync: Promise<void>,
+  errorMessage: string,
+): void {
+  void sync
+    .then(() => cacheSyncedPlan(userId, plan))
+    .catch((error) => console.error(errorMessage, error));
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -175,9 +181,16 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         workout: next,
       }),
     }));
-    cacheCurrentPlan(get().plan);
+    const syncedPlan = get().plan;
     const userId = activeUserId();
-    if (userId) void upsertWorkoutToSupabase(weekday, next, userId);
+    if (userId) {
+      cachePlanAfterSync(
+        userId,
+        syncedPlan,
+        upsertWorkoutToSupabase(weekday, next, userId),
+        "Failed to sync added workout",
+      );
+    }
   },
 
   updateWorkout: (weekday, workout) => {
@@ -190,27 +203,48 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         workout: next,
       }),
     }));
-    cacheCurrentPlan(get().plan);
+    const syncedPlan = get().plan;
     const userId = activeUserId();
-    if (userId) void upsertWorkoutToSupabase(weekday, next, userId);
+    if (userId) {
+      cachePlanAfterSync(
+        userId,
+        syncedPlan,
+        upsertWorkoutToSupabase(weekday, next, userId),
+        "Failed to sync updated workout",
+      );
+    }
   },
 
   removeWorkout: (weekday) => {
     set((state) => ({
       plan: replaceDay(state.plan, weekday, { weekday, rest: false }),
     }));
-    cacheCurrentPlan(get().plan);
+    const syncedPlan = get().plan;
     const userId = activeUserId();
-    if (userId) void removeWorkoutFromSupabase(weekday, userId);
+    if (userId) {
+      cachePlanAfterSync(
+        userId,
+        syncedPlan,
+        removeWorkoutFromSupabase(weekday, userId),
+        "Failed to sync removed workout",
+      );
+    }
   },
 
   setRest: (weekday) => {
     set((state) => ({
       plan: replaceDay(state.plan, weekday, { weekday, rest: true }),
     }));
-    cacheCurrentPlan(get().plan);
+    const syncedPlan = get().plan;
     const userId = activeUserId();
-    if (userId) void setRestInSupabase(weekday, userId);
+    if (userId) {
+      cachePlanAfterSync(
+        userId,
+        syncedPlan,
+        setRestInSupabase(weekday, userId),
+        "Failed to sync rest day",
+      );
+    }
   },
 
   toggleCompleted: (weekday) => {
@@ -227,9 +261,16 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       };
     });
     if (nextCompleted !== null) {
-      cacheCurrentPlan(get().plan);
+      const syncedPlan = get().plan;
       const userId = activeUserId();
-      if (userId) void setCompletedInSupabase(weekday, userId, nextCompleted);
+      if (userId) {
+        cachePlanAfterSync(
+          userId,
+          syncedPlan,
+          setCompletedInSupabase(weekday, userId, nextCompleted),
+          "Failed to sync workout completion",
+        );
+      }
     }
   },
 
@@ -250,11 +291,12 @@ export const usePlanStore = create<PlanState>((set, get) => ({
     });
 
     if (changedWeekday !== null) {
-      cacheCurrentPlan(get().plan);
+      const syncedPlan = get().plan;
       const userId = activeUserId();
       if (userId) {
         try {
           await setCompletedInSupabase(changedWeekday, userId, completed);
+          cacheSyncedPlan(userId, syncedPlan);
         } catch (error) {
           console.error("Failed to sync workout completion", error);
         }

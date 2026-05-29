@@ -40,17 +40,11 @@ async function waitForAuthInitialization(): Promise<void> {
   if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
 
   await new Promise<void>((resolve) => {
-    const subscription: { unsubscribe?: () => void } = {};
-    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (!state.initialized) return;
-      subscription.unsubscribe?.();
+      unsubscribe();
       resolve();
     });
-
-    if (useAuthStore.getState().initialized) {
-      subscription.unsubscribe();
-      resolve();
-    }
   });
 }
 

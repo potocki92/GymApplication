@@ -45,17 +45,11 @@ async function waitForAuthInitialization(): Promise<void> {
   if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
 
   await new Promise<void>((resolve) => {
-    const subscription: { unsubscribe?: () => void } = {};
-    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (!state.initialized) return;
-      subscription.unsubscribe?.();
+      unsubscribe();
       resolve();
     });
-
-    if (useAuthStore.getState().initialized) {
-      subscription.unsubscribe();
-      resolve();
-    }
   });
 }
 
@@ -117,8 +111,14 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
     });
     const user = activeUser();
     if (user) {
-      cacheCurrentMetrics(user.id, { records: get().records, goal: get().goal });
+      const syncedMetrics = { records: get().records, goal: get().goal };
       await upsertMetricToSupabase(record, user.id);
+      if (
+        get().records === syncedMetrics.records &&
+        get().goal === syncedMetrics.goal
+      ) {
+        cacheCurrentMetrics(user.id, syncedMetrics);
+      }
     } else {
       await putMetric(record);
     }
@@ -128,8 +128,14 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
     set((s) => ({ records: s.records.filter((r) => r.id !== id) }));
     const user = activeUser();
     if (user) {
-      cacheCurrentMetrics(user.id, { records: get().records, goal: get().goal });
+      const syncedMetrics = { records: get().records, goal: get().goal };
       await deleteMetricFromSupabase(id, user.id);
+      if (
+        get().records === syncedMetrics.records &&
+        get().goal === syncedMetrics.goal
+      ) {
+        cacheCurrentMetrics(user.id, syncedMetrics);
+      }
     } else {
       await deleteMetric(id);
     }
@@ -139,8 +145,14 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
     set({ goal });
     const user = activeUser();
     if (user) {
-      cacheCurrentMetrics(user.id, { records: get().records, goal });
+      const syncedMetrics = { records: get().records, goal };
       await saveGoalToSupabase(goal, user.id);
+      if (
+        get().records === syncedMetrics.records &&
+        get().goal === syncedMetrics.goal
+      ) {
+        cacheCurrentMetrics(user.id, syncedMetrics);
+      }
     } else {
       await saveGoal(goal);
     }

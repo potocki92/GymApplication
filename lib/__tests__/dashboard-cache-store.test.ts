@@ -1,10 +1,14 @@
 import type { User } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { WeeklyPlan } from "@/types";
+import type { WeeklyPlan, Workout } from "@/types";
 
 const mocks = vi.hoisted(() => ({
   loadPlanFromSupabase: vi.fn<() => Promise<WeeklyPlan>>(),
+  removeWorkoutFromSupabase: vi.fn<() => Promise<void>>(),
+  setCompletedInSupabase: vi.fn<() => Promise<void>>(),
+  setRestInSupabase: vi.fn<() => Promise<void>>(),
+  upsertWorkoutToSupabase: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock("@/lib/supabase/config", () => ({
@@ -13,13 +17,17 @@ vi.mock("@/lib/supabase/config", () => ({
 
 vi.mock("@/lib/supabase-plan", () => ({
   loadPlanFromSupabase: mocks.loadPlanFromSupabase,
-  removeWorkoutFromSupabase: vi.fn(),
-  setCompletedInSupabase: vi.fn(),
-  setRestInSupabase: vi.fn(),
-  upsertWorkoutToSupabase: vi.fn(),
+  removeWorkoutFromSupabase: mocks.removeWorkoutFromSupabase,
+  setCompletedInSupabase: mocks.setCompletedInSupabase,
+  setRestInSupabase: mocks.setRestInSupabase,
+  upsertWorkoutToSupabase: mocks.upsertWorkoutToSupabase,
 }));
 
-import { DASHBOARD_CACHE_TTL_MS, writeDashboardCache } from "@/lib/dashboard-cache";
+import {
+  DASHBOARD_CACHE_TTL_MS,
+  readDashboardCache,
+  writeDashboardCache,
+} from "@/lib/dashboard-cache";
 import { useAuthStore } from "@/store/use-auth-store";
 import { usePlanStore } from "@/store/use-plan-store";
 
@@ -44,11 +52,41 @@ const REMOTE_PLAN: WeeklyPlan = {
   id: "remote-plan",
 };
 
+function workout(id: string): Workout {
+  return {
+    id,
+    name: id,
+    type: "Custom",
+    exercises: [],
+    estimatedDurationMin: 45,
+    completed: false,
+  };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function flushPromises(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   mocks.loadPlanFromSupabase.mockReset();
+  mocks.removeWorkoutFromSupabase.mockReset();
+  mocks.setCompletedInSupabase.mockReset();
+  mocks.setRestInSupabase.mockReset();
+  mocks.upsertWorkoutToSupabase.mockReset();
   useAuthStore.setState({ user: USER, initialized: true });
-  usePlanStore.setState({ hydrated: false });
+  usePlanStore.setState({ plan: CACHED_PLAN, hydrated: false });
 });
 
 describe("usePlanStore dashboard cache", () => {
@@ -85,5 +123,58 @@ describe("usePlanStore dashboard cache", () => {
 
     expect(usePlanStore.getState().plan.id).toBe("remote-plan");
     expect(mocks.loadPlanFromSupabase).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes optimistic plan changes to cache only after remote sync resolves", async () => {
+    const sync = deferred<void>();
+    mocks.upsertWorkoutToSupabase.mockReturnValueOnce(sync.promise);
+
+    usePlanStore.getState().addWorkout("monday", workout("delayed-sync"));
+
+    expect(readDashboardCache<WeeklyPlan>("plan", USER.id)).toBeNull();
+
+    sync.resolve();
+    await sync.promise;
+    await flushPromises();
+
+    expect(readDashboardCache<WeeklyPlan>("plan", USER.id)?.days[0].workout?.id)
+      .toBe("delayed-sync");
+  });
+
+  it("does not cache optimistic plan changes when remote sync rejects", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.upsertWorkoutToSupabase.mockRejectedValueOnce(new Error("network"));
+
+    usePlanStore.getState().addWorkout("monday", workout("failed-sync"));
+    await flushPromises();
+
+    expect(readDashboardCache<WeeklyPlan>("plan", USER.id)).toBeNull();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to sync added workout",
+      expect.any(Error),
+    );
+
+    consoleError.mockRestore();
+  });
+
+  it("does not overwrite cache with an older mutation when plan changes again before sync resolves", async () => {
+    const olderSync = deferred<void>();
+    mocks.upsertWorkoutToSupabase
+      .mockReturnValueOnce(olderSync.promise)
+      .mockResolvedValueOnce();
+
+    usePlanStore.getState().addWorkout("monday", workout("older-sync"));
+    usePlanStore.getState().updateWorkout("monday", workout("newer-sync"));
+    await flushPromises();
+
+    expect(readDashboardCache<WeeklyPlan>("plan", USER.id)?.days[0].workout?.id)
+      .toBe("newer-sync");
+
+    olderSync.resolve();
+    await olderSync.promise;
+    await flushPromises();
+
+    expect(readDashboardCache<WeeklyPlan>("plan", USER.id)?.days[0].workout?.id)
+      .toBe("newer-sync");
   });
 });

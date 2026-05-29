@@ -35,17 +35,11 @@ async function waitForAuthInitialization(): Promise<void> {
   if (!isSupabaseConfigured() || useAuthStore.getState().initialized) return;
 
   await new Promise<void>((resolve) => {
-    const subscription: { unsubscribe?: () => void } = {};
-    subscription.unsubscribe = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (!state.initialized) return;
-      subscription.unsubscribe?.();
+      unsubscribe();
       resolve();
     });
-
-    if (useAuthStore.getState().initialized) {
-      subscription.unsubscribe();
-      resolve();
-    }
   });
 }
 
@@ -94,8 +88,11 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
       });
       const user = await activeUserAfterAuth();
       if (user) {
-        writeDashboardCache("sessions", user.id, get().sessions);
+        const syncedSessions = get().sessions;
         await upsertSessionToSupabase(record, user.id);
+        if (get().sessions === syncedSessions) {
+          writeDashboardCache("sessions", user.id, syncedSessions);
+        }
       } else {
         await putSession(record);
       }
@@ -105,8 +102,11 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
       set((s) => ({ sessions: s.sessions.filter((x) => x.id !== id) }));
       const user = await activeUserAfterAuth();
       if (user) {
-        writeDashboardCache("sessions", user.id, get().sessions);
+        const syncedSessions = get().sessions;
         await deleteSessionFromSupabase(id, user.id);
+        if (get().sessions === syncedSessions) {
+          writeDashboardCache("sessions", user.id, syncedSessions);
+        }
       } else {
         await deleteSession(id);
       }
@@ -117,8 +117,10 @@ export const useSessionHistoryStore = create<SessionHistoryState>(
       set({ sessions: [] });
       const user = await activeUserAfterAuth();
       if (user) {
-        writeDashboardCache("sessions", user.id, []);
         for (const id of ids) await deleteSessionFromSupabase(id, user.id);
+        if (get().sessions.length === 0) {
+          writeDashboardCache("sessions", user.id, []);
+        }
       } else {
         await clearAllSessions();
       }
