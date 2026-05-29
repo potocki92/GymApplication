@@ -44,6 +44,35 @@ export function Logo({
 }
 
 const LOCKUP_RATIO = 728 / 760;
+const LOGO_TEXT_WIDTH = 2031;
+const LOGO_TEXT_HEIGHT = 774;
+const LOGO_TEXT_RATIO = LOGO_TEXT_HEIGHT / LOGO_TEXT_WIDTH;
+
+/** Horizontal REPIFY brand asset with text from public/logo_text.webp.
+ *  Intended for app chrome placements where the logo should include the wordmark. */
+export function LogoText({
+  width = 132,
+  className,
+  preload = false,
+  alt = "REPIFY — Train Smarter",
+}: {
+  width?: number;
+  className?: string;
+  preload?: boolean;
+  alt?: string;
+}) {
+  return (
+    <Image
+      src="/logo_text.webp"
+      alt={alt}
+      width={width}
+      height={Math.round(width * LOGO_TEXT_RATIO)}
+      preload={preload}
+      unoptimized
+      className={cn("block h-auto shrink-0", className)}
+    />
+  );
+}
 
 /** The full brand lockup (mark + REPIFY wordmark + TRAIN SMARTER tagline).
  *  Reserved for roomy, prominent placements like the auth screen. */

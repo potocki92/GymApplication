@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu } from "lucide-react";
 
-import { Logo, Wordmark } from "@/components/shared/logo";
+import { LogoText } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -50,9 +50,8 @@ export function MobileNavDrawer() {
           <SheetDescription className="sr-only">
             {t.app.tagline}
           </SheetDescription>
-          <div className="flex items-center gap-2.5" aria-hidden="true">
-            <Logo size={40} alt="" className="rounded-xl" />
-            <Wordmark withTagline />
+          <div className="flex items-center" aria-hidden="true">
+            <LogoText width={148} alt="" className="w-36" />
           </div>
         </SheetHeader>
 
