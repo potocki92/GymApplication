@@ -19,6 +19,12 @@ begin
         and column_name = 'status'
     ) then
     execute '
+      create unique index if not exists workout_sessions_one_active_or_paused_uidx
+        on public.workout_sessions (user_id)
+        where status in (''active'', ''paused'')
+    ';
+
+    execute '
       create index if not exists workout_sessions_user_active_status_idx
         on public.workout_sessions (user_id, status, updated_at desc)
         where status in (''active'', ''paused'')
@@ -261,16 +267,12 @@ begin
     into v_session
   from public.workout_sessions ws
   where ws.id = p_session_id
+    and ws.user_id = v_user_id
   for update;
 
   if not found then
     raise exception 'Workout session not found: %', p_session_id
       using errcode = 'P0002';
-  end if;
-
-  if v_session.user_id <> v_user_id then
-    raise exception 'Workout session does not belong to the authenticated user'
-      using errcode = '42501';
   end if;
 
   -- Idempotent retry: if this client event has already been accepted for the
@@ -320,6 +322,16 @@ begin
       status = p_next_status,
       version = v_next_sequence,
       last_event_id = v_event.id,
+      finished_at = case
+        when p_next_status = 'completed' then now()
+        else ws.finished_at
+      end,
+      total_active_ms = case
+        when p_next_status = 'completed'
+          and coalesce(p_next_state->>'totalActiveMs', '') ~ '^[0-9]+$'
+          then (p_next_state->>'totalActiveMs')::bigint
+        else ws.total_active_ms
+      end,
       updated_at = now()
   where ws.id = p_session_id
     and ws.user_id = v_user_id;
