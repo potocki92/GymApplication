@@ -705,6 +705,8 @@ export const pl = {
     profileSection: {
       title: "Dane osobowe",
       description: "Wykorzystywane do personalizacji statystyk.",
+      displayNameLabel: "Imię",
+      displayNamePlaceholder: "np. Anna",
     },
     trainingSection: {
       title: "Trening",

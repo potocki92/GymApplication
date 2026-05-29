@@ -3,7 +3,7 @@
 import { useAuthStore, useProfileStore } from "@/store";
 
 export interface CurrentUser {
-  /** Best available display name; falls back to a friendly placeholder. */
+  /** Profile display name; falls back to a friendly placeholder. */
   name: string;
   /** 1-2 letter avatar fallback derived from the resolved name. */
   initials: string;
@@ -23,8 +23,8 @@ function computeInitials(source: string): string {
 
 /**
  * Resolves the signed-in user's identity for display. Prefers the profile's
- * display name, then the email's local part, then a friendly placeholder — so
- * the dashboard and sidebar never show hardcoded sample data.
+ * display name and then a friendly placeholder, keeping email available only as
+ * secondary account metadata.
  */
 export function useCurrentUser(): CurrentUser {
   const profile = useProfileStore((s) => s.profile);
@@ -34,10 +34,8 @@ export function useCurrentUser(): CurrentUser {
 
   const email = profile?.email ?? authUser?.email ?? null;
   const fromName = profile?.displayName?.trim() || null;
-  const fromEmail = email ? email.split("@")[0] : null;
-  const resolved = fromName ?? fromEmail;
-  const name = resolved ?? FALLBACK_NAME;
-  const initials = computeInitials(resolved ?? "");
+  const name = fromName ?? FALLBACK_NAME;
+  const initials = computeInitials(fromName ?? email ?? "");
 
   return {
     name,

@@ -33,6 +33,8 @@ const UNITS_WEIGHT_VALUES = ["kg", "lbs"] as const;
 const UNITS_LENGTH_VALUES = ["cm", "in"] as const;
 const THEME_VALUES = ["dark", "light", "system"] as const;
 
+const displayName = z.string().trim().max(80);
+
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate")
@@ -66,6 +68,7 @@ export type OnboardingInput = z.infer<typeof onboardingSchema>;
 /** Partial schema reused by the settings tabs — every field optional so each tab
  *  can submit just its own slice. */
 export const profileSettingsSchema = z.object({
+  displayName: displayName.optional(),
   gender: z.enum(GENDER_VALUES).optional(),
   birthDate: isoDate.optional(),
   heightCm: z.number().min(80).max(260).optional(),

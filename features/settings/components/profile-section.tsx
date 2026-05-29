@@ -24,12 +24,14 @@ import type { Gender, UserProfile } from "@/types";
 import { SectionCard } from "./section-card";
 
 const schema = profileSettingsSchema.pick({
+  displayName: true,
   gender: true,
   birthDate: true,
   heightCm: true,
 });
 
 type FormValues = {
+  displayName?: string;
   gender?: Gender;
   birthDate?: string;
   heightCm?: number;
@@ -43,6 +45,7 @@ export function ProfileSection({ profile }: { profile: UserProfile }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      displayName: profile.displayName ?? "",
       gender: profile.gender ?? undefined,
       birthDate: profile.birthDate ?? undefined,
       heightCm: profile.heightCm ?? undefined,
@@ -51,16 +54,18 @@ export function ProfileSection({ profile }: { profile: UserProfile }) {
 
   useEffect(() => {
     form.reset({
+      displayName: profile.displayName ?? "",
       gender: profile.gender ?? undefined,
       birthDate: profile.birthDate ?? undefined,
       heightCm: profile.heightCm ?? undefined,
     });
-  }, [profile.gender, profile.birthDate, profile.heightCm, form]);
+  }, [profile.displayName, profile.gender, profile.birthDate, profile.heightCm, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitting(true);
     try {
       const saved = await update({
+        displayName: values.displayName?.trim() || null,
         gender: values.gender,
         birthDate: values.birthDate,
         heightCm: values.heightCm,
@@ -82,6 +87,16 @@ export function ProfileSection({ profile }: { profile: UserProfile }) {
         </Button>
       }
     >
+      <FormField label={t.settings.profileSection.displayNameLabel} htmlFor="displayName">
+        <Input
+          id="displayName"
+          type="text"
+          autoComplete="given-name"
+          placeholder={t.settings.profileSection.displayNamePlaceholder}
+          {...form.register("displayName")}
+        />
+      </FormField>
+
       <FormField label={t.onboarding.gender}>
         <Controller
           control={form.control}
