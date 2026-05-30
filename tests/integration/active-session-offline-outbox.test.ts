@@ -4,6 +4,7 @@ import { buildActiveSession } from "@/lib/session-utils";
 import {
   appendWorkoutSessionEvent,
   getActiveWorkoutSession,
+  getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
   startWorkoutSession,
 } from "@/lib/supabase-workout-session-events";
@@ -17,6 +18,7 @@ import type { ActiveSession, Workout, WorkoutSessionJson } from "@/types";
 
 vi.mock("@/lib/supabase-workout-session-events", () => ({
   getActiveWorkoutSession: vi.fn(),
+  getWorkoutSessionById: vi.fn(),
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
   appendWorkoutSessionEvent: vi.fn(),
@@ -25,6 +27,7 @@ vi.mock("@/lib/supabase-workout-session-events", () => ({
 const appendMock = vi.mocked(appendWorkoutSessionEvent);
 const getActiveMock = vi.mocked(getActiveWorkoutSession);
 const eventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
+const getByIdMock = vi.mocked(getWorkoutSessionById);
 const startMock = vi.mocked(startWorkoutSession);
 
 function makeWorkout(): Workout {
@@ -76,6 +79,8 @@ async function resetStore(): Promise<void> {
     future: [],
   });
   getActiveMock.mockRejectedValue(new Error("offline"));
+  getByIdMock.mockReset();
+  getByIdMock.mockResolvedValue(null);
   eventsAfterMock.mockResolvedValue([]);
   startMock.mockImplementation(async (input) => ({
     id: input.sessionId,

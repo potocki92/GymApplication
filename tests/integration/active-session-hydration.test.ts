@@ -4,6 +4,7 @@ import { buildActiveSession, currentSet } from "@/lib/session-utils";
 import {
   appendWorkoutSessionEvent,
   getActiveWorkoutSession,
+  getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
   startWorkoutSession,
 } from "@/lib/supabase-workout-session-events";
@@ -17,6 +18,7 @@ import type { ActiveSession, Workout, WorkoutSessionJson } from "@/types";
 
 vi.mock("@/lib/supabase-workout-session-events", () => ({
   getActiveWorkoutSession: vi.fn(),
+  getWorkoutSessionById: vi.fn(),
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
   appendWorkoutSessionEvent: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock("@/lib/idb-session", () => ({
 const appendWorkoutSessionEventMock = vi.mocked(appendWorkoutSessionEvent);
 const getActiveWorkoutSessionMock = vi.mocked(getActiveWorkoutSession);
 const getWorkoutSessionEventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
+const getWorkoutSessionByIdMock = vi.mocked(getWorkoutSessionById);
 const startWorkoutSessionMock = vi.mocked(startWorkoutSession);
 const clearSessionMock = vi.mocked(clearSession);
 const loadSessionSnapshotMock = vi.mocked(loadSessionSnapshot);
@@ -73,6 +76,7 @@ function resetStore(): void {
   });
   getActiveWorkoutSessionMock.mockReset();
   getWorkoutSessionEventsAfterMock.mockReset();
+  getWorkoutSessionByIdMock.mockReset();
   startWorkoutSessionMock.mockReset();
   appendWorkoutSessionEventMock.mockReset();
   clearSessionMock.mockReset();
