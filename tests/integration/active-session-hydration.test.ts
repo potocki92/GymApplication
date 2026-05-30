@@ -425,7 +425,7 @@ describe("hydrateActiveWorkoutSession", () => {
         sessionId: expect.stringMatching(/^session-/),
         workoutId: workout.id,
         workoutName: workout.name,
-        deviceId: null,
+        deviceId: expect.stringMatching(/^device-/),
         clientEventId: expect.stringContaining("-start-"),
       }),
     );
@@ -490,7 +490,7 @@ describe("hydrateActiveWorkoutSession", () => {
         eventType: "SET_STARTED",
         expectedVersion: 1,
         nextStatus: "active",
-        deviceId: null,
+        deviceId: expect.stringMatching(/^device-/),
         clientEventId: expect.stringContaining("set_started"),
         nextState: expect.any(Object),
       }),

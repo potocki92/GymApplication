@@ -23,6 +23,7 @@ vi.mock("@/lib/supabase-workout-session-events", () => ({
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
   appendWorkoutSessionEvent: vi.fn(),
+  completeWorkoutSession: vi.fn(),
 }));
 
 const appendMock = vi.mocked(appendWorkoutSessionEvent);

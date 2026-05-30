@@ -17,6 +17,7 @@ import {
   getWorkoutSessionEventsAfter,
   startWorkoutSession as startWorkoutSessionInSupabase,
 } from "@/lib/supabase-workout-session-events";
+import { getWorkoutSessionDeviceId } from "@/lib/workout-session-device";
 import {
   applyWorkoutSessionEvent,
   isActiveSessionSnapshot,
@@ -47,6 +48,7 @@ import type {
   Workout,
   WorkoutSessionJson,
   WorkoutSessionOutboxEvent,
+  WorkoutSessionEventRecord,
 } from "@/types";
 
 const HISTORY_LIMIT = 30;
@@ -156,6 +158,14 @@ interface ActiveSessionState {
   hydrate: (session: ActiveSession) => void;
   hydrateActiveWorkoutSession: () => Promise<void>;
   syncOutbox: (sessionId?: string) => Promise<void>;
+  applyRemoteWorkoutSessionEvents: (events: WorkoutSessionEventRecord[]) => Promise<void>;
+  getRealtimeSyncState: () => {
+    sessionId: string | null;
+    serverVersion: number | null;
+    hydrationReady: boolean;
+    deviceId: string | null;
+    ownClientEventIds: ReadonlySet<string>;
+  };
 }
 
 export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
@@ -163,6 +173,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
   let eventQueue = Promise.resolve();
   const syncLocks = new Map<string, Promise<void>>();
   const syncTimeouts = new Map<string, number>();
+  const localClientEventIds = new Set<string>();
 
   function isOnline(): boolean {
     return typeof navigator === "undefined" || navigator.onLine;
@@ -301,6 +312,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       lastError: null,
     };
     await putWorkoutSessionOutboxEvent(outboxEvent);
+    localClientEventIds.add(outboxEvent.clientEventId);
     return outboxEvent;
   }
 
@@ -589,6 +601,43 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     return run;
   }
 
+  async function applyRemoteWorkoutSessionEventsNow(
+    events: WorkoutSessionEventRecord[],
+  ): Promise<void> {
+    const current = get().session;
+    if (!current || get().hydrationStatus !== "ready") return;
+
+    const relevant = events
+      .filter((event) => event.sessionId === current.id)
+      .filter((event) => event.sequenceNumber > (get().serverVersion ?? 0))
+      .filter((event) => !localClientEventIds.has(event.clientEventId));
+    if (relevant.length === 0) return;
+
+    if (get().pendingSync) {
+      const recovered = await recoverOutboxConflict(current.id);
+      if (recovered) {
+        void syncSessionOutbox(current.id);
+      }
+      return;
+    }
+
+    const replay = replayWorkoutSessionEvents(current, relevant);
+    if (!replay.session) return;
+
+    const nextVersion = Math.max(get().serverVersion ?? 0, replay.serverVersion);
+    if (nextVersion <= (get().serverVersion ?? 0)) return;
+
+    set({
+      session: replay.session,
+      activeSession: replay.session,
+      serverVersion: nextVersion,
+      pendingSync: false,
+      past: [],
+      future: [],
+    });
+    persistLocalSession(replay.session, nextVersion, false);
+  }
+
   async function startLocalSession(workout: Workout): Promise<ActiveSession> {
     const session = buildActiveSession(workout);
     const now = session.startedAt ?? Date.now();
@@ -604,7 +653,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         startedAt: now,
       },
       clientEventId,
-      deviceId: null,
+      deviceId: getWorkoutSessionDeviceId(),
     };
     await appendOutboxEvent(event, session, 0);
     applySessionState(session, null, true, "ready");
@@ -671,7 +720,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             reps: suggestedReps(firstSet.targetReps),
             weightKg: firstSet.targetWeightKg,
           },
-          null,
+          getWorkoutSessionDeviceId(),
         ),
       );
     },
@@ -697,7 +746,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             rpe: set.rpe,
             notes: set.notes,
           },
-          null,
+          getWorkoutSessionDeviceId(),
         ),
       );
     },
@@ -712,8 +761,8 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       void commitEvent(
         true,
         restFinished
-          ? buildEvent(s.id, "REST_FINISHED", now, { finishedAt: now }, null)
-          : buildEvent(s.id, "REST_SKIPPED", now, { skippedAt: now }, null),
+          ? buildEvent(s.id, "REST_FINISHED", now, { finishedAt: now }, getWorkoutSessionDeviceId())
+          : buildEvent(s.id, "REST_SKIPPED", now, { skippedAt: now }, getWorkoutSessionDeviceId()),
       );
     },
 
@@ -731,7 +780,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
               "EXERCISE_STARTED",
               now,
               { exerciseId: s.exercises[e].id, exerciseIndex: e },
-              null,
+              getWorkoutSessionDeviceId(),
             ),
           );
           return;
@@ -765,7 +814,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const now = Date.now();
       void commitEvent(
         false,
-        buildEvent(s.id, "WORKOUT_PAUSED", now, { pausedAt: now }, null),
+        buildEvent(s.id, "WORKOUT_PAUSED", now, { pausedAt: now }, getWorkoutSessionDeviceId()),
       );
     },
 
@@ -775,31 +824,20 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const now = Date.now();
       void commitEvent(
         false,
-        buildEvent(s.id, "WORKOUT_RESUMED", now, { resumedAt: now }, null),
+        buildEvent(s.id, "WORKOUT_RESUMED", now, { resumedAt: now }, getWorkoutSessionDeviceId()),
       );
     },
 
     finishEarly: () => {
-      const id = get().session?.id;
-      commit(true, (s) => {
-        if (s.status === "finished" || s.status === "planning") return false;
-        const now = Date.now();
-        for (const ex of s.exercises) {
-          for (const st of ex.sets) {
-            if (st.status === "pending" || st.status === "active") {
-              st.status = "skipped";
-            }
-          }
-        }
-        s.status = "finished";
-        s.finishedAt = now;
-        s.restStartedAt = null;
-        s.pausedAt = null;
-      });
-      // Ending locally never emits a completing event, so finalize the server row
-      // now — otherwise it stays `active` and the next start would resume it.
-      if (id && get().session?.status === "finished") {
-        void completeWorkoutSession(id);
+      const s = get().session;
+      if (!s || s.status === "finished" || s.status === "planning") return;
+      const now = Date.now();
+      void commitEventNow(
+        true,
+        buildEvent(s.id, "WORKOUT_FINISHED", now, { finishedAt: now }, getWorkoutSessionDeviceId()),
+      );
+      if (get().session?.status === "finished") {
+        void completeWorkoutSession(s.id);
       }
     },
 
@@ -860,7 +898,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
                 ? undefined
                 : Math.max(0, patch.actualWeightKg),
           },
-          null,
+          getWorkoutSessionDeviceId(),
         ),
       );
     },
@@ -890,7 +928,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
               exerciseId: exercise.id,
               setIndex,
             },
-            null,
+            getWorkoutSessionDeviceId(),
           ),
         );
         return;
@@ -926,7 +964,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
                   ? null
                   : patch.notes?.trim(),
           },
-          null,
+          getWorkoutSessionDeviceId(),
         ),
       );
     },
@@ -950,7 +988,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
               exerciseId: s.exercises[s.currentExerciseIndex]?.id,
               setIndex: s.currentSetIndex,
             },
-            null,
+            getWorkoutSessionDeviceId(),
           ),
         );
         return;
@@ -969,7 +1007,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             setIndex: s.currentSetIndex,
             restTargetSec: clamped,
           },
-          null,
+          getWorkoutSessionDeviceId(),
         ),
       );
     },
@@ -1013,7 +1051,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           "SET_DELETED",
           now,
           { exerciseId: exercise.id, setIndex },
-          null,
+          getWorkoutSessionDeviceId(),
         ),
       );
     },
@@ -1163,5 +1201,17 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const sessionIds = Array.from(new Set(events.map((event) => event.sessionId)));
       for (const id of sessionIds) await syncSessionOutbox(id);
     },
+
+    applyRemoteWorkoutSessionEvents: async (events) => {
+      await applyRemoteWorkoutSessionEventsNow(events);
+    },
+
+    getRealtimeSyncState: () => ({
+      sessionId: get().session?.id ?? null,
+      serverVersion: get().serverVersion,
+      hydrationReady: get().hydrationStatus === "ready",
+      deviceId: getWorkoutSessionDeviceId(),
+      ownClientEventIds: new Set(localClientEventIds),
+    }),
   };
 });

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type {
@@ -25,6 +25,16 @@ export interface WorkoutSessionRow {
   last_event_id: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export type WorkoutSessionEventHandler = (event: WorkoutSessionEventRecord) => void;
+export type WorkoutSessionSubscriptionStatusHandler = (status: string) => void;
+export type UnsubscribeWorkoutSessionEvents = () => Promise<void>;
+
+export interface SubscribeWorkoutSessionEventsOptions {
+  sessionId: string;
+  onInsert: WorkoutSessionEventHandler;
+  onStatus?: WorkoutSessionSubscriptionStatusHandler;
 }
 
 export interface WorkoutSessionEventRow {
@@ -239,4 +249,39 @@ export async function getWorkoutSessionById(
 
   const row = ((data as WorkoutSessionRow[] | null) ?? [])[0];
   return row ? mapRowToWorkoutSession(row) : null;
+}
+
+export function subscribeWorkoutSessionEventInserts(
+  options: SubscribeWorkoutSessionEventsOptions,
+): UnsubscribeWorkoutSessionEvents | null {
+  const supabase = getClient();
+  if (!supabase) return null;
+
+  let channel: RealtimeChannel | null = supabase
+    .channel(`workout-session-events:${options.sessionId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "workout_session_events",
+        filter: `session_id=eq.${options.sessionId}`,
+      },
+      (payload) => {
+        const row = payload.new as WorkoutSessionEventRow | null;
+        if (!row) return;
+        options.onInsert(mapRowToWorkoutSessionEvent(row));
+      },
+    );
+
+  channel = channel.subscribe((status) => {
+    options.onStatus?.(status);
+  });
+
+  return async () => {
+    if (!channel) return;
+    const current = channel;
+    channel = null;
+    await supabase.removeChannel(current);
+  };
 }
