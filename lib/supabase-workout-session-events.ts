@@ -154,6 +154,30 @@ export async function appendWorkoutSessionEvent(
   return data ? mapRowToWorkoutSessionEvent(data as WorkoutSessionEventRow) : null;
 }
 
+/**
+ * Marks an active/paused session as completed server-side so it is no longer
+ * returned by {@link getActiveWorkoutSession}. Called from the terminal session
+ * flows (finish / save / discard) — sessions that end locally (e.g. `finishEarly`)
+ * never emit a completing event, so without this their row stays `active` and the
+ * next `startWorkoutSession` would resurrect it. Best-effort and idempotent: a no-op
+ * when Supabase is not configured or the session is already completed.
+ */
+export async function completeWorkoutSession(sessionId: string): Promise<void> {
+  const supabase = getClient();
+  if (!supabase) return;
+
+  const userId = await currentUserId(supabase);
+  if (!userId) return;
+
+  const { error } = await supabase
+    .from("workout_sessions")
+    .update({ status: "completed", finished_at: new Date().toISOString() })
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .in("status", ["active", "paused"]);
+  throwIfSupabaseError(error);
+}
+
 export async function getActiveWorkoutSession(): Promise<ActiveWorkoutSessionRecord | null> {
   const supabase = getClient();
   if (!supabase) return null;

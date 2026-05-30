@@ -11,6 +11,7 @@ import {
 } from "@/lib/session-utils";
 import {
   appendWorkoutSessionEvent,
+  completeWorkoutSession,
   getActiveWorkoutSession,
   getWorkoutSessionEventsAfter,
   startWorkoutSession as startWorkoutSessionInSupabase,
@@ -666,6 +667,11 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         draft.finishedAt = now;
         draft.restStartedAt = null;
       });
+      // Finishing here is a local-only commit — finalize the server row so it is
+      // not resurrected as an active session on the next start.
+      if (get().session?.status === "finished") {
+        void completeWorkoutSession(s.id);
+      }
     },
 
     pause: () => {
@@ -688,7 +694,8 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       );
     },
 
-    finishEarly: () =>
+    finishEarly: () => {
+      const id = get().session?.id;
       commit(true, (s) => {
         if (s.status === "finished" || s.status === "planning") return false;
         const now = Date.now();
@@ -703,7 +710,13 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         s.finishedAt = now;
         s.restStartedAt = null;
         s.pausedAt = null;
-      }),
+      });
+      // Ending locally never emits a completing event, so finalize the server row
+      // now — otherwise it stays `active` and the next start would resume it.
+      if (id && get().session?.status === "finished") {
+        void completeWorkoutSession(id);
+      }
+    },
 
     abort: () => {
       const id = get().session?.id;
@@ -715,7 +728,10 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         past: [],
         future: [],
       });
-      if (id) void clearCachedSession(id);
+      if (id) {
+        void clearCachedSession(id);
+        void completeWorkoutSession(id);
+      }
     },
 
     save: () => {
@@ -730,6 +746,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         past: [],
         future: [],
       });
+      void completeWorkoutSession(s.id);
       return completed;
     },
 
