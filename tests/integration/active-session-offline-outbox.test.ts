@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildActiveSession } from "@/lib/session-utils";
+import { applyWorkoutSessionEvent } from "@/lib/workout-session-event-reducer";
 import {
   appendWorkoutSessionEvent,
   getActiveWorkoutSession,
+  getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
   startWorkoutSession,
 } from "@/lib/supabase-workout-session-events";
@@ -13,10 +15,11 @@ import {
   putWorkoutSessionOutboxEvent,
 } from "@/lib/idb-workout-session-outbox";
 import { useActiveSessionStore } from "@/store";
-import type { ActiveSession, Workout, WorkoutSessionJson } from "@/types";
+import type { ActiveSession, Workout, WorkoutSessionEventRecord, WorkoutSessionJson } from "@/types";
 
 vi.mock("@/lib/supabase-workout-session-events", () => ({
   getActiveWorkoutSession: vi.fn(),
+  getWorkoutSessionById: vi.fn(),
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
   appendWorkoutSessionEvent: vi.fn(),
@@ -25,6 +28,7 @@ vi.mock("@/lib/supabase-workout-session-events", () => ({
 const appendMock = vi.mocked(appendWorkoutSessionEvent);
 const getActiveMock = vi.mocked(getActiveWorkoutSession);
 const eventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
+const getByIdMock = vi.mocked(getWorkoutSessionById);
 const startMock = vi.mocked(startWorkoutSession);
 
 function makeWorkout(): Workout {
@@ -76,6 +80,8 @@ async function resetStore(): Promise<void> {
     future: [],
   });
   getActiveMock.mockRejectedValue(new Error("offline"));
+  getByIdMock.mockReset();
+  getByIdMock.mockResolvedValue(null);
   eventsAfterMock.mockResolvedValue([]);
   startMock.mockImplementation(async (input) => ({
     id: input.sessionId,
@@ -305,6 +311,246 @@ describe("active workout Offline Outbox", () => {
 
       expect(clearTimeoutSpy).toHaveBeenCalled();
       expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+
+  it("rebuilds stale local outbox against newer remote events before append", async () => {
+    vi.useFakeTimers();
+    try {
+      appendMock.mockClear();
+      const session = buildActiveSession(makeWorkout());
+      const started = applyWorkoutSessionEvent(session, {
+        id: "local-start-set",
+        type: "SET_STARTED",
+        occurredAt: Date.now(),
+        payload: {
+          exerciseId: session.exercises[0].id,
+          setIndex: 0,
+          startedAt: Date.now(),
+          reps: 8,
+          weightKg: 80,
+        },
+        clientEventId: "local-start-set",
+        deviceId: "device-a",
+      });
+      expect(started).not.toBeNull();
+
+      useActiveSessionStore.setState({
+        session,
+        activeSession: session,
+        serverVersion: 1,
+        pendingSync: true,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      });
+      await putWorkoutSessionOutboxEvent({
+        id: "local-start-set",
+        sessionId: session.id,
+        userId: "user-1",
+        eventType: "SET_STARTED",
+        payload: {
+          exerciseId: session.exercises[0].id,
+          setIndex: 0,
+          startedAt: Date.now(),
+          reps: 8,
+          weightKg: 80,
+          nextState: asJson(started!),
+        },
+        clientEventId: "local-start-set",
+        deviceId: "device-a",
+        baseVersion: 1,
+        localSequenceNumber: 2,
+        createdAt: Date.now(),
+        syncStatus: "pending",
+        retryCount: 0,
+        lastError: null,
+      });
+
+      setOnline(true);
+      const remote = {
+        id: session.id,
+        userId: "user-1",
+        workoutId: session.workoutId,
+        workoutName: session.workoutName,
+        startedAt: Date.now(),
+        totalActiveMs: 0,
+        status: "active" as const,
+        currentState: asJson(session),
+        version: 2,
+      };
+      getActiveMock.mockResolvedValue(remote);
+      getByIdMock.mockResolvedValue(remote);
+      const remoteEvents: WorkoutSessionEventRecord[] = [
+        {
+          id: "remote-start",
+          sessionId: session.id,
+          userId: "user-1",
+          eventType: "WORKOUT_STARTED",
+          payload: {
+            sessionId: session.id,
+            workoutId: session.workoutId,
+            workoutName: session.workoutName,
+            startedAt: session.startedAt,
+            nextState: asJson(session),
+          },
+          clientEventId: "remote-start-client",
+          deviceId: "device-b",
+          sequenceNumber: 1,
+          createdAt: Date.now(),
+        },
+        {
+          id: "remote-rest-update",
+          sessionId: session.id,
+          userId: "user-1",
+          eventType: "SET_UPDATED",
+          payload: {
+            exerciseId: session.exercises[0].id,
+            setIndex: 0,
+            restTargetSec: 120,
+          },
+          clientEventId: "remote-rest-update",
+          deviceId: "device-b",
+          sequenceNumber: 2,
+          createdAt: Date.now(),
+        },
+      ];
+      eventsAfterMock.mockImplementation(async (_sessionId, sequenceNumber) =>
+        sequenceNumber === 0 ? remoteEvents : [],
+      );
+
+      await useActiveSessionStore.getState().syncOutbox(session.id);
+
+      expect(appendMock).not.toHaveBeenCalled();
+      let [event] = await listWorkoutSessionOutboxEvents(session.id);
+      expect(event.baseVersion).toBe(2);
+      expect(event.localSequenceNumber).toBe(3);
+      expect(event.syncStatus).toBe("pending");
+      expect(useActiveSessionStore.getState().session?.exercises[0].sets[0].restTargetSec).toBe(120);
+
+      getActiveMock.mockResolvedValue({ ...remote, version: 2 });
+      getByIdMock.mockResolvedValue({ ...remote, version: 2 });
+      await useActiveSessionStore.getState().syncOutbox(session.id);
+
+      expect(appendMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expectedVersion: 2,
+          eventType: "SET_STARTED",
+        }),
+      );
+      [event] = await listWorkoutSessionOutboxEvents(session.id);
+      expect(event.syncStatus).toBe("synced");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps obsolete local events as unresolved conflicts instead of deleting them", async () => {
+    vi.useFakeTimers();
+    try {
+      appendMock.mockClear();
+      const session = buildActiveSession(makeWorkout());
+      useActiveSessionStore.setState({
+        session,
+        activeSession: session,
+        serverVersion: 1,
+        pendingSync: true,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      });
+      await putWorkoutSessionOutboxEvent({
+        id: "local-start-after-finish",
+        sessionId: session.id,
+        userId: "user-1",
+        eventType: "SET_STARTED",
+        payload: {
+          exerciseId: session.exercises[0].id,
+          setIndex: 0,
+          startedAt: Date.now(),
+        },
+        clientEventId: "local-start-after-finish",
+        deviceId: "device-a",
+        baseVersion: 1,
+        localSequenceNumber: 2,
+        createdAt: Date.now(),
+        syncStatus: "pending",
+        retryCount: 0,
+        lastError: null,
+      });
+
+      setOnline(true);
+      const remote = {
+        id: session.id,
+        userId: "user-1",
+        workoutId: session.workoutId,
+        workoutName: session.workoutName,
+        startedAt: Date.now(),
+        totalActiveMs: 0,
+        status: "completed" as const,
+        currentState: asJson(session),
+        version: 3,
+      };
+      getActiveMock.mockResolvedValue(remote);
+      getByIdMock.mockResolvedValue(remote);
+      const finished = { ...session, status: "finished" as const, finishedAt: Date.now() };
+      const finishedEvents: WorkoutSessionEventRecord[] = [
+        {
+          id: "remote-start",
+          sessionId: session.id,
+          userId: "user-1",
+          eventType: "WORKOUT_STARTED",
+          payload: {
+            sessionId: session.id,
+            workoutId: session.workoutId,
+            workoutName: session.workoutName,
+            startedAt: session.startedAt,
+            nextState: asJson(session),
+          },
+          clientEventId: "remote-start-client",
+          deviceId: "device-b",
+          sequenceNumber: 1,
+          createdAt: Date.now(),
+        },
+        {
+          id: "remote-set-started",
+          sessionId: session.id,
+          userId: "user-1",
+          eventType: "SET_STARTED",
+          payload: {
+            exerciseId: session.exercises[0].id,
+            setIndex: 0,
+            startedAt: Date.now(),
+          },
+          clientEventId: "remote-set-started",
+          deviceId: "device-b",
+          sequenceNumber: 2,
+          createdAt: Date.now(),
+        },
+        {
+          id: "remote-finish",
+          sessionId: session.id,
+          userId: "user-1",
+          eventType: "WORKOUT_FINISHED",
+          payload: { finishedAt: finished.finishedAt },
+          clientEventId: "remote-finish",
+          deviceId: "device-b",
+          sequenceNumber: 3,
+          createdAt: Date.now(),
+        },
+      ];
+      eventsAfterMock.mockResolvedValue(finishedEvents);
+
+      await useActiveSessionStore.getState().syncOutbox(session.id);
+
+      expect(appendMock).not.toHaveBeenCalled();
+      const [event] = await listWorkoutSessionOutboxEvents(session.id);
+      expect(event.syncStatus).toBe("conflict");
+      expect(event.lastError).toContain("Unresolved conflict");
+      expect(useActiveSessionStore.getState().pendingSync).toBe(true);
     } finally {
       vi.useRealTimers();
     }

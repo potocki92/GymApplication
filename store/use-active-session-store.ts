@@ -5,8 +5,6 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 
 import {
   buildActiveSession,
-  currentSet,
-  nextCursor,
   suggestedReps,
   toCompletedSession,
   uid,
@@ -14,11 +12,15 @@ import {
 import {
   appendWorkoutSessionEvent,
   getActiveWorkoutSession,
+  getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
   startWorkoutSession as startWorkoutSessionInSupabase,
 } from "@/lib/supabase-workout-session-events";
 import {
+  applyWorkoutSessionEvent,
   isActiveSessionSnapshot,
+  outboxEventToRecord,
+  replayWorkoutSessionEvents,
   reduceWorkoutSessionEvents,
 } from "@/lib/workout-session-event-reducer";
 import { pl } from "@/lib/i18n/pl";
@@ -64,19 +66,6 @@ function activeSessionToJson(session: ActiveSession): WorkoutSessionJson {
   return JSON.parse(JSON.stringify(session)) as WorkoutSessionJson;
 }
 
-/** Activate the set the cursor currently points at (start its timer, prefill actuals). */
-function activateCurrentSet(s: ActiveSession, now: number): void {
-  const set = s.exercises[s.currentExerciseIndex]?.sets[s.currentSetIndex];
-  if (!set) return;
-  s.status = "executing";
-  s.restStartedAt = null;
-  s.restTargetSec = 0;
-  set.startedAt = now;
-  set.status = "active";
-  if (set.actualReps == null) set.actualReps = suggestedReps(set.targetReps);
-  if (set.actualWeightKg == null) set.actualWeightKg = set.targetWeightKg;
-}
-
 function workoutSessionEventPayload(
   event: WorkoutSessionEvent,
   nextState?: ActiveSession,
@@ -117,219 +106,6 @@ function buildEvent<T extends WorkoutSessionEvent["type"]>(
     clientEventId,
     deviceId,
   } as Extract<WorkoutSessionEvent, { type: T }>;
-}
-
-function applyActiveSessionEvent(
-  session: ActiveSession,
-  event: WorkoutSessionEvent,
-): ActiveSession | null {
-  const next = clone(session);
-  const now = event.occurredAt;
-
-  switch (event.type) {
-    case "EXERCISE_STARTED": {
-      const ex = next.exercises[event.payload.exerciseIndex];
-      if (!ex || ex.id !== event.payload.exerciseId) return null;
-      if (next.status !== "executing" && next.status !== "resting") return null;
-
-      const current = next.exercises[next.currentExerciseIndex];
-      if (current) {
-        for (const st of current.sets) {
-          if (st.status === "pending" || st.status === "active") {
-            st.status = "skipped";
-          }
-        }
-      }
-
-      next.currentExerciseIndex = event.payload.exerciseIndex;
-      next.currentSetIndex = 0;
-      next.restStartedAt = null;
-      next.restTargetSec = 0;
-      activateCurrentSet(next, now);
-      break;
-    }
-
-    case "SET_STARTED": {
-      const exIndex = next.exercises.findIndex(
-        (ex) => ex.id === event.payload.exerciseId,
-      );
-      if (exIndex < 0 || !next.exercises[exIndex].sets[event.payload.setIndex]) {
-        return null;
-      }
-      next.startedAt ??= event.payload.startedAt ?? now;
-      next.currentExerciseIndex = exIndex;
-      next.currentSetIndex = event.payload.setIndex;
-      activateCurrentSet(next, event.payload.startedAt ?? now);
-      const set = currentSet(next);
-      if (set) {
-        if (event.payload.reps != null) {
-          set.actualReps = Math.max(0, Math.round(event.payload.reps));
-        }
-        if (event.payload.weightKg != null) {
-          set.actualWeightKg = Math.max(0, event.payload.weightKg);
-        }
-      }
-      break;
-    }
-
-    case "SET_COMPLETED": {
-      if (next.status !== "executing") return null;
-      const exIndex = next.exercises.findIndex(
-        (ex) => ex.id === event.payload.exerciseId,
-      );
-      const set = next.exercises[exIndex]?.sets[event.payload.setIndex];
-      if (!set) return null;
-
-      next.currentExerciseIndex = exIndex;
-      next.currentSetIndex = event.payload.setIndex;
-      set.completedAt = event.payload.completedAt ?? now;
-      set.status = "completed";
-      set.actualReps = Math.max(0, Math.round(event.payload.reps));
-      set.actualWeightKg = Math.max(0, event.payload.weightKg);
-      if (event.payload.rpe !== undefined) set.rpe = event.payload.rpe;
-      if (event.payload.notes !== undefined) set.notes = event.payload.notes;
-
-      const cursor = nextCursor(next, exIndex, event.payload.setIndex);
-      if (!cursor) {
-        next.status = "finished";
-        next.finishedAt = set.completedAt;
-        next.restStartedAt = null;
-        next.restTargetSec = 0;
-        break;
-      }
-
-      const restSec = set.restTargetSec;
-      next.currentExerciseIndex = cursor.exerciseIndex;
-      next.currentSetIndex = cursor.setIndex;
-      if (restSec > 0) {
-        next.status = "resting";
-        next.restStartedAt = set.completedAt;
-        next.restTargetSec = restSec;
-      } else {
-        activateCurrentSet(next, set.completedAt);
-      }
-      break;
-    }
-
-    case "SET_UPDATED": {
-      const ex = next.exercises.find((item) => item.id === event.payload.exerciseId);
-      const target = ex?.sets[event.payload.setIndex];
-      if (!target) return null;
-      if (event.payload.reps !== undefined) {
-        target.actualReps = Math.max(0, Math.round(event.payload.reps));
-      }
-      if (event.payload.weightKg !== undefined) {
-        target.actualWeightKg = Math.max(0, event.payload.weightKg);
-      }
-      if (event.payload.rpe !== undefined) target.rpe = event.payload.rpe;
-      if (event.payload.notes !== undefined) target.notes = event.payload.notes;
-      if (event.payload.restTargetSec !== undefined) {
-        target.restTargetSec = Math.max(0, Math.round(event.payload.restTargetSec));
-      }
-      break;
-    }
-
-    case "SET_DELETED": {
-      const ex = next.exercises.find((item) => item.id === event.payload.exerciseId);
-      if (!ex) return null;
-      const target = ex.sets[event.payload.setIndex];
-      if (!target || target.status !== "pending") return null;
-      if (
-        next.exercises[next.currentExerciseIndex]?.id === event.payload.exerciseId &&
-        next.currentSetIndex === event.payload.setIndex
-      ) {
-        return null;
-      }
-      ex.sets.splice(event.payload.setIndex, 1);
-      ex.sets.forEach((set, index) => (set.setNumber = index + 1));
-      if (
-        next.exercises[next.currentExerciseIndex]?.id === event.payload.exerciseId &&
-        event.payload.setIndex < next.currentSetIndex
-      ) {
-        next.currentSetIndex -= 1;
-      }
-      break;
-    }
-
-    case "REST_STARTED": {
-      next.status = "resting";
-      next.restStartedAt = event.payload.startedAt ?? now;
-      next.restTargetSec = Math.max(0, Math.round(event.payload.durationSec));
-      break;
-    }
-
-    case "REST_FINISHED":
-    case "REST_SKIPPED": {
-      if (next.status !== "resting") return null;
-      activateCurrentSet(
-        next,
-        event.type === "REST_FINISHED"
-          ? event.payload.finishedAt ?? now
-          : event.payload.skippedAt ?? now,
-      );
-      break;
-    }
-
-    case "WORKOUT_PAUSED": {
-      if (next.status !== "executing" && next.status !== "resting") return null;
-      next.pausedAt = event.payload.pausedAt ?? now;
-      next.status = "paused";
-      break;
-    }
-
-    case "WORKOUT_RESUMED": {
-      if (next.status !== "paused" || next.pausedAt == null) return null;
-      const resumedAt = event.payload.resumedAt ?? now;
-      const delta = resumedAt - next.pausedAt;
-      if (next.startedAt != null) next.startedAt += delta;
-      if (next.restStartedAt != null) {
-        next.restStartedAt += delta;
-        next.status = "resting";
-      } else {
-        const cur = currentSet(next);
-        if (cur?.startedAt != null && cur.completedAt == null) {
-          cur.startedAt += delta;
-        }
-        next.status = "executing";
-      }
-      next.pausedAt = null;
-      break;
-    }
-
-    case "WORKOUT_FINISHED": {
-      if (next.status === "finished" || next.status === "planning") return null;
-      for (const ex of next.exercises) {
-        for (const st of ex.sets) {
-          if (st.status === "pending" || st.status === "active") {
-            st.status = "skipped";
-          }
-        }
-      }
-      next.status = "finished";
-      next.finishedAt = event.payload.finishedAt ?? now;
-      next.restStartedAt = null;
-      next.pausedAt = null;
-      break;
-    }
-
-    case "NOTE_ADDED": {
-      const ex = event.payload.exerciseId
-        ? next.exercises.find((item) => item.id === event.payload.exerciseId)
-        : undefined;
-      const target =
-        ex && event.payload.setIndex != null ? ex.sets[event.payload.setIndex] : null;
-      if (!target) return null;
-      const trimmed = event.payload.note.trim();
-      target.notes = trimmed === "" ? null : trimmed;
-      break;
-    }
-
-    default:
-      return null;
-  }
-
-  next.updatedAt = now;
-  return next;
 }
 
 type ActiveSessionHydrationStatus = "idle" | "loading" | "ready" | "error";
@@ -427,12 +203,26 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
 
   async function resolveServerSession(
     active: Awaited<ReturnType<typeof getActiveWorkoutSession>>,
+    options: { requireEventLog?: boolean } = {},
   ): Promise<{ session: ActiveSession; serverVersion: number } | null> {
-    if (!active || !isActiveSessionSnapshot(active.currentState)) return null;
+    if (!active) return null;
 
-    const events = await getWorkoutSessionEventsAfter(active.id, active.version);
-    const session = reduceWorkoutSessionEvents(active.currentState, events);
-    const serverVersion = events.at(-1)?.sequenceNumber ?? active.version;
+    const events = await getWorkoutSessionEventsAfter(active.id, 0);
+    const replayed = replayWorkoutSessionEvents(null, events);
+    if (replayed.session) {
+      return {
+        session: replayed.session,
+        serverVersion: Math.max(active.version, replayed.serverVersion),
+      };
+    }
+
+    if (options.requireEventLog || !isActiveSessionSnapshot(active.currentState)) {
+      return null;
+    }
+
+    const missingEvents = await getWorkoutSessionEventsAfter(active.id, active.version);
+    const session = reduceWorkoutSessionEvents(active.currentState, missingEvents);
+    const serverVersion = missingEvents.at(-1)?.sequenceNumber ?? active.version;
     return { session, serverVersion };
   }
 
@@ -535,7 +325,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     const cur = get().session;
     if (!cur) return;
 
-    const next = applyActiveSessionEvent(cur, event);
+    const next = applyWorkoutSessionEvent(cur, event);
     if (!next) return;
 
     const baseVersion = get().serverVersion ?? 0;
@@ -575,6 +365,88 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     return isActiveSessionSnapshot(state) ? state : null;
   }
 
+  function withNextStatePayload(
+    payload: WorkoutSessionJson,
+    nextState: ActiveSession,
+  ): WorkoutSessionJson {
+    return {
+      ...payloadRecord(payload),
+      nextState: activeSessionToJson(nextState),
+    } as WorkoutSessionJson;
+  }
+
+  async function recoverOutboxConflict(sessionId: string): Promise<boolean> {
+    const latestRemote = await getWorkoutSessionById(sessionId);
+    if (!latestRemote) return false;
+
+    const remoteEvents = await getWorkoutSessionEventsAfter(sessionId, 0);
+    const remoteReplay = replayWorkoutSessionEvents(null, remoteEvents);
+    if (!remoteReplay.session) return false;
+
+    const acceptedClientEventIds = new Set(remoteReplay.appliedClientEventIds);
+    const localEvents = await listWorkoutSessionOutboxEvents(sessionId);
+    let merged = remoteReplay.session;
+    const remoteVersion = Math.max(latestRemote.version, remoteReplay.serverVersion);
+    let nextLocalSequence = remoteVersion;
+    let hasPendingLocal = false;
+
+    for (const event of localEvents) {
+      if (event.syncStatus === "synced") continue;
+
+      if (acceptedClientEventIds.has(event.clientEventId)) {
+        await updateWorkoutSessionOutboxEvent(event.id, {
+          syncStatus: "synced",
+          syncStartedAt: null,
+          lastError: null,
+        });
+        continue;
+      }
+
+      const replay = replayWorkoutSessionEvents(
+        merged,
+        [outboxEventToRecord(event, nextLocalSequence + 1)],
+      );
+
+      if (!replay.session || replay.skippedEventIds.includes(event.id)) {
+        hasPendingLocal = true;
+        await updateWorkoutSessionOutboxEvent(event.id, {
+          syncStatus: "conflict",
+          syncStartedAt: null,
+          lastError: "Unresolved conflict: the remote event log made this local event obsolete",
+        });
+        continue;
+      }
+
+      merged = replay.session;
+      nextLocalSequence += 1;
+      hasPendingLocal = true;
+      acceptedClientEventIds.add(event.clientEventId);
+      await updateWorkoutSessionOutboxEvent(event.id, {
+        payload: withNextStatePayload(event.payload, merged),
+        baseVersion: nextLocalSequence - 1,
+        localSequenceNumber: nextLocalSequence,
+        syncStatus: "pending",
+        syncStartedAt: null,
+        lastError: null,
+      });
+    }
+
+    if (get().session?.id === sessionId || get().session == null) {
+      set({
+        session: merged,
+        activeSession: merged,
+        serverVersion: remoteVersion,
+        pendingSync: hasPendingLocal,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      });
+      persistLocalSession(merged, remoteVersion, hasPendingLocal);
+    }
+
+    return true;
+  }
+
   async function syncSessionOutbox(sessionId: string): Promise<void> {
     const pendingTimeout = syncTimeouts.get(sessionId);
     if (pendingTimeout != null) {
@@ -591,15 +463,28 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const events = await listSyncableWorkoutSessionOutboxEvents(sessionId);
       if (events.length === 0) {
         if (get().session?.id === sessionId) {
-          set({ pendingSync: false });
-          persistLocalSession(get().session, get().serverVersion, false);
+          const allEvents = await listWorkoutSessionOutboxEvents(sessionId);
+          const pendingSync = allEvents.some((event) => event.syncStatus !== "synced");
+          set({ pendingSync });
+          persistLocalSession(get().session, get().serverVersion, pendingSync);
         }
         return;
       }
 
       let serverVersion = get().session?.id === sessionId ? get().serverVersion : null;
       const active = await getActiveWorkoutSession();
-      if (active?.id === sessionId) serverVersion = active.version;
+      if (active?.id === sessionId) {
+        const localKnownVersion = serverVersion ?? events[0]?.baseVersion ?? 0;
+        if (active.version > localKnownVersion) {
+          const recovered = await recoverOutboxConflict(sessionId);
+          if (recovered) {
+            set({ pendingSync: true });
+            window.setTimeout(() => void syncSessionOutbox(sessionId), 0);
+            return;
+          }
+        }
+        serverVersion = Math.max(serverVersion ?? 0, active.version);
+      }
 
       for (const event of events) {
         const current = await updateWorkoutSessionOutboxEvent(event.id, {
@@ -645,11 +530,19 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             lastError: null,
           });
           if (get().session?.id === sessionId) {
-            set({ serverVersion, pendingSync: true });
-            persistLocalSession(get().session, serverVersion, true);
+            const guardedVersion = Math.max(get().serverVersion ?? 0, serverVersion ?? 0);
+            set({ serverVersion: guardedVersion, pendingSync: true });
+            persistLocalSession(get().session, guardedVersion, true);
           }
         } catch (error) {
           if (isVersionConflict(error)) {
+            const recovered = await recoverOutboxConflict(sessionId);
+            if (recovered) {
+              set({ pendingSync: true });
+              window.setTimeout(() => void syncSessionOutbox(sessionId), 0);
+              return;
+            }
+
             await updateWorkoutSessionOutboxEvent(current.id, {
               syncStatus: "conflict",
               syncStartedAt: null,
@@ -679,11 +572,12 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         }
       }
 
-      const remaining = await listSyncableWorkoutSessionOutboxEvents(sessionId);
-      const pendingSync = remaining.length > 0;
+      const remaining = await listWorkoutSessionOutboxEvents(sessionId);
+      const pendingSync = remaining.some((event) => event.syncStatus !== "synced");
       if (get().session?.id === sessionId) {
-        set({ pendingSync });
-        persistLocalSession(get().session, serverVersion, pendingSync);
+        const guardedVersion = Math.max(get().serverVersion ?? 0, serverVersion ?? 0);
+        set({ serverVersion: guardedVersion, pendingSync });
+        persistLocalSession(get().session, guardedVersion, pendingSync);
       }
       await cleanupWorkoutSessionOutbox({ activeSessionIds: [sessionId] });
     })().finally(() => {

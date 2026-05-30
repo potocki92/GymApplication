@@ -4,6 +4,7 @@ import { buildActiveSession, currentSet } from "@/lib/session-utils";
 import {
   appendWorkoutSessionEvent,
   getActiveWorkoutSession,
+  getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
   startWorkoutSession,
 } from "@/lib/supabase-workout-session-events";
@@ -17,6 +18,7 @@ import type { ActiveSession, Workout, WorkoutSessionJson } from "@/types";
 
 vi.mock("@/lib/supabase-workout-session-events", () => ({
   getActiveWorkoutSession: vi.fn(),
+  getWorkoutSessionById: vi.fn(),
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
   appendWorkoutSessionEvent: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock("@/lib/idb-session", () => ({
 const appendWorkoutSessionEventMock = vi.mocked(appendWorkoutSessionEvent);
 const getActiveWorkoutSessionMock = vi.mocked(getActiveWorkoutSession);
 const getWorkoutSessionEventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
+const getWorkoutSessionByIdMock = vi.mocked(getWorkoutSessionById);
 const startWorkoutSessionMock = vi.mocked(startWorkoutSession);
 const clearSessionMock = vi.mocked(clearSession);
 const loadSessionSnapshotMock = vi.mocked(loadSessionSnapshot);
@@ -73,6 +76,7 @@ function resetStore(): void {
   });
   getActiveWorkoutSessionMock.mockReset();
   getWorkoutSessionEventsAfterMock.mockReset();
+  getWorkoutSessionByIdMock.mockReset();
   startWorkoutSessionMock.mockReset();
   appendWorkoutSessionEventMock.mockReset();
   clearSessionMock.mockReset();
@@ -328,9 +332,9 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
   });
 
-  it("replays snapshot events after the server version", async () => {
+  it("replays command events from the server event log", async () => {
     const session = buildActiveSession(makeWorkout());
-    const replayed = { ...session, status: "paused" as const, updatedAt: session.updatedAt + 1 };
+
     getActiveWorkoutSessionMock.mockResolvedValue({
       id: session.id,
       userId: "user-1",
@@ -344,14 +348,46 @@ describe("hydrateActiveWorkoutSession", () => {
     });
     getWorkoutSessionEventsAfterMock.mockResolvedValue([
       {
-        id: "event-4",
+        id: "event-1",
         sessionId: session.id,
         userId: "user-1",
-        eventType: "SESSION_PAUSED",
-        payload: { nextState: asJson(replayed) },
-        clientEventId: "client-event-4",
+        eventType: "WORKOUT_STARTED",
+        payload: {
+          sessionId: session.id,
+          workoutId: session.workoutId,
+          workoutName: session.workoutName,
+          startedAt: session.startedAt,
+          nextState: asJson(session),
+        },
+        clientEventId: "client-event-1",
         deviceId: null,
-        sequenceNumber: 4,
+        sequenceNumber: 1,
+        createdAt: Date.now(),
+      },
+      {
+        id: "event-2",
+        sessionId: session.id,
+        userId: "user-1",
+        eventType: "SET_STARTED",
+        payload: {
+          exerciseId: session.exercises[0].id,
+          setIndex: 0,
+          startedAt: Date.now(),
+        },
+        clientEventId: "client-event-2",
+        deviceId: null,
+        sequenceNumber: 2,
+        createdAt: Date.now(),
+      },
+      {
+        id: "event-3",
+        sessionId: session.id,
+        userId: "user-1",
+        eventType: "WORKOUT_PAUSED",
+        payload: { pausedAt: Date.now() },
+        clientEventId: "client-event-3",
+        deviceId: null,
+        sequenceNumber: 3,
         createdAt: Date.now(),
       },
     ]);
@@ -359,7 +395,7 @@ describe("hydrateActiveWorkoutSession", () => {
     await useActiveSessionStore.getState().hydrateActiveWorkoutSession();
 
     expect(useActiveSessionStore.getState().activeSession?.status).toBe("paused");
-    expect(useActiveSessionStore.getState().serverVersion).toBe(4);
+    expect(useActiveSessionStore.getState().serverVersion).toBe(3);
   });
   it("starts a new Supabase-backed workout session and stores server version", async () => {
     const workout = makeWorkout();

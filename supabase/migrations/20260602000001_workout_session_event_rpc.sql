@@ -166,9 +166,11 @@ begin
     v_user_id,
     'WORKOUT_STARTED',
     jsonb_build_object(
+      'sessionId', p_session_id,
       'workoutId', p_workout_id,
       'workoutName', p_workout_name,
-      'startedAt', v_started_at
+      'startedAt', v_started_at,
+      'nextState', coalesce(p_initial_state, '{}'::jsonb)
     ),
     p_client_event_id,
     p_device_id,
