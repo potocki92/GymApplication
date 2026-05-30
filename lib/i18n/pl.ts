@@ -815,6 +815,8 @@ export const pl = {
       replace: "Zmień zdjęcie",
       processing: "Przetwarzanie obrazu…",
       uploading: "Wysyłanie…",
+      saving: "Zapisywanie…",
+      progressLabel: "Postęp wysyłania",
       submit: "Zapisz zdjęcie",
       tips: "Najlepsze porównania: stałe oświetlenie, ta sama poza, podobna odległość.",
     },

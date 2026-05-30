@@ -22,10 +22,25 @@ import type {
 } from "@/types";
 import { useAuthStore } from "./use-auth-store";
 
+export type UploadPhase =
+  | "idle"
+  | "compressing"
+  | "uploading"
+  | "saving"
+  | "done";
+
 interface ProgressPhotosState {
   records: ProgressPhotoRecord[];
   hydrated: boolean;
   uploading: boolean;
+  /**
+   * Coarse upload phase. Supabase Storage `.upload()` exposes no byte-level
+   * progress callback, so we surface honest discrete phases instead of a faked
+   * continuous percentage.
+   */
+  uploadPhase: UploadPhase;
+  /** 0–100, derived from `uploadPhase` — drives the determinate Progress bar. */
+  uploadProgress: number;
   hydrate: () => Promise<void>;
   rehydrate: () => Promise<void>;
   add: (draft: ProgressPhotoDraft, file: File) => Promise<ProgressPhotoRecord>;
@@ -63,6 +78,8 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
   records: [],
   hydrated: false,
   uploading: false,
+  uploadPhase: "idle",
+  uploadProgress: 0,
 
   hydrate: async () => {
     if (get().hydrated) return;
@@ -76,13 +93,14 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
   },
 
   add: async (draft, file) => {
-    set({ uploading: true });
+    set({ uploading: true, uploadPhase: "compressing", uploadProgress: 10 });
     try {
       const user = activeUser();
       if (!user) {
         throw new Error("authRequired");
       }
       const processed = await processProgressImage(file);
+      set({ uploadPhase: "uploading", uploadProgress: 55 });
       const record = await insertProgressPhoto({
         userId: user.id,
         draft,
@@ -91,11 +109,13 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
         width: processed.width,
         height: processed.height,
       });
+      set({ uploadPhase: "saving", uploadProgress: 90 });
       set((s) => ({ records: sortByTakenAtDesc([...s.records, record]) }));
       void putProgressPhoto(record);
+      set({ uploadPhase: "done", uploadProgress: 100 });
       return record;
     } finally {
-      set({ uploading: false });
+      set({ uploading: false, uploadPhase: "idle", uploadProgress: 0 });
     }
   },
 
