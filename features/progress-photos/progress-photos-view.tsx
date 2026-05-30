@@ -20,8 +20,8 @@ import { FullscreenViewer } from "./components/fullscreen-viewer";
 import { MilestoneBadges } from "./components/milestone-badges";
 import { MonthSection } from "./components/month-section";
 import { PoseTabs } from "./components/pose-tabs";
+import { ProgressTimeline } from "./components/progress-timeline";
 import { StreakCard } from "./components/streak-card";
-import { TimelineSwiper } from "./components/timeline-swiper";
 import { TransformationHero } from "./components/transformation-hero";
 import { UploadDialog } from "./components/upload-dialog";
 import { useComparisonEndpoints } from "./use-comparison-endpoints";
@@ -111,7 +111,7 @@ export function ProgressPhotosView() {
                 <h2 className="font-heading text-lg font-semibold tracking-tight">
                   {t.progressPhotos.sections.timeline}
                 </h2>
-                <TimelineSwiper
+                <ProgressTimeline
                   records={filtered}
                   beforeId={cmp.before?.id ?? null}
                   afterId={cmp.after?.id ?? null}

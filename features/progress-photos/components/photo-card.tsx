@@ -28,9 +28,6 @@ export function PhotoCard({ record, onOpen, selected, className }: PhotoCardProp
   const t = useDictionary();
   const { url, loading } = useSignedUrl(record.thumbPath);
 
-  const aspect =
-    record.width && record.height ? `${record.width} / ${record.height}` : "3 / 4";
-
   return (
     <motion.button
       type="button"
@@ -43,7 +40,7 @@ export function PhotoCard({ record, onOpen, selected, className }: PhotoCardProp
         className,
       )}
     >
-      <div className="relative w-full bg-muted" style={{ aspectRatio: aspect }}>
+      <div className="relative aspect-square w-full bg-muted">
         {loading ? (
           <Skeleton className="absolute inset-0" />
         ) : url ? (
