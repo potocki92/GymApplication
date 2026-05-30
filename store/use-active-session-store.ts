@@ -8,6 +8,14 @@ import {
   toCompletedSession,
   uid,
 } from "@/lib/session-utils";
+import {
+  getActiveWorkoutSession,
+  getWorkoutSessionEventsAfter,
+} from "@/lib/supabase-workout-session-events";
+import {
+  isActiveSessionSnapshot,
+  reduceWorkoutSessionEvents,
+} from "@/lib/workout-session-event-reducer";
 import type {
   ActiveSession,
   CompletedSession,
@@ -35,8 +43,13 @@ function activateCurrentSet(s: ActiveSession, now: number): void {
   if (set.actualWeightKg == null) set.actualWeightKg = set.targetWeightKg;
 }
 
+type ActiveSessionHydrationStatus = "idle" | "loading" | "ready" | "error";
+
 interface ActiveSessionState {
   session: ActiveSession | null;
+  activeSession: ActiveSession | null;
+  serverVersion: number | null;
+  hydrationStatus: ActiveSessionHydrationStatus;
   past: ActiveSession[];
   future: ActiveSession[];
 
@@ -73,6 +86,7 @@ interface ActiveSessionState {
 
   // recovery
   hydrate: (session: ActiveSession) => void;
+  hydrateActiveWorkoutSession: () => Promise<void>;
 }
 
 export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
@@ -93,21 +107,34 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     if (pushHistory) {
       set({
         session: draft,
+        activeSession: draft,
         past: [...get().past, cur].slice(-HISTORY_LIMIT),
         future: [],
       });
     } else {
-      set({ session: draft });
+      set({ session: draft, activeSession: draft });
     }
   }
 
   return {
     session: null,
+    activeSession: null,
+    serverVersion: null,
+    hydrationStatus: "idle",
     past: [],
     future: [],
 
-    start: (workout) =>
-      set({ session: buildActiveSession(workout), past: [], future: [] }),
+    start: (workout) => {
+      const session = buildActiveSession(workout);
+      set({
+        session,
+        activeSession: session,
+        serverVersion: null,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      });
+    },
 
     beginFirstSet: () =>
       commit(true, (s) => {
@@ -227,13 +254,14 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         s.pausedAt = null;
       }),
 
-    abort: () => set({ session: null, past: [], future: [] }),
+    abort: () =>
+      set({ session: null, activeSession: null, serverVersion: null, past: [], future: [] }),
 
     save: () => {
       const s = get().session;
       if (!s || s.status !== "finished") return null;
       const completed = toCompletedSession(s);
-      set({ session: null, past: [], future: [] });
+      set({ session: null, activeSession: null, serverVersion: null, past: [], future: [] });
       return completed;
     },
 
@@ -338,6 +366,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const prev = past[past.length - 1];
       set({
         session: prev,
+        activeSession: prev,
         past: past.slice(0, -1),
         future: [session, ...future].slice(0, HISTORY_LIMIT),
       });
@@ -349,11 +378,67 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const next = future[0];
       set({
         session: next,
+        activeSession: next,
         past: [...past, session].slice(-HISTORY_LIMIT),
         future: future.slice(1),
       });
     },
 
-    hydrate: (session) => set({ session, past: [], future: [] }),
+    hydrate: (session) =>
+      set({
+        session,
+        activeSession: session,
+        serverVersion: null,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      }),
+
+    hydrateActiveWorkoutSession: async () => {
+      const { activeSession, hydrationStatus } = get();
+      if (hydrationStatus === "loading" || activeSession) return;
+      set({ hydrationStatus: "loading" });
+      try {
+        const active = await getActiveWorkoutSession();
+        if (!active) {
+          set({
+            session: null,
+            activeSession: null,
+            serverVersion: null,
+            hydrationStatus: "ready",
+            past: [],
+            future: [],
+          });
+          return;
+        }
+
+        if (!isActiveSessionSnapshot(active.currentState)) {
+          set({
+            session: null,
+            activeSession: null,
+            serverVersion: active.version,
+            hydrationStatus: "ready",
+            past: [],
+            future: [],
+          });
+          return;
+        }
+
+        const events = await getWorkoutSessionEventsAfter(active.id, active.version);
+        const session = reduceWorkoutSessionEvents(active.currentState, events);
+        const serverVersion = events.at(-1)?.sequenceNumber ?? active.version;
+        set({
+          session,
+          activeSession: session,
+          serverVersion,
+          hydrationStatus: "ready",
+          past: [],
+          future: [],
+        });
+      } catch (error) {
+        console.error("Failed to hydrate active workout session", error);
+        set({ hydrationStatus: "error" });
+      }
+    },
   };
 });

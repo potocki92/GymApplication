@@ -29,7 +29,14 @@ vi.mock("@/hooks/use-session-clock", () => ({
 }));
 
 function resetActiveSession() {
-  useActiveSessionStore.setState({ session: null, past: [], future: [] });
+  useActiveSessionStore.setState({
+    session: null,
+    activeSession: null,
+    serverVersion: null,
+    hydrationStatus: "idle",
+    past: [],
+    future: [],
+  });
   pushMock.mockClear();
 }
 

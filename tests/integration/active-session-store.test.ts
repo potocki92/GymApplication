@@ -34,7 +34,14 @@ function makeWorkout(): Workout {
 }
 
 function reset() {
-  useActiveSessionStore.setState({ session: null, past: [], future: [] });
+  useActiveSessionStore.setState({
+    session: null,
+    activeSession: null,
+    serverVersion: null,
+    hydrationStatus: "idle",
+    past: [],
+    future: [],
+  });
 }
 
 function startAndBeginFirstSet(): void {
