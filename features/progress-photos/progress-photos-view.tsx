@@ -6,13 +6,6 @@ import { Camera, Plus } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
   selectPhotosByMonth,
@@ -22,16 +15,16 @@ import {
 import type { ProgressPhotoRecord, ProgressPose } from "@/types";
 
 import { CelebrationOverlay } from "./components/celebration-overlay";
-import { ComparisonSlide } from "./components/comparison-slide";
+import { ComparisonCard } from "./components/comparison-card";
 import { FullscreenViewer } from "./components/fullscreen-viewer";
 import { MilestoneBadges } from "./components/milestone-badges";
 import { MonthSection } from "./components/month-section";
-import { MonthToMonthCard } from "./components/month-to-month-card";
 import { PoseTabs } from "./components/pose-tabs";
 import { StreakCard } from "./components/streak-card";
 import { TimelineSwiper } from "./components/timeline-swiper";
 import { TransformationHero } from "./components/transformation-hero";
 import { UploadDialog } from "./components/upload-dialog";
+import { useComparisonEndpoints } from "./use-comparison-endpoints";
 
 export function ProgressPhotosView() {
   const t = useDictionary();
@@ -45,6 +38,8 @@ export function ProgressPhotosView() {
     () => selectPhotosByPose(records, pose),
     [records, pose],
   );
+
+  const cmp = useComparisonEndpoints(filtered, records, pose);
 
   const openViewer = useCallback(
     (record: ProgressPhotoRecord) => {
@@ -102,7 +97,6 @@ export function ProgressPhotosView() {
           ) : (
             <>
               <TransformationHero
-                filtered={filtered}
                 allRecords={records}
                 onAdd={() => setUploadOpen(true)}
               />
@@ -111,25 +105,18 @@ export function ProgressPhotosView() {
 
               <MilestoneBadges records={records} />
 
-              <MonthToMonthCard records={records} pose={pose} />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t.progressPhotos.sections.comparison}</CardTitle>
-                  <CardDescription>
-                    {t.progressPhotos.sections.comparisonDesc}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ComparisonSlide records={filtered} />
-                </CardContent>
-              </Card>
+              <ComparisonCard records={filtered} cmp={cmp} />
 
               <section className="space-y-2">
                 <h2 className="font-heading text-lg font-semibold tracking-tight">
                   {t.progressPhotos.sections.timeline}
                 </h2>
-                <TimelineSwiper records={filtered} onSelect={openViewer} />
+                <TimelineSwiper
+                  records={filtered}
+                  beforeId={cmp.before?.id ?? null}
+                  afterId={cmp.after?.id ?? null}
+                  onSelect={openViewer}
+                />
               </section>
 
               <section className="space-y-4">

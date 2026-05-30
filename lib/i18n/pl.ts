@@ -834,13 +834,15 @@ export const pl = {
       generic: "Coś poszło nie tak. Spróbuj ponownie.",
     },
     sections: {
-      monthToMonth: "Miesiąc do miesiąca",
-      monthToMonthDesc:
-        "Najnowsze zdjęcie z bieżącego miesiąca obok ostatniego z poprzedniego.",
       comparison: "Porównanie zdjęć",
-      comparisonDesc: "Wybierz dwa zdjęcia, aby porównać je w sliderze.",
+      comparisonDesc:
+        "Wybierz tryb porównania lub dwa własne zdjęcia, aby zobaczyć je w sliderze.",
       comparisonPickLeft: "Lewe (wcześniejsze)",
       comparisonPickRight: "Prawe (późniejsze)",
+      presetLabel: "Tryb porównania",
+      presetTransformation: "Początek → Teraz",
+      presetMonthToMonth: "Miesiąc do miesiąca",
+      presetManual: "Ręcznie",
       timeline: "Oś czasu",
       gallery: "Galeria",
     },
@@ -850,6 +852,10 @@ export const pl = {
       same: "Wybierz dwa różne zdjęcia.",
       leftLabel: "Wcześniej",
       rightLabel: "Później",
+    },
+    timeline: {
+      before: "Początek",
+      after: "Teraz",
     },
     card: {
       noWeight: "—",
