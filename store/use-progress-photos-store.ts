@@ -7,6 +7,10 @@ import {
   replaceAllProgressPhotos,
 } from "@/lib/idb-progress-photos";
 import { processProgressImage } from "@/lib/progress-photos/image-pipeline";
+import {
+  newCountMilestone,
+  type ProgressMilestone,
+} from "@/lib/progress-photos/streak-utils";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   deleteProgressPhoto as deleteSupaPhoto,
@@ -41,6 +45,9 @@ interface ProgressPhotosState {
   uploadPhase: UploadPhase;
   /** 0–100, derived from `uploadPhase` — drives the determinate Progress bar. */
   uploadProgress: number;
+  /** Set when an upload crosses a count milestone; consumed by the celebration. */
+  celebrate: ProgressMilestone | null;
+  dismissCelebration: () => void;
   hydrate: () => Promise<void>;
   rehydrate: () => Promise<void>;
   add: (draft: ProgressPhotoDraft, file: File) => Promise<ProgressPhotoRecord>;
@@ -80,6 +87,9 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
   uploading: false,
   uploadPhase: "idle",
   uploadProgress: 0,
+  celebrate: null,
+
+  dismissCelebration: () => set({ celebrate: null }),
 
   hydrate: async () => {
     if (get().hydrated) return;
@@ -110,7 +120,12 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
         height: processed.height,
       });
       set({ uploadPhase: "saving", uploadProgress: 90 });
-      set((s) => ({ records: sortByTakenAtDesc([...s.records, record]) }));
+      const beforeTotal = get().records.length;
+      const milestone = newCountMilestone(beforeTotal, beforeTotal + 1);
+      set((s) => ({
+        records: sortByTakenAtDesc([...s.records, record]),
+        celebrate: milestone ?? s.celebrate,
+      }));
       void putProgressPhoto(record);
       set({ uploadPhase: "done", uploadProgress: 100 });
       return record;

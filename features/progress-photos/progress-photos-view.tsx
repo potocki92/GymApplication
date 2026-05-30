@@ -21,12 +21,16 @@ import {
 } from "@/store";
 import type { ProgressPhotoRecord, ProgressPose } from "@/types";
 
+import { CelebrationOverlay } from "./components/celebration-overlay";
 import { ComparisonSlide } from "./components/comparison-slide";
 import { FullscreenViewer } from "./components/fullscreen-viewer";
+import { MilestoneBadges } from "./components/milestone-badges";
 import { MonthSection } from "./components/month-section";
 import { MonthToMonthCard } from "./components/month-to-month-card";
 import { PoseTabs } from "./components/pose-tabs";
+import { StreakCard } from "./components/streak-card";
 import { TimelineSwiper } from "./components/timeline-swiper";
+import { TransformationHero } from "./components/transformation-hero";
 import { UploadDialog } from "./components/upload-dialog";
 
 export function ProgressPhotosView() {
@@ -61,29 +65,24 @@ export function ProgressPhotosView() {
 
   return (
     <div className="space-y-6 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-      <PageHeader
-        title={t.progressPhotos.title}
-        description={t.progressPhotos.subtitle}
-        actions={
-          <Button onClick={() => setUploadOpen(true)}>
-            <Plus className="size-4" />
-            {t.progressPhotos.addPhoto}
-          </Button>
-        }
-      />
-
       {!hasAny ? (
-        <EmptyState
-          icon={Camera}
-          title={t.progressPhotos.emptyTitle}
-          description={t.progressPhotos.emptyDescription}
-          action={
-            <Button onClick={() => setUploadOpen(true)}>
-              <Plus className="size-4" />
-              {t.progressPhotos.emptyAction}
-            </Button>
-          }
-        />
+        <>
+          <PageHeader
+            title={t.progressPhotos.title}
+            description={t.progressPhotos.subtitle}
+          />
+          <EmptyState
+            icon={Camera}
+            title={t.progressPhotos.emptyTitle}
+            description={t.progressPhotos.emptyDescription}
+            action={
+              <Button onClick={() => setUploadOpen(true)}>
+                <Plus className="size-4" />
+                {t.progressPhotos.emptyAction}
+              </Button>
+            }
+          />
+        </>
       ) : (
         <>
           <PoseTabs value={pose} onChange={setPose} />
@@ -94,7 +93,7 @@ export function ProgressPhotosView() {
               title={t.progressPhotos.emptyTitle}
               description={t.progressPhotos.emptyDescription}
               action={
-                <Button variant="outline" onClick={() => setUploadOpen(true)}>
+                <Button onClick={() => setUploadOpen(true)}>
                   <Plus className="size-4" />
                   {t.progressPhotos.addPhoto}
                 </Button>
@@ -102,6 +101,16 @@ export function ProgressPhotosView() {
             />
           ) : (
             <>
+              <TransformationHero
+                filtered={filtered}
+                allRecords={records}
+                onAdd={() => setUploadOpen(true)}
+              />
+
+              <StreakCard records={records} />
+
+              <MilestoneBadges records={records} />
+
               <MonthToMonthCard records={records} pose={pose} />
 
               <Card>
@@ -152,6 +161,7 @@ export function ProgressPhotosView() {
         onIndexChange={setViewerIndex}
         onClose={() => setViewerIndex(null)}
       />
+      <CelebrationOverlay />
     </div>
   );
 }
