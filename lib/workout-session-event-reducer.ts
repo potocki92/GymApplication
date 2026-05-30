@@ -123,10 +123,14 @@ export function applyWorkoutSessionEvent(
     }
 
     case "SET_STARTED": {
+      if (next.status !== "planning" && next.status !== "executing" && next.status !== "resting") {
+        return null;
+      }
       const exIndex = next.exercises.findIndex(
         (ex) => ex.id === event.payload.exerciseId,
       );
-      if (exIndex < 0 || !next.exercises[exIndex].sets[event.payload.setIndex]) {
+      const target = exIndex < 0 ? undefined : next.exercises[exIndex].sets[event.payload.setIndex];
+      if (!target || target.status === "completed" || target.status === "skipped") {
         return null;
       }
       next.startedAt ??= event.payload.startedAt ?? now;
@@ -151,7 +155,7 @@ export function applyWorkoutSessionEvent(
         (ex) => ex.id === event.payload.exerciseId,
       );
       const set = next.exercises[exIndex]?.sets[event.payload.setIndex];
-      if (!set) return null;
+      if (!set || set.status === "completed" || set.status === "skipped") return null;
 
       next.currentExerciseIndex = exIndex;
       next.currentSetIndex = event.payload.setIndex;
@@ -485,12 +489,6 @@ function replayOnce(
     const command = workoutSessionEventFromRecord(record);
     const next = command ? applyWorkoutSessionEvent(session, command) : null;
     if (!next) {
-      if (isActiveSessionSnapshot(snapshot)) {
-        session = clone(snapshot);
-        seenClientEventIds.add(record.clientEventId);
-        appliedClientEventIds.push(record.clientEventId);
-        continue;
-      }
       skippedEventIds.push(record.id);
       continue;
     }

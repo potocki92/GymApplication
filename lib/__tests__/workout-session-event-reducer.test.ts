@@ -115,20 +115,24 @@ describe("workout session event replay", () => {
 
   it("uses remote server order before local pending order during a conflict", () => {
     const session = buildActiveSession(makeWorkout());
-    const remotePaused = { ...session, status: "paused" as const, pausedAt: NOW + 2 };
     const remote = [
       startEvent(session),
-      remoteEvent(session, 2, "SESSION_PAUSED", { nextState: asJson(remotePaused) }, "remote-pause"),
+      remoteEvent(session, 2, "SET_STARTED", {
+        exerciseId: session.exercises[0].id,
+        setIndex: 0,
+        startedAt: NOW + 2,
+      }, "remote-start"),
+      remoteEvent(session, 3, "WORKOUT_PAUSED", { pausedAt: NOW + 3 }, "remote-pause"),
     ];
     const remoteReplay = replayWorkoutSessionEvents(null, remote);
     const localResume = pendingOutbox(
       session,
-      3,
+      4,
       "WORKOUT_RESUMED",
-      { resumedAt: NOW + 3, nextState: asJson(session) },
+      { resumedAt: NOW + 4, nextState: asJson(session) },
     );
 
-    const merged = replayWorkoutSessionEvents(remoteReplay.session, [outboxEventToRecord(localResume, 3)]);
+    const merged = replayWorkoutSessionEvents(remoteReplay.session, [outboxEventToRecord(localResume, 4)]);
 
     expect(remoteReplay.session?.status).toBe("paused");
     expect(merged.session?.status).toBe("executing");

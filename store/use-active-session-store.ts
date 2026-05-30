@@ -408,10 +408,11 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       );
 
       if (!replay.session || replay.skippedEventIds.includes(event.id)) {
+        hasPendingLocal = true;
         await updateWorkoutSessionOutboxEvent(event.id, {
-          syncStatus: "synced",
+          syncStatus: "conflict",
           syncStartedAt: null,
-          lastError: "Skipped during conflict recovery because the remote event log made it obsolete",
+          lastError: "Unresolved conflict: the remote event log made this local event obsolete",
         });
         continue;
       }
@@ -462,15 +463,28 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const events = await listSyncableWorkoutSessionOutboxEvents(sessionId);
       if (events.length === 0) {
         if (get().session?.id === sessionId) {
-          set({ pendingSync: false });
-          persistLocalSession(get().session, get().serverVersion, false);
+          const allEvents = await listWorkoutSessionOutboxEvents(sessionId);
+          const pendingSync = allEvents.some((event) => event.syncStatus !== "synced");
+          set({ pendingSync });
+          persistLocalSession(get().session, get().serverVersion, pendingSync);
         }
         return;
       }
 
       let serverVersion = get().session?.id === sessionId ? get().serverVersion : null;
       const active = await getActiveWorkoutSession();
-      if (active?.id === sessionId) serverVersion = Math.max(serverVersion ?? 0, active.version);
+      if (active?.id === sessionId) {
+        const localKnownVersion = serverVersion ?? events[0]?.baseVersion ?? 0;
+        if (active.version > localKnownVersion) {
+          const recovered = await recoverOutboxConflict(sessionId);
+          if (recovered) {
+            set({ pendingSync: true });
+            window.setTimeout(() => void syncSessionOutbox(sessionId), 0);
+            return;
+          }
+        }
+        serverVersion = Math.max(serverVersion ?? 0, active.version);
+      }
 
       for (const event of events) {
         const current = await updateWorkoutSessionOutboxEvent(event.id, {
@@ -558,8 +572,8 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         }
       }
 
-      const remaining = await listSyncableWorkoutSessionOutboxEvents(sessionId);
-      const pendingSync = remaining.length > 0;
+      const remaining = await listWorkoutSessionOutboxEvents(sessionId);
+      const pendingSync = remaining.some((event) => event.syncStatus !== "synced");
       if (get().session?.id === sessionId) {
         const guardedVersion = Math.max(get().serverVersion ?? 0, serverVersion ?? 0);
         set({ serverVersion: guardedVersion, pendingSync });
