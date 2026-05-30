@@ -7,6 +7,10 @@ import {
   replaceAllProgressPhotos,
 } from "@/lib/idb-progress-photos";
 import { processProgressImage } from "@/lib/progress-photos/image-pipeline";
+import {
+  newCountMilestone,
+  type ProgressMilestone,
+} from "@/lib/progress-photos/streak-utils";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   deleteProgressPhoto as deleteSupaPhoto,
@@ -22,10 +26,28 @@ import type {
 } from "@/types";
 import { useAuthStore } from "./use-auth-store";
 
+export type UploadPhase =
+  | "idle"
+  | "compressing"
+  | "uploading"
+  | "saving"
+  | "done";
+
 interface ProgressPhotosState {
   records: ProgressPhotoRecord[];
   hydrated: boolean;
   uploading: boolean;
+  /**
+   * Coarse upload phase. Supabase Storage `.upload()` exposes no byte-level
+   * progress callback, so we surface honest discrete phases instead of a faked
+   * continuous percentage.
+   */
+  uploadPhase: UploadPhase;
+  /** 0–100, derived from `uploadPhase` — drives the determinate Progress bar. */
+  uploadProgress: number;
+  /** Set when an upload crosses a count milestone; consumed by the celebration. */
+  celebrate: ProgressMilestone | null;
+  dismissCelebration: () => void;
   hydrate: () => Promise<void>;
   rehydrate: () => Promise<void>;
   add: (draft: ProgressPhotoDraft, file: File) => Promise<ProgressPhotoRecord>;
@@ -63,6 +85,11 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
   records: [],
   hydrated: false,
   uploading: false,
+  uploadPhase: "idle",
+  uploadProgress: 0,
+  celebrate: null,
+
+  dismissCelebration: () => set({ celebrate: null }),
 
   hydrate: async () => {
     if (get().hydrated) return;
@@ -76,13 +103,14 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
   },
 
   add: async (draft, file) => {
-    set({ uploading: true });
+    set({ uploading: true, uploadPhase: "compressing", uploadProgress: 10 });
     try {
       const user = activeUser();
       if (!user) {
         throw new Error("authRequired");
       }
       const processed = await processProgressImage(file);
+      set({ uploadPhase: "uploading", uploadProgress: 55 });
       const record = await insertProgressPhoto({
         userId: user.id,
         draft,
@@ -91,11 +119,18 @@ export const useProgressPhotosStore = create<ProgressPhotosState>((set, get) => 
         width: processed.width,
         height: processed.height,
       });
-      set((s) => ({ records: sortByTakenAtDesc([...s.records, record]) }));
+      set({ uploadPhase: "saving", uploadProgress: 90 });
+      const beforeTotal = get().records.length;
+      const milestone = newCountMilestone(beforeTotal, beforeTotal + 1);
+      set((s) => ({
+        records: sortByTakenAtDesc([...s.records, record]),
+        celebrate: milestone ?? s.celebrate,
+      }));
       void putProgressPhoto(record);
+      set({ uploadPhase: "done", uploadProgress: 100 });
       return record;
     } finally {
-      set({ uploading: false });
+      set({ uploading: false, uploadPhase: "idle", uploadProgress: 0 });
     }
   },
 

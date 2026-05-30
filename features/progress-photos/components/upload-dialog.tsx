@@ -5,14 +5,12 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  BottomSheet,
+  BottomSheetBody,
+  BottomSheetFooter,
+} from "@/components/ui/bottom-sheet";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -53,6 +51,15 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
   const t = useDictionary();
   const add = useProgressPhotosStore((s) => s.add);
   const uploading = useProgressPhotosStore((s) => s.uploading);
+  const uploadPhase = useProgressPhotosStore((s) => s.uploadPhase);
+  const uploadProgress = useProgressPhotosStore((s) => s.uploadProgress);
+
+  const phaseLabel =
+    uploadPhase === "compressing"
+      ? t.progressPhotos.upload.processing
+      : uploadPhase === "saving"
+        ? t.progressPhotos.upload.saving
+        : t.progressPhotos.upload.uploading;
 
   const defaultDate = useMemo(() => todayISO(), []);
   const [file, setFile] = useState<File | null>(null);
@@ -113,6 +120,9 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
 
     try {
       await add(parsed.data, file);
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        navigator.vibrate(10);
+      }
       toast.success(t.progressPhotos.card.saved);
       reset();
       onOpenChange(false);
@@ -128,103 +138,106 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
   };
 
   return (
-    <Dialog
+    <BottomSheet
       open={open}
       onOpenChange={(next) => {
         if (!next) reset();
         onOpenChange(next);
       }}
+      title={t.progressPhotos.upload.title}
+      description={t.progressPhotos.upload.description}
+      dismissOnDrag={!uploading}
     >
-      <DialogContent className="sm:max-w-lg">
-        <form onSubmit={handleSubmit} className="contents">
-          <DialogHeader>
-            <DialogTitle>{t.progressPhotos.upload.title}</DialogTitle>
-            <DialogDescription>{t.progressPhotos.upload.description}</DialogDescription>
-          </DialogHeader>
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <BottomSheetBody className="grid gap-3">
+          <PhotoDropzone onFile={handleFile} disabled={uploading} hasFile={!!file} />
+          {file ? <PhotoPreview file={file} /> : null}
 
-          <div className="grid gap-3">
-            <PhotoDropzone onFile={handleFile} disabled={uploading} hasFile={!!file} />
-            {file ? <PhotoPreview file={file} /> : null}
-
-            <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="min-w-0 space-y-1.5">
-                <Label htmlFor="pp-date">{t.progressPhotos.fields.date}</Label>
-                <Input
-                  id="pp-date"
-                  type="date"
-                  value={date}
-                  max={todayISO()}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="min-w-0 space-y-1.5">
-                <Label htmlFor="pp-pose">{t.progressPhotos.fields.pose}</Label>
-                <Select value={pose} onValueChange={(v) => setPose(v as ProgressPose)}>
-                  <SelectTrigger id="pp-pose" className="w-full min-w-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROGRESS_POSES.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {t.progressPhotos.poses[p]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="pp-weight">{t.progressPhotos.fields.weight}</Label>
+          <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="pp-date">{t.progressPhotos.fields.date}</Label>
               <Input
-                id="pp-weight"
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                min="20"
-                max="400"
-                placeholder="—"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
+                id="pp-date"
+                type="date"
+                value={date}
+                max={todayISO()}
+                onChange={(e) => setDate(e.target.value)}
+                required
               />
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="pp-notes">{t.progressPhotos.fields.notes}</Label>
-              <Input
-                id="pp-notes"
-                value={notes}
-                maxLength={500}
-                onChange={(e) => setNotes(e.target.value)}
-              />
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="pp-pose">{t.progressPhotos.fields.pose}</Label>
+              <Select value={pose} onValueChange={(v) => setPose(v as ProgressPose)}>
+                <SelectTrigger id="pp-pose" className="w-full min-w-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROGRESS_POSES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {t.progressPhotos.poses[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
-            {fieldError ? (
-              <p className="text-xs text-destructive">{fieldError}</p>
-            ) : null}
-            <p className="text-[11px] text-muted-foreground">
-              {t.progressPhotos.upload.tips}
-            </p>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={uploading}
-            >
-              {t.common.cancel}
-            </Button>
-            <Button type="submit" disabled={!file || uploading}>
-              {uploading
-                ? t.progressPhotos.upload.uploading
-                : t.progressPhotos.upload.submit}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <div className="space-y-1.5">
+            <Label htmlFor="pp-weight">{t.progressPhotos.fields.weight}</Label>
+            <Input
+              id="pp-weight"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min="20"
+              max="400"
+              placeholder="—"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="pp-notes">{t.progressPhotos.fields.notes}</Label>
+            <Input
+              id="pp-notes"
+              value={notes}
+              maxLength={500}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          {fieldError ? (
+            <p className="text-xs text-destructive">{fieldError}</p>
+          ) : null}
+          <p className="text-[11px] text-muted-foreground">
+            {t.progressPhotos.upload.tips}
+          </p>
+        </BottomSheetBody>
+
+        <BottomSheetFooter>
+          {uploading ? (
+            <div className="flex w-full flex-col gap-1.5 sm:mr-auto sm:max-w-[14rem]">
+              <Progress
+                value={uploadProgress}
+                aria-label={t.progressPhotos.upload.progressLabel}
+              />
+              <p className="text-[11px] text-muted-foreground">{phaseLabel}</p>
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={uploading}
+          >
+            {t.common.cancel}
+          </Button>
+          <Button type="submit" disabled={!file || uploading}>
+            {uploading ? phaseLabel : t.progressPhotos.upload.submit}
+          </Button>
+        </BottomSheetFooter>
+      </form>
+    </BottomSheet>
   );
 }
