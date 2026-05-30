@@ -60,6 +60,8 @@ const RESUMABLE_STATUSES = new Set<ActiveSession["status"]>([
   "resting",
   "paused",
 ]);
+const LOCAL_CLIENT_EVENT_ID_LIMIT = 1024;
+const AUTO_RETRY_LIMIT = 8;
 
 function clone<T>(value: T): T {
   return cloneSerializable(value);
@@ -204,6 +206,16 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     return Math.min(30_000, 500 * 2 ** Math.max(0, retryCount));
   }
 
+  function rememberLocalClientEventId(clientEventId: string): void {
+    localClientEventIds.delete(clientEventId);
+    localClientEventIds.add(clientEventId);
+    while (localClientEventIds.size > LOCAL_CLIENT_EVENT_ID_LIMIT) {
+      const oldest = localClientEventIds.values().next().value;
+      if (typeof oldest !== "string") break;
+      localClientEventIds.delete(oldest);
+    }
+  }
+
   async function nextLocalSequenceNumber(sessionId: string, baseVersion: number): Promise<number> {
     const events = await listWorkoutSessionOutboxEvents(sessionId);
     return Math.max(baseVersion, ...events.map((event) => event.localSequenceNumber)) + 1;
@@ -318,7 +330,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       lastError: null,
     };
     await putWorkoutSessionOutboxEvent(outboxEvent);
-    localClientEventIds.add(outboxEvent.clientEventId);
+    rememberLocalClientEventId(outboxEvent.clientEventId);
     return outboxEvent;
   }
 
@@ -487,7 +499,11 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           const recovered = await recoverOutboxConflict(sessionId);
           if (recovered) {
             set({ pendingSync: true });
-            setSyncTimeout(() => void syncSessionOutbox(sessionId), 0);
+            const timeoutId = setSyncTimeout(() => {
+              syncTimeouts.delete(sessionId);
+              void syncSessionOutbox(sessionId);
+            }, 0);
+            syncTimeouts.set(sessionId, timeoutId);
             return;
           }
         }
@@ -547,7 +563,11 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             const recovered = await recoverOutboxConflict(sessionId);
             if (recovered) {
               set({ pendingSync: true });
-              setSyncTimeout(() => void syncSessionOutbox(sessionId), 0);
+              const timeoutId = setSyncTimeout(() => {
+                syncTimeouts.delete(sessionId);
+                void syncSessionOutbox(sessionId);
+              }, 0);
+              syncTimeouts.set(sessionId, timeoutId);
               return;
             }
 
@@ -569,7 +589,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             lastError: outboxError(error),
           });
           set({ pendingSync: true });
-          if (isOnline()) {
+          if (isOnline() && retryCount <= AUTO_RETRY_LIMIT) {
             const timeoutId = setSyncTimeout(() => {
               syncTimeouts.delete(sessionId);
               void syncSessionOutbox(sessionId);
@@ -1180,7 +1200,23 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         void syncSessionOutbox(resolved.session.id);
       } catch (error) {
         console.error("Failed to hydrate active workout session", error);
-        if (run === hydrationRun) set({ hydrationStatus: "error" });
+        if (run !== hydrationRun) return;
+
+        const fallbackSession = get().session ?? localSnapshot?.session ?? null;
+        if (fallbackSession) {
+          set({
+            session: fallbackSession,
+            activeSession: fallbackSession,
+            serverVersion: get().serverVersion ?? localVersion(localSnapshot),
+            pendingSync: true,
+            hydrationStatus: "ready",
+          });
+          persistLocalSession(fallbackSession, get().serverVersion, true);
+          void syncSessionOutbox(fallbackSession.id);
+          return;
+        }
+
+        set({ hydrationStatus: "error" });
       }
     },
 
