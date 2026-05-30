@@ -18,6 +18,7 @@ import {
   startWorkoutSession as startWorkoutSessionInSupabase,
 } from "@/lib/supabase-workout-session-events";
 import { getWorkoutSessionDeviceId } from "@/lib/workout-session-device";
+import { cloneSerializable, isJsonRecord, toWorkoutSessionJson } from "@/lib/workout-session-serialization";
 import {
   applyWorkoutSessionEvent,
   isActiveSessionSnapshot,
@@ -61,21 +62,17 @@ const RESUMABLE_STATUSES = new Set<ActiveSession["status"]>([
 ]);
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === "function") return structuredClone(value);
-  return JSON.parse(JSON.stringify(value)) as T;
+  return cloneSerializable(value);
 }
 
 function activeSessionToJson(session: ActiveSession): WorkoutSessionJson {
-  return JSON.parse(JSON.stringify(session)) as WorkoutSessionJson;
+  return toWorkoutSessionJson(session);
 }
 
 function workoutSessionEventPayload(
   event: WorkoutSessionEvent,
-  nextState?: ActiveSession,
 ): WorkoutSessionJson {
-  const payload = JSON.parse(JSON.stringify(event.payload)) as Record<string, WorkoutSessionJson>;
-  if (nextState) payload.nextState = activeSessionToJson(nextState);
-  return payload as WorkoutSessionJson;
+  return toWorkoutSessionJson(event.payload);
 }
 
 function isVersionConflict(error: unknown): boolean {
@@ -91,6 +88,14 @@ function nextPersistenceStatus(
   if (session.status === "finished") return "completed";
   if (session.status === "paused") return "paused";
   return "active";
+}
+
+function setSyncTimeout(handler: () => void, timeout: number): number {
+  return globalThis.setTimeout(handler, timeout) as unknown as number;
+}
+
+function clearSyncTimeout(id: number): void {
+  globalThis.clearTimeout(id);
 }
 
 function buildEvent<T extends WorkoutSessionEvent["type"]>(
@@ -301,7 +306,8 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       sessionId: next.id,
       userId: await currentOutboxUserId(),
       eventType: event.type,
-      payload: workoutSessionEventPayload(event, next),
+      payload: workoutSessionEventPayload(event),
+      nextState: activeSessionToJson(next),
       clientEventId: event.clientEventId ?? event.id,
       deviceId: event.deviceId ?? null,
       baseVersion,
@@ -368,24 +374,13 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
   }
 
   function payloadRecord(payload: WorkoutSessionJson): Record<string, WorkoutSessionJson> {
-    return payload != null && typeof payload === "object" && !Array.isArray(payload)
-      ? payload
-      : {};
+    return isJsonRecord(payload) ? payload : {};
   }
 
-  function payloadSnapshot(payload: WorkoutSessionJson): ActiveSession | null {
-    const state = payloadRecord(payload).nextState;
-    return isActiveSessionSnapshot(state) ? state : null;
-  }
-
-  function withNextStatePayload(
-    payload: WorkoutSessionJson,
-    nextState: ActiveSession,
-  ): WorkoutSessionJson {
-    return {
-      ...payloadRecord(payload),
-      nextState: activeSessionToJson(nextState),
-    } as WorkoutSessionJson;
+  function outboxSnapshot(event: WorkoutSessionOutboxEvent): ActiveSession | null {
+    if (isActiveSessionSnapshot(event.nextState)) return event.nextState;
+    const legacyState = payloadRecord(event.payload).nextState;
+    return isActiveSessionSnapshot(legacyState) ? legacyState : null;
   }
 
   async function recoverOutboxConflict(sessionId: string): Promise<boolean> {
@@ -435,7 +430,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       hasPendingLocal = true;
       acceptedClientEventIds.add(event.clientEventId);
       await updateWorkoutSessionOutboxEvent(event.id, {
-        payload: withNextStatePayload(event.payload, merged),
+        nextState: activeSessionToJson(merged),
         baseVersion: nextLocalSequence - 1,
         localSequenceNumber: nextLocalSequence,
         syncStatus: "pending",
@@ -463,7 +458,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
   async function syncSessionOutbox(sessionId: string): Promise<void> {
     const pendingTimeout = syncTimeouts.get(sessionId);
     if (pendingTimeout != null) {
-      window.clearTimeout(pendingTimeout);
+      clearSyncTimeout(pendingTimeout);
       syncTimeouts.delete(sessionId);
     }
 
@@ -492,7 +487,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           const recovered = await recoverOutboxConflict(sessionId);
           if (recovered) {
             set({ pendingSync: true });
-            window.setTimeout(() => void syncSessionOutbox(sessionId), 0);
+            setSyncTimeout(() => void syncSessionOutbox(sessionId), 0);
             return;
           }
         }
@@ -508,7 +503,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         if (!current) continue;
 
         try {
-          const nextState = payloadSnapshot(current.payload);
+          const nextState = outboxSnapshot(current);
           if (!nextState) throw new Error("Outbox event is missing nextState snapshot");
 
           if (current.eventType === "WORKOUT_STARTED") {
@@ -552,7 +547,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             const recovered = await recoverOutboxConflict(sessionId);
             if (recovered) {
               set({ pendingSync: true });
-              window.setTimeout(() => void syncSessionOutbox(sessionId), 0);
+              setSyncTimeout(() => void syncSessionOutbox(sessionId), 0);
               return;
             }
 
@@ -575,7 +570,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           });
           set({ pendingSync: true });
           if (isOnline()) {
-            const timeoutId = window.setTimeout(() => {
+            const timeoutId = setSyncTimeout(() => {
               syncTimeouts.delete(sessionId);
               void syncSessionOutbox(sessionId);
             }, backoffMs(retryCount));

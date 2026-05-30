@@ -28,8 +28,8 @@ function makeWorkout(): Workout {
         id: "we-1",
         exerciseId: "bench-press",
         sets: 2,
-        reps: "8-10",
-        weightKg: 80,
+      reps: "8-10",
+      weightKg: 80,
         restSec: 0,
         order: 0,
       },
@@ -44,7 +44,7 @@ function asJson(session: ActiveSession): WorkoutSessionJson {
 function remoteEvent(
   session: ActiveSession,
   sequenceNumber: number,
-  eventType: string,
+  eventType: WorkoutSessionEventRecord["eventType"],
   payload: WorkoutSessionJson,
   clientEventId = `client-${sequenceNumber}`,
 ): WorkoutSessionEventRecord {
@@ -80,7 +80,7 @@ function startEvent(session: ActiveSession): WorkoutSessionEventRecord {
 function pendingOutbox(
   session: ActiveSession,
   localSequenceNumber: number,
-  eventType: string,
+  eventType: WorkoutSessionEventRecord["eventType"],
   payload: WorkoutSessionJson,
   clientEventId = `pending-${localSequenceNumber}`,
 ): WorkoutSessionOutboxEvent {
@@ -90,6 +90,7 @@ function pendingOutbox(
     userId: "user-1",
     eventType,
     payload,
+    nextState: asJson(session),
     clientEventId,
     deviceId: "device-b",
     baseVersion: localSequenceNumber - 1,
@@ -119,8 +120,8 @@ describe("workout session event replay", () => {
       startEvent(session),
       remoteEvent(session, 2, "SET_STARTED", {
         exerciseId: session.exercises[0].id,
-        setIndex: 0,
-        startedAt: NOW + 2,
+      setIndex: 0,
+      startedAt: NOW + 2,
       }, "remote-start"),
       remoteEvent(session, 3, "WORKOUT_PAUSED", { pausedAt: NOW + 3 }, "remote-pause"),
     ];
@@ -184,14 +185,14 @@ describe("workout session event replay", () => {
       startEvent(session),
       remoteEvent(session, 2, "SET_STARTED", {
         exerciseId: session.exercises[0].id,
-        setIndex: 0,
-        startedAt: NOW + 2,
+      setIndex: 0,
+      startedAt: NOW + 2,
       }),
       remoteEvent(session, 3, "SET_UPDATED", {
         exerciseId: session.exercises[0].id,
-        setIndex: 0,
-        reps: 9,
-        weightKg: 82.5,
+      setIndex: 0,
+      reps: 9,
+      weightKg: 82.5,
       }),
     ];
 
@@ -211,10 +212,10 @@ describe("workout session event replay", () => {
       occurredAt: NOW + 2,
       payload: {
         exerciseId: session.exercises[0].id,
-        setIndex: 0,
-        startedAt: NOW + 2,
-        reps: 8,
-        weightKg: 80,
+      setIndex: 0,
+      startedAt: NOW + 2,
+      reps: 8,
+      weightKg: 80,
       },
       clientEventId: "set-started",
       deviceId: "device-a",
@@ -245,4 +246,39 @@ describe("workout session event replay", () => {
     expect(result.session).toEqual(remotelyDeleted);
     expect(result.skippedEventIds).toEqual([localUpdate.id]);
   });
+
+  it("replays 1000+ canonical events without relying on payload snapshots", () => {
+    const workout = makeWorkout();
+    workout.exercises[0].sets = 1001;
+    const session = buildActiveSession(workout);
+    const events: WorkoutSessionEventRecord[] = [startEvent(session)];
+
+    events.push(remoteEvent(session, 2, "SET_STARTED", {
+      exerciseId: session.exercises[0].id,
+      setIndex: 0,
+      startedAt: NOW + 2,
+      reps: 8,
+      weightKg: 80,
+    }, "start-set-0"));
+
+    for (let index = 0; index < 1000; index += 1) {
+      events.push(remoteEvent(session, index + 3, "SET_COMPLETED", {
+        exerciseId: session.exercises[0].id,
+        setIndex: index,
+        completedAt: NOW + index + 3,
+        reps: 8,
+        weightKg: 80,
+      }, `complete-${index}`));
+    }
+
+    const startedAt = performance.now();
+    const result = replayWorkoutSessionEvents(null, events);
+    const durationMs = performance.now() - startedAt;
+
+    expect(result.skippedEventIds).toEqual([]);
+    expect(result.session?.exercises[0].sets[999].status).toBe("completed");
+    expect(result.session?.currentSetIndex).toBe(1000);
+    expect(durationMs).toBeLessThan(1_000);
+  });
+
 });

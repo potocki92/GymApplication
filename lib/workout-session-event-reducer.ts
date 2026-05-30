@@ -1,5 +1,6 @@
 import type { WorkoutSessionEvent } from "@/features/workout-session/domain/workout-session-events";
 import { currentSet, nextCursor, suggestedReps } from "@/lib/session-utils";
+import { cloneSerializable, isJsonRecord, stableJson } from "@/lib/workout-session-serialization";
 import type {
   ActiveSession,
   WorkoutSessionEventRecord,
@@ -8,22 +9,11 @@ import type {
 } from "@/types";
 
 function clone<T>(value: T): T {
-  if (typeof structuredClone === "function") return structuredClone(value);
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function stableJson(value: unknown): string {
-  if (value == null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  const record = value as Record<string, unknown>;
-  return `{${Object.keys(record)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
-    .join(",")}}`;
+  return cloneSerializable(value);
 }
 
 function isRecord(value: WorkoutSessionJson | undefined): value is Record<string, WorkoutSessionJson> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
+  return isJsonRecord(value);
 }
 
 export function isActiveSessionSnapshot(
@@ -46,6 +36,7 @@ export function isActiveSessionSnapshot(
 function payloadState(payload: WorkoutSessionJson): WorkoutSessionJson | null {
   if (!isRecord(payload)) return null;
   return (
+    payload.initialState ??
     payload.nextState ??
     payload.currentState ??
     payload.activeSession ??
@@ -89,21 +80,20 @@ function activateCurrentSet(s: ActiveSession, now: number): void {
   if (set.actualWeightKg == null) set.actualWeightKg = set.targetWeightKg;
 }
 
-export function applyWorkoutSessionEvent(
-  session: ActiveSession,
+function applyWorkoutSessionEventDraft(
+  next: ActiveSession,
   event: WorkoutSessionEvent,
-): ActiveSession | null {
-  const next = clone(session);
+): boolean {
   const now = event.occurredAt;
 
   switch (event.type) {
     case "WORKOUT_STARTED":
-      return next;
+      return true;
 
     case "EXERCISE_STARTED": {
       const ex = next.exercises[event.payload.exerciseIndex];
-      if (!ex || ex.id !== event.payload.exerciseId) return null;
-      if (next.status !== "executing" && next.status !== "resting") return null;
+      if (!ex || ex.id !== event.payload.exerciseId) return false;
+      if (next.status !== "executing" && next.status !== "resting") return false;
 
       const current = next.exercises[next.currentExerciseIndex];
       if (current) {
@@ -124,14 +114,14 @@ export function applyWorkoutSessionEvent(
 
     case "SET_STARTED": {
       if (next.status !== "planning" && next.status !== "executing" && next.status !== "resting") {
-        return null;
+        return false;
       }
       const exIndex = next.exercises.findIndex(
         (ex) => ex.id === event.payload.exerciseId,
       );
       const target = exIndex < 0 ? undefined : next.exercises[exIndex].sets[event.payload.setIndex];
       if (!target || target.status === "completed" || target.status === "skipped") {
-        return null;
+        return false;
       }
       next.startedAt ??= event.payload.startedAt ?? now;
       next.currentExerciseIndex = exIndex;
@@ -150,12 +140,12 @@ export function applyWorkoutSessionEvent(
     }
 
     case "SET_COMPLETED": {
-      if (next.status !== "executing") return null;
+      if (next.status !== "executing") return false;
       const exIndex = next.exercises.findIndex(
         (ex) => ex.id === event.payload.exerciseId,
       );
       const set = next.exercises[exIndex]?.sets[event.payload.setIndex];
-      if (!set || set.status === "completed" || set.status === "skipped") return null;
+      if (!set || set.status === "completed" || set.status === "skipped") return false;
 
       next.currentExerciseIndex = exIndex;
       next.currentSetIndex = event.payload.setIndex;
@@ -191,7 +181,7 @@ export function applyWorkoutSessionEvent(
     case "SET_UPDATED": {
       const ex = next.exercises.find((item) => item.id === event.payload.exerciseId);
       const target = ex?.sets[event.payload.setIndex];
-      if (!target) return null;
+      if (!target) return false;
       if (event.payload.reps !== undefined) {
         target.actualReps = Math.max(0, Math.round(event.payload.reps));
       }
@@ -208,14 +198,14 @@ export function applyWorkoutSessionEvent(
 
     case "SET_DELETED": {
       const ex = next.exercises.find((item) => item.id === event.payload.exerciseId);
-      if (!ex) return null;
+      if (!ex) return false;
       const target = ex.sets[event.payload.setIndex];
-      if (!target || target.status !== "pending") return null;
+      if (!target || target.status !== "pending") return false;
       if (
         next.exercises[next.currentExerciseIndex]?.id === event.payload.exerciseId &&
         next.currentSetIndex === event.payload.setIndex
       ) {
-        return null;
+        return false;
       }
       ex.sets.splice(event.payload.setIndex, 1);
       ex.sets.forEach((set, index) => (set.setNumber = index + 1));
@@ -237,7 +227,7 @@ export function applyWorkoutSessionEvent(
 
     case "REST_FINISHED":
     case "REST_SKIPPED": {
-      if (next.status !== "resting") return null;
+      if (next.status !== "resting") return false;
       activateCurrentSet(
         next,
         event.type === "REST_FINISHED"
@@ -248,17 +238,17 @@ export function applyWorkoutSessionEvent(
     }
 
     case "WORKOUT_PAUSED": {
-      if (next.status === "paused") return null;
-      if (next.status !== "executing" && next.status !== "resting") return null;
+      if (next.status === "paused") return false;
+      if (next.status !== "executing" && next.status !== "resting") return false;
       next.pausedAt = event.payload.pausedAt ?? now;
       next.status = "paused";
       break;
     }
 
     case "WORKOUT_RESUMED": {
-      if (next.status !== "paused" || next.pausedAt == null) return null;
+      if (next.status !== "paused" || next.pausedAt == null) return false;
       const resumedAt = event.payload.resumedAt ?? now;
-      const delta = resumedAt - next.pausedAt;
+      const delta = Math.max(0, resumedAt - next.pausedAt);
       if (next.startedAt != null) next.startedAt += delta;
       if (next.restStartedAt != null) {
         next.restStartedAt += delta;
@@ -275,7 +265,7 @@ export function applyWorkoutSessionEvent(
     }
 
     case "WORKOUT_FINISHED": {
-      if (next.status === "finished" || next.status === "planning") return null;
+      if (next.status === "finished" || next.status === "planning") return false;
       for (const ex of next.exercises) {
         for (const st of ex.sets) {
           if (st.status === "pending" || st.status === "active") {
@@ -296,18 +286,26 @@ export function applyWorkoutSessionEvent(
         : undefined;
       const target =
         ex && event.payload.setIndex != null ? ex.sets[event.payload.setIndex] : null;
-      if (!target) return null;
+      if (!target) return false;
       const trimmed = event.payload.note.trim();
       target.notes = trimmed === "" ? null : trimmed;
       break;
     }
 
     default:
-      return null;
+      return false;
   }
 
   next.updatedAt = now;
-  return next;
+  return true;
+}
+
+export function applyWorkoutSessionEvent(
+  session: ActiveSession,
+  event: WorkoutSessionEvent,
+): ActiveSession | null {
+  const next = clone(session);
+  return applyWorkoutSessionEventDraft(next, event) ? next : null;
 }
 
 export function workoutSessionEventFromRecord(
@@ -487,13 +485,10 @@ function replayOnce(
     }
 
     const command = workoutSessionEventFromRecord(record);
-    const next = command ? applyWorkoutSessionEvent(session, command) : null;
-    if (!next) {
+    if (!command || !applyWorkoutSessionEventDraft(session, command)) {
       skippedEventIds.push(record.id);
       continue;
     }
-
-    session = next;
     seenClientEventIds.add(record.clientEventId);
     appliedClientEventIds.push(record.clientEventId);
   }
@@ -512,9 +507,11 @@ export function replayWorkoutSessionEvents(
   events: WorkoutSessionEventRecord[],
 ): WorkoutSessionReplayResult {
   const first = replayOnce(initial, events);
-  const second = replayOnce(initial, events);
-  if (stableJson(first.session) !== stableJson(second.session)) {
-    throw new Error("Workout session replay is non-deterministic");
+  if (process.env.NODE_ENV !== "production") {
+    const second = replayOnce(initial, events);
+    if (stableJson(first.session) !== stableJson(second.session)) {
+      throw new Error("Workout session replay is non-deterministic");
+    }
   }
   return first;
 }

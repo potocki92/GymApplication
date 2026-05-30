@@ -9,6 +9,7 @@
  * Post-fix: the store falls back to `supabase.auth.getUser()` when the auth
  * store is empty, the upsert succeeds, and the wizard completes.
  */
+import type { User } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/config", () => ({
@@ -35,6 +36,8 @@ vi.mock("@/lib/supabase/client", () => ({
 
 import { useAuthStore } from "@/store/use-auth-store";
 import { useProfileStore } from "@/store/use-profile-store";
+
+const TEST_USER = { id: "u-1" } as User;
 
 const PROFILE_ROW = {
   id: "u-1",
@@ -72,8 +75,7 @@ beforeEach(() => {
 describe("useProfileStore.update", () => {
   it("saves the patch when the auth store is populated", async () => {
     useAuthStore.setState({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      user: { id: "u-1" } as any,
+      user: TEST_USER,
       initialized: true,
     });
     maybeSingleMock.mockResolvedValueOnce({ data: PROFILE_ROW, error: null });
@@ -117,8 +119,7 @@ describe("useProfileStore.update", () => {
 
   it("surfaces the supabase error message when the upsert fails", async () => {
     useAuthStore.setState({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      user: { id: "u-1" } as any,
+      user: TEST_USER,
       initialized: true,
     });
     maybeSingleMock.mockResolvedValueOnce({

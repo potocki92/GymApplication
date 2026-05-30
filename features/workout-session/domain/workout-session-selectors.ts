@@ -1,5 +1,7 @@
 import type { WorkoutSessionSet, WorkoutSessionState } from "./workout-session-state";
 
+const completedSetsCache = new WeakMap<readonly WorkoutSessionSet[], WorkoutSessionSet[]>();
+
 function isCompletedSet(set: WorkoutSessionSet): boolean {
   return set.status === "completed";
 }
@@ -33,7 +35,11 @@ export function getRestRemainingSec(
 }
 
 export function getCompletedSets(state: WorkoutSessionState): WorkoutSessionSet[] {
-  return state.sets.filter(isCompletedSet);
+  const cached = completedSetsCache.get(state.sets);
+  if (cached) return cached;
+  const completed = state.sets.filter(isCompletedSet);
+  completedSetsCache.set(state.sets, completed);
+  return completed;
 }
 
 export function getTotalVolumeKg(state: WorkoutSessionState): number {

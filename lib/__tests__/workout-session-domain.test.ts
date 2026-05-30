@@ -254,3 +254,35 @@ describe("workout session selectors", () => {
     expect(getExercisesCount(state)).toBe(0);
   });
 });
+
+describe("workout session selector memoization", () => {
+  it("returns the same completed-set array while state.sets identity is stable", () => {
+    const state = replayWorkoutSessionEvents(null, [
+      {
+        id: "start",
+        type: "WORKOUT_STARTED",
+        occurredAt: 1_000,
+        payload: {
+          sessionId: "session-1",
+          workoutId: "workout-1",
+          workoutName: "Push",
+          startedAt: 1_000,
+        },
+      },
+      {
+        id: "set-completed",
+        type: "SET_COMPLETED",
+        occurredAt: 1_001,
+        payload: {
+          exerciseId: "exercise-1",
+          setIndex: 0,
+          reps: 8,
+          weightKg: 80,
+        },
+      },
+    ]);
+
+    expect(state).not.toBeNull();
+    expect(getCompletedSets(state!)).toBe(getCompletedSets(state!));
+  });
+});
