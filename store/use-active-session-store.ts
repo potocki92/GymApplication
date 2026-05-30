@@ -8,11 +8,21 @@ import {
   toCompletedSession,
   uid,
 } from "@/lib/session-utils";
+import {
+  getActiveWorkoutSession,
+  getWorkoutSessionEventsAfter,
+  startWorkoutSession as startWorkoutSessionInSupabase,
+} from "@/lib/supabase-workout-session-events";
+import {
+  isActiveSessionSnapshot,
+  reduceWorkoutSessionEvents,
+} from "@/lib/workout-session-event-reducer";
 import type {
   ActiveSession,
   CompletedSession,
   LoggedSet,
   Workout,
+  WorkoutSessionJson,
 } from "@/types";
 
 const HISTORY_LIMIT = 30;
@@ -20,6 +30,10 @@ const HISTORY_LIMIT = 30;
 function clone<T>(value: T): T {
   if (typeof structuredClone === "function") return structuredClone(value);
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function activeSessionToJson(session: ActiveSession): WorkoutSessionJson {
+  return JSON.parse(JSON.stringify(session)) as WorkoutSessionJson;
 }
 
 /** Activate the set the cursor currently points at (start its timer, prefill actuals). */
@@ -35,13 +49,19 @@ function activateCurrentSet(s: ActiveSession, now: number): void {
   if (set.actualWeightKg == null) set.actualWeightKg = set.targetWeightKg;
 }
 
+type ActiveSessionHydrationStatus = "idle" | "loading" | "ready" | "error";
+
 interface ActiveSessionState {
   session: ActiveSession | null;
+  activeSession: ActiveSession | null;
+  serverVersion: number | null;
+  hydrationStatus: ActiveSessionHydrationStatus;
   past: ActiveSession[];
   future: ActiveSession[];
 
   // lifecycle
   start: (workout: Workout) => void;
+  startWorkoutSession: (workout: Workout) => Promise<ActiveSession | null>;
   beginFirstSet: () => void;
   pause: () => void;
   resume: () => void;
@@ -73,9 +93,31 @@ interface ActiveSessionState {
 
   // recovery
   hydrate: (session: ActiveSession) => void;
+  hydrateActiveWorkoutSession: () => Promise<void>;
 }
 
 export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
+  async function applyServerSession(active: Awaited<ReturnType<typeof getActiveWorkoutSession>>): Promise<ActiveSession | null> {
+    if (!active) return null;
+    if (!isActiveSessionSnapshot(active.currentState)) {
+      set({ serverVersion: active.version, hydrationStatus: "ready" });
+      return null;
+    }
+
+    const events = await getWorkoutSessionEventsAfter(active.id, active.version);
+    const session = reduceWorkoutSessionEvents(active.currentState, events);
+    const serverVersion = events.at(-1)?.sequenceNumber ?? active.version;
+    set({
+      session,
+      activeSession: session,
+      serverVersion,
+      hydrationStatus: "ready",
+      past: [],
+      future: [],
+    });
+    return session;
+  }
+
   /**
    * Apply an immutable mutation to the session. `fn` mutates a deep clone; return
    * `false` to abort with no state change. When `pushHistory` is true the pre-edit
@@ -93,21 +135,71 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     if (pushHistory) {
       set({
         session: draft,
+        activeSession: draft,
         past: [...get().past, cur].slice(-HISTORY_LIMIT),
         future: [],
       });
     } else {
-      set({ session: draft });
+      set({ session: draft, activeSession: draft });
     }
   }
 
   return {
     session: null,
+    activeSession: null,
+    serverVersion: null,
+    hydrationStatus: "idle",
     past: [],
     future: [],
 
-    start: (workout) =>
-      set({ session: buildActiveSession(workout), past: [], future: [] }),
+    start: (workout) => {
+      const session = buildActiveSession(workout);
+      set({ session, activeSession: session, past: [], future: [] });
+    },
+
+    startWorkoutSession: async (workout) => {
+      const current = get().activeSession;
+      if (current && current.status !== "finished") return current;
+
+      const existing = await getActiveWorkoutSession();
+      const existingSession = await applyServerSession(existing);
+      if (existingSession) return existingSession;
+      if (existing) return null;
+
+      const session = buildActiveSession(workout);
+      const clientEventId = `${session.id}-start-${uid()}`;
+
+      try {
+        const started = await startWorkoutSessionInSupabase({
+          sessionId: session.id,
+          workoutId: session.workoutId,
+          workoutName: session.workoutName,
+          deviceId: null,
+          clientEventId,
+          initialState: activeSessionToJson(session),
+        });
+
+        if (!started) {
+          set({
+            session,
+            activeSession: session,
+            serverVersion: null,
+            hydrationStatus: "ready",
+            past: [],
+            future: [],
+          });
+          return session;
+        }
+
+        const serverSession = await applyServerSession(started);
+        return serverSession ?? session;
+      } catch (error) {
+        const active = await getActiveWorkoutSession();
+        const activeSession = await applyServerSession(active);
+        if (activeSession) return activeSession;
+        throw error;
+      }
+    },
 
     beginFirstSet: () =>
       commit(true, (s) => {
@@ -227,13 +319,14 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         s.pausedAt = null;
       }),
 
-    abort: () => set({ session: null, past: [], future: [] }),
+    abort: () =>
+      set({ session: null, activeSession: null, serverVersion: null, past: [], future: [] }),
 
     save: () => {
       const s = get().session;
       if (!s || s.status !== "finished") return null;
       const completed = toCompletedSession(s);
-      set({ session: null, past: [], future: [] });
+      set({ session: null, activeSession: null, serverVersion: null, past: [], future: [] });
       return completed;
     },
 
@@ -338,6 +431,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const prev = past[past.length - 1];
       set({
         session: prev,
+        activeSession: prev,
         past: past.slice(0, -1),
         future: [session, ...future].slice(0, HISTORY_LIMIT),
       });
@@ -349,11 +443,49 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const next = future[0];
       set({
         session: next,
+        activeSession: next,
         past: [...past, session].slice(-HISTORY_LIMIT),
         future: future.slice(1),
       });
     },
 
-    hydrate: (session) => set({ session, past: [], future: [] }),
+    hydrate: (session) => set({ session, activeSession: session, past: [], future: [] }),
+
+    hydrateActiveWorkoutSession: async () => {
+      set({ hydrationStatus: "loading" });
+      try {
+        const active = await getActiveWorkoutSession();
+        if (!active) {
+          if (get().activeSession) {
+            set({ hydrationStatus: "ready" });
+            return;
+          }
+          set({
+            session: null,
+            activeSession: null,
+            serverVersion: null,
+            hydrationStatus: "ready",
+            past: [],
+            future: [],
+          });
+          return;
+        }
+
+        const session = await applyServerSession(active);
+        if (!session) {
+          set({
+            session: null,
+            activeSession: null,
+            serverVersion: active.version,
+            hydrationStatus: "ready",
+            past: [],
+            future: [],
+          });
+        }
+      } catch (error) {
+        console.error("Failed to hydrate active workout session", error);
+        set({ hydrationStatus: "error" });
+      }
+    },
   };
 });

@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { ActiveWorkoutHydrationGate } from "@/features/active-workout/active-workout-hydration-gate";
 import { SessionRecoveryGate } from "@/features/active-workout/session-recovery-gate";
 import { AuthHydrationGate } from "@/features/auth/auth-hydration-gate";
 import { HistoryHydrationGate } from "@/features/exercise-history/history-hydration-gate";
@@ -21,6 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MetricsHydrationGate />
       <ProgressPhotosHydrationGate />
       <GarminIntegrationHydrationGate />
+      <ActiveWorkoutHydrationGate />
       <SessionRecoveryGate />
     </AppShell>
   );

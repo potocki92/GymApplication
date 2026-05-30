@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WEEKLY_PLAN } from "@/data";
@@ -29,7 +29,14 @@ vi.mock("@/hooks/use-session-clock", () => ({
 }));
 
 function resetActiveSession() {
-  useActiveSessionStore.setState({ session: null, past: [], future: [] });
+  useActiveSessionStore.setState({
+    session: null,
+    activeSession: null,
+    serverVersion: null,
+    hydrationStatus: "idle",
+    past: [],
+    future: [],
+  });
   pushMock.mockClear();
 }
 
@@ -48,13 +55,13 @@ describe("starting an active workout", () => {
     resetActiveSession();
   });
 
-  it("creates a planning session from the dashboard card and navigates to active workout", () => {
+  it("creates a planning session from the dashboard card and navigates to active workout", async () => {
     const workout = plannedWorkout();
 
     render(<NextWorkoutCard workout={workout} />);
     fireEvent.click(screen.getByRole("button", { name: "Rozpocznij trening" }));
 
-    expect(pushMock).toHaveBeenCalledWith("/workout/active");
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/workout/active"));
     const session = useActiveSessionStore.getState().session;
     expect(session?.status).toBe("planning");
     expect(session?.workoutId).toBe(workout.id);

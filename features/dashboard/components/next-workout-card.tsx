@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,13 +22,18 @@ function Meta({ label, value }: { label: string; value: string }) {
 export function NextWorkoutCard({ workout }: { workout?: Workout }) {
   const t = useDictionary();
   const router = useRouter();
-  const startSession = useActiveSessionStore((s) => s.start);
+  const startSession = useActiveSessionStore((s) => s.startWorkoutSession);
   const restSec = workout?.exercises[0]?.restSec ?? 90;
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!workout) return;
-    startSession(workout);
-    router.push("/workout/active");
+    try {
+      const session = await startSession(workout);
+      if (session) router.push("/workout/active");
+    } catch (error) {
+      console.error(error);
+      toast.error(t.errors.unexpectedTitle);
+    }
   };
 
   return (
@@ -51,7 +57,7 @@ export function NextWorkoutCard({ workout }: { workout?: Workout }) {
               <Meta label={t.dashboard.workoutMeta.estTime} value={formatMinutes(workout.estimatedDurationMin)} />
               <Meta label={t.dashboard.workoutMeta.restBetween} value={formatRest(restSec)} />
             </div>
-            <Button className="mt-5 h-10 w-full" onClick={handleStart}>
+            <Button className="mt-5 h-10 w-full" onClick={() => void handleStart()}>
               {t.dashboard.startWorkout}
             </Button>
           </>

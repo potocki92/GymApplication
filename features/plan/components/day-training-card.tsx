@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { CircleCheckBig, Coffee, Play, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,14 +22,19 @@ export function DayTrainingCard({
 }) {
   const t = useDictionary();
   const router = useRouter();
-  const startSession = useActiveSessionStore((s) => s.start);
+  const startSession = useActiveSessionStore((s) => s.startWorkoutSession);
   const { weekday, rest, workout } = day;
   const href = `/plan/new?day=${weekday}`;
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!workout) return;
-    startSession(workout);
-    router.push("/workout/active");
+    try {
+      const session = await startSession(workout);
+      if (session) router.push("/workout/active");
+    } catch (error) {
+      console.error(error);
+      toast.error(t.errors.unexpectedTitle);
+    }
   };
 
   return (
@@ -73,7 +79,7 @@ export function DayTrainingCard({
               {formatMinutes(workout.estimatedDurationMin)}
             </p>
             {!completed ? (
-              <Button size="sm" className="w-full" onClick={handleStart}>
+              <Button size="sm" className="w-full" onClick={() => void handleStart()}>
                 <Play className="size-4" />
                 {t.activeWorkout.start}
               </Button>
