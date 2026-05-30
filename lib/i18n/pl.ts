@@ -861,6 +861,10 @@ export const pl = {
     },
     fullscreen: {
       close: "Zamknij",
+      next: "Następne zdjęcie",
+      previous: "Poprzednie zdjęcie",
+      counter: "{current} z {total}",
+      zoomReset: "Resetuj powiększenie",
     },
     months: [
       "Styczeń",

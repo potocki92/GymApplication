@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Camera, Plus } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -35,11 +35,19 @@ export function ProgressPhotosView() {
 
   const [pose, setPose] = useState<ProgressPose>("front");
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [viewing, setViewing] = useState<ProgressPhotoRecord | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const filtered = useMemo(
     () => selectPhotosByPose(records, pose),
     [records, pose],
+  );
+
+  const openViewer = useCallback(
+    (record: ProgressPhotoRecord) => {
+      const idx = filtered.findIndex((r) => r.id === record.id);
+      if (idx >= 0) setViewerIndex(idx);
+    },
+    [filtered],
   );
 
   const byMonth = useMemo(() => {
@@ -112,7 +120,7 @@ export function ProgressPhotosView() {
                 <h2 className="font-heading text-lg font-semibold tracking-tight">
                   {t.progressPhotos.sections.timeline}
                 </h2>
-                <TimelineSwiper records={filtered} onSelect={setViewing} />
+                <TimelineSwiper records={filtered} onSelect={openViewer} />
               </section>
 
               <section className="space-y-4">
@@ -124,7 +132,7 @@ export function ProgressPhotosView() {
                     key={monthKey}
                     monthKey={monthKey}
                     records={recs}
-                    onOpen={setViewing}
+                    onOpen={openViewer}
                   />
                 ))}
               </section>
@@ -138,7 +146,12 @@ export function ProgressPhotosView() {
         onOpenChange={setUploadOpen}
         defaultPose={pose}
       />
-      <FullscreenViewer record={viewing} onClose={() => setViewing(null)} />
+      <FullscreenViewer
+        photos={filtered}
+        index={viewerIndex}
+        onIndexChange={setViewerIndex}
+        onClose={() => setViewerIndex(null)}
+      />
     </div>
   );
 }
