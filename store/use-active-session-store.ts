@@ -126,7 +126,14 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
 
     start: (workout) => {
       const session = buildActiveSession(workout);
-      set({ session, activeSession: session, past: [], future: [] });
+      set({
+        session,
+        activeSession: session,
+        serverVersion: null,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      });
     },
 
     beginFirstSet: () =>
@@ -377,9 +384,19 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       });
     },
 
-    hydrate: (session) => set({ session, activeSession: session, past: [], future: [] }),
+    hydrate: (session) =>
+      set({
+        session,
+        activeSession: session,
+        serverVersion: null,
+        hydrationStatus: "ready",
+        past: [],
+        future: [],
+      }),
 
     hydrateActiveWorkoutSession: async () => {
+      const { activeSession, hydrationStatus } = get();
+      if (hydrationStatus === "loading" || activeSession) return;
       set({ hydrationStatus: "loading" });
       try {
         const active = await getActiveWorkoutSession();

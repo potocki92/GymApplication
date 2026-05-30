@@ -17,7 +17,7 @@ export function SessionRecoveryGate() {
   const pathname = usePathname();
   const hydrationStatus = useActiveSessionStore((s) => s.hydrationStatus);
 
-  if (hydrationStatus === "loading") return null;
+  if (hydrationStatus === "idle" || hydrationStatus === "loading") return null;
   if (pathname?.startsWith("/workout/active")) return null;
 
   return (

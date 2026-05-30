@@ -125,4 +125,43 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(useActiveSessionStore.getState().activeSession?.status).toBe("paused");
     expect(useActiveSessionStore.getState().serverVersion).toBe(4);
   });
+
+  it("does not issue duplicate hydration while a local active session exists", async () => {
+    const session = buildActiveSession(makeWorkout());
+    useActiveSessionStore.setState({
+      session,
+      activeSession: session,
+      serverVersion: 7,
+      hydrationStatus: "ready",
+      past: [],
+      future: [],
+    });
+
+    await useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+
+    expect(getActiveWorkoutSessionMock).not.toHaveBeenCalled();
+    expect(useActiveSessionStore.getState().serverVersion).toBe(7);
+  });
+
+  it("resets server hydration metadata when starting a local session", () => {
+    useActiveSessionStore.setState({ serverVersion: 9, hydrationStatus: "error" });
+
+    useActiveSessionStore.getState().start(makeWorkout());
+
+    expect(useActiveSessionStore.getState().serverVersion).toBeNull();
+    expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
+    expect(useActiveSessionStore.getState().activeSession?.workoutId).toBe("w-1");
+  });
+
+  it("resets server hydration metadata when hydrating from local recovery", () => {
+    const session = buildActiveSession(makeWorkout());
+    useActiveSessionStore.setState({ serverVersion: 9, hydrationStatus: "error" });
+
+    useActiveSessionStore.getState().hydrate(session);
+
+    expect(useActiveSessionStore.getState().serverVersion).toBeNull();
+    expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
+    expect(useActiveSessionStore.getState().activeSession?.id).toBe(session.id);
+  });
+
 });
