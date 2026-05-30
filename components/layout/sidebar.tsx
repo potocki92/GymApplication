@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Timer } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogoText } from "@/components/shared/logo";
@@ -10,8 +11,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useActiveSessionTimer } from "@/hooks/use-active-session-timer";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDictionary } from "@/hooks/use-dictionary";
+import { formatClock } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { isNavActive, NAV_ITEMS } from "./nav-items";
 
@@ -19,6 +22,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const t = useDictionary();
   const user = useCurrentUser();
+  const timer = useActiveSessionTimer();
 
   return (
     <aside className="group/sidebar sticky top-0 hidden h-screen shrink-0 flex-col gap-2 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground shadow-2xl shadow-black/25 md:flex md:w-[4.75rem] md:hover:w-64 md:focus-within:w-64 motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-out">
@@ -68,6 +72,32 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Active workout timer */}
+      {timer.isActive ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href="/workout/active"
+              aria-label={t.activeWorkout.returnToWorkout}
+              className="group flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 justify-center md:group-hover/sidebar:justify-start md:group-focus-within/sidebar:justify-start"
+            >
+              <span className="relative flex size-5 shrink-0 items-center justify-center">
+                <Timer className="size-5" />
+                {!timer.isPaused ? (
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex size-2 animate-ping rounded-full bg-primary" />
+                ) : null}
+              </span>
+              <span className="max-w-0 -translate-x-1 overflow-hidden whitespace-nowrap font-mono tabular-nums opacity-0 motion-safe:transition-[max-width,opacity,transform] motion-safe:duration-200 motion-safe:ease-out md:group-hover/sidebar:max-w-40 md:group-hover/sidebar:translate-x-0 md:group-hover/sidebar:opacity-100 md:group-focus-within/sidebar:max-w-40 md:group-focus-within/sidebar:translate-x-0 md:group-focus-within/sidebar:opacity-100">
+                {formatClock(timer.totalMs)}
+              </span>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="lg:hidden">
+            {t.activeWorkout.inProgress} · {formatClock(timer.totalMs)}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
 
       {/* User */}
       <Link
