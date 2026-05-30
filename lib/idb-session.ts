@@ -33,10 +33,16 @@ function hasIDB(): boolean {
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      if (!db.objectStoreNames.contains("workout-session-outbox")) {
+        const outbox = db.createObjectStore("workout-session-outbox", { keyPath: "id" });
+        outbox.createIndex("session-status-sequence", ["sessionId", "syncStatus", "localSequenceNumber"]);
+        outbox.createIndex("client-event", "clientEventId", { unique: true });
+        outbox.createIndex("created-at", "createdAt");
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

@@ -1,6 +1,8 @@
 import { toast } from "sonner";
 import { create } from "zustand";
 
+import { getSupabaseClient } from "@/lib/supabase/client";
+
 import {
   buildActiveSession,
   currentSet,
@@ -26,6 +28,14 @@ import {
   saveSessionSnapshot,
   type ActiveSessionCacheSnapshot,
 } from "@/lib/idb-session";
+import {
+  cleanupWorkoutSessionOutbox,
+  listSyncableWorkoutSessionOutboxEvents,
+  listWorkoutSessionOutboxEvents,
+  putWorkoutSessionOutboxEvent,
+  resetStaleSyncingWorkoutSessionOutboxEvents,
+  updateWorkoutSessionOutboxEvent,
+} from "@/lib/idb-workout-session-outbox";
 import type { WorkoutSessionEvent } from "@/features/workout-session/domain/workout-session-events";
 import type {
   ActiveSession,
@@ -33,9 +43,11 @@ import type {
   LoggedSet,
   Workout,
   WorkoutSessionJson,
+  WorkoutSessionOutboxEvent,
 } from "@/types";
 
 const HISTORY_LIMIT = 30;
+const OFFLINE_USER_ID = "offline-user";
 const RESUMABLE_STATUSES = new Set<ActiveSession["status"]>([
   "planning",
   "executing",
@@ -67,8 +79,11 @@ function activateCurrentSet(s: ActiveSession, now: number): void {
 
 function workoutSessionEventPayload(
   event: WorkoutSessionEvent,
+  nextState?: ActiveSession,
 ): WorkoutSessionJson {
-  return JSON.parse(JSON.stringify(event.payload)) as WorkoutSessionJson;
+  const payload = JSON.parse(JSON.stringify(event.payload)) as Record<string, WorkoutSessionJson>;
+  if (nextState) payload.nextState = activeSessionToJson(nextState);
+  return payload as WorkoutSessionJson;
 }
 
 function isVersionConflict(error: unknown): boolean {
@@ -281,6 +296,22 @@ function applyActiveSessionEvent(
       break;
     }
 
+    case "WORKOUT_FINISHED": {
+      if (next.status === "finished" || next.status === "planning") return null;
+      for (const ex of next.exercises) {
+        for (const st of ex.sets) {
+          if (st.status === "pending" || st.status === "active") {
+            st.status = "skipped";
+          }
+        }
+      }
+      next.status = "finished";
+      next.finishedAt = event.payload.finishedAt ?? now;
+      next.restStartedAt = null;
+      next.pausedAt = null;
+      break;
+    }
+
     case "NOTE_ADDED": {
       const ex = event.payload.exerciseId
         ? next.exercises.find((item) => item.id === event.payload.exerciseId)
@@ -347,11 +378,42 @@ interface ActiveSessionState {
   // recovery
   hydrate: (session: ActiveSession) => void;
   hydrateActiveWorkoutSession: () => Promise<void>;
+  syncOutbox: (sessionId?: string) => Promise<void>;
 }
 
 export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
   let hydrationRun = 0;
   let eventQueue = Promise.resolve();
+  const syncLocks = new Map<string, Promise<void>>();
+
+  function isOnline(): boolean {
+    return typeof navigator === "undefined" || navigator.onLine;
+  }
+
+  async function currentOutboxUserId(): Promise<string> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return OFFLINE_USER_ID;
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) return OFFLINE_USER_ID;
+      return data.user?.id ?? OFFLINE_USER_ID;
+    } catch {
+      return OFFLINE_USER_ID;
+    }
+  }
+
+  function outboxError(error: unknown): string {
+    return error instanceof Error ? error.message : "Unknown sync error";
+  }
+
+  function backoffMs(retryCount: number): number {
+    return Math.min(30_000, 500 * 2 ** Math.max(0, retryCount));
+  }
+
+  async function nextLocalSequenceNumber(sessionId: string, baseVersion: number): Promise<number> {
+    const events = await listWorkoutSessionOutboxEvents(sessionId);
+    return Math.max(baseVersion, ...events.map((event) => event.localSequenceNumber)) + 1;
+  }
 
   function persistLocalSession(
     session: ActiveSession | null,
@@ -426,6 +488,30 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     persistLocalSession(draft, serverVersion, true);
   }
 
+  async function appendOutboxEvent(
+    event: WorkoutSessionEvent,
+    next: ActiveSession,
+    baseVersion: number,
+  ): Promise<WorkoutSessionOutboxEvent> {
+    const outboxEvent: WorkoutSessionOutboxEvent = {
+      id: event.clientEventId ?? event.id,
+      sessionId: next.id,
+      userId: await currentOutboxUserId(),
+      eventType: event.type,
+      payload: workoutSessionEventPayload(event, next),
+      clientEventId: event.clientEventId ?? event.id,
+      deviceId: event.deviceId ?? null,
+      baseVersion,
+      localSequenceNumber: await nextLocalSequenceNumber(next.id, baseVersion),
+      createdAt: event.occurredAt,
+      syncStatus: "pending",
+      retryCount: 0,
+      lastError: null,
+    };
+    await putWorkoutSessionOutboxEvent(outboxEvent);
+    return outboxEvent;
+  }
+
   async function commitEvent(
     pushHistory: boolean,
     event: WorkoutSessionEvent,
@@ -451,56 +537,171 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     const next = applyActiveSessionEvent(cur, event);
     if (!next) return;
 
-    const applyLocalState = (serverVersion: number | null, pendingSync: boolean) => {
-      if (pushHistory) {
-        set({
-          session: next,
-          activeSession: next,
-          serverVersion,
-          pendingSync,
-          past: [...get().past, cur].slice(-HISTORY_LIMIT),
-          future: [],
-        });
-      } else {
-        set({ session: next, activeSession: next, serverVersion, pendingSync });
-      }
-      persistLocalSession(next, serverVersion, pendingSync);
-    };
+    const baseVersion = get().serverVersion ?? 0;
+    if (pushHistory) {
+      set({
+        session: next,
+        activeSession: next,
+        pendingSync: true,
+        past: [...get().past, cur].slice(-HISTORY_LIMIT),
+        future: [],
+      });
+    } else {
+      set({ session: next, activeSession: next, pendingSync: true });
+    }
+    persistLocalSession(next, baseVersion || null, true);
 
-    const expectedVersion = get().serverVersion;
-    if (expectedVersion == null) {
-      applyLocalState(null, true);
+    try {
+      await appendOutboxEvent(event, next, baseVersion);
+    } catch (error) {
+      toast.error(pl.errors.unexpectedTitle, {
+        description: outboxError(error),
+      });
       return;
     }
 
-    try {
-      const persisted = await appendWorkoutSessionEvent({
-        sessionId: cur.id,
-        eventType: event.type,
-        payload: workoutSessionEventPayload(event),
-        expectedVersion,
-        nextState: activeSessionToJson(next),
-        nextStatus: nextPersistenceStatus(next),
-        clientEventId: event.clientEventId ?? event.id,
-        deviceId: event.deviceId ?? null,
-      });
+    void syncSessionOutbox(next.id);
+  }
 
-      applyLocalState(persisted?.sequenceNumber ?? expectedVersion + 1, false);
-    } catch (error) {
-      if (isVersionConflict(error)) {
-        toast.error(pl.errors.unexpectedTitle, {
-          description: pl.errors.unexpectedDesc,
-        });
-        await get().hydrateActiveWorkoutSession();
+  function payloadRecord(payload: WorkoutSessionJson): Record<string, WorkoutSessionJson> {
+    return payload != null && typeof payload === "object" && !Array.isArray(payload)
+      ? payload
+      : {};
+  }
+
+  function payloadSnapshot(payload: WorkoutSessionJson): ActiveSession | null {
+    const state = payloadRecord(payload).nextState;
+    return isActiveSessionSnapshot(state) ? state : null;
+  }
+
+  async function syncSessionOutbox(sessionId: string): Promise<void> {
+    const existing = syncLocks.get(sessionId);
+    if (existing) return existing;
+
+    const run = (async () => {
+      if (!isOnline()) return;
+      await resetStaleSyncingWorkoutSessionOutboxEvents();
+      const events = await listSyncableWorkoutSessionOutboxEvents(sessionId);
+      if (events.length === 0) {
+        if (get().session?.id === sessionId) {
+          set({ pendingSync: false });
+          persistLocalSession(get().session, get().serverVersion, false);
+        }
         return;
       }
 
-      toast.error(pl.errors.networkTitle, {
-        description: pl.errors.networkDesc,
-      });
-      throw error;
-    }
+      let serverVersion = get().session?.id === sessionId ? get().serverVersion : null;
+      const active = await getActiveWorkoutSession();
+      if (active?.id === sessionId) serverVersion = active.version;
+
+      for (const event of events) {
+        const current = await updateWorkoutSessionOutboxEvent(event.id, {
+          syncStatus: "syncing",
+          lastError: null,
+        });
+        if (!current) continue;
+
+        try {
+          const nextState = payloadSnapshot(current.payload);
+          if (!nextState) throw new Error("Outbox event is missing nextState snapshot");
+
+          if (current.eventType === "WORKOUT_STARTED") {
+            const payload = payloadRecord(current.payload);
+            const started = await startWorkoutSessionInSupabase({
+              sessionId: current.sessionId,
+              workoutId: String(payload.workoutId ?? nextState.workoutId),
+              workoutName: String(payload.workoutName ?? nextState.workoutName),
+              deviceId: current.deviceId,
+              clientEventId: current.clientEventId,
+              initialState: activeSessionToJson(nextState),
+            });
+            serverVersion = started?.version ?? 1;
+          } else {
+            const expectedVersion = serverVersion ?? current.baseVersion;
+            const persisted = await appendWorkoutSessionEvent({
+              sessionId: current.sessionId,
+              eventType: current.eventType,
+              payload: current.payload,
+              expectedVersion,
+              nextState: activeSessionToJson(nextState),
+              nextStatus: nextPersistenceStatus(nextState),
+              clientEventId: current.clientEventId,
+              deviceId: current.deviceId,
+            });
+            serverVersion = persisted?.sequenceNumber ?? expectedVersion + 1;
+          }
+
+          await updateWorkoutSessionOutboxEvent(current.id, {
+            syncStatus: "synced",
+            lastError: null,
+          });
+          if (get().session?.id === sessionId) {
+            set({ serverVersion, pendingSync: true });
+            persistLocalSession(get().session, serverVersion, true);
+          }
+        } catch (error) {
+          if (isVersionConflict(error)) {
+            await updateWorkoutSessionOutboxEvent(current.id, {
+              syncStatus: "conflict",
+              lastError: outboxError(error),
+            });
+            set({ pendingSync: true });
+            await get().hydrateActiveWorkoutSession();
+            return;
+          }
+
+          const retryCount = current.retryCount + 1;
+          await updateWorkoutSessionOutboxEvent(current.id, {
+            syncStatus: "failed",
+            retryCount,
+            lastError: outboxError(error),
+          });
+          set({ pendingSync: true });
+          if (isOnline()) {
+            window.setTimeout(() => void syncSessionOutbox(sessionId), backoffMs(retryCount));
+          }
+          return;
+        }
+      }
+
+      const remaining = await listSyncableWorkoutSessionOutboxEvents(sessionId);
+      const pendingSync = remaining.length > 0;
+      if (get().session?.id === sessionId) {
+        set({ pendingSync });
+        persistLocalSession(get().session, serverVersion, pendingSync);
+      }
+      await cleanupWorkoutSessionOutbox({ activeSessionIds: [sessionId] });
+    })().finally(() => {
+      syncLocks.delete(sessionId);
+    });
+
+    syncLocks.set(sessionId, run);
+    return run;
   }
+
+  async function startLocalSession(workout: Workout): Promise<ActiveSession> {
+    const session = buildActiveSession(workout);
+    const now = session.startedAt ?? Date.now();
+    const clientEventId = `${session.id}-start-${uid()}`;
+    const event: WorkoutSessionEvent = {
+      id: clientEventId,
+      type: "WORKOUT_STARTED",
+      occurredAt: now,
+      payload: {
+        sessionId: session.id,
+        workoutId: session.workoutId,
+        workoutName: session.workoutName,
+        startedAt: now,
+      },
+      clientEventId,
+      deviceId: null,
+    };
+    await appendOutboxEvent(event, session, 0);
+    applySessionState(session, null, true, "ready");
+    await syncSessionOutbox(session.id);
+    return session;
+  }
+
 
   return {
     session: null,
@@ -520,50 +721,25 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       const current = get().activeSession;
       if (current && current.status !== "finished") return current;
 
-      const existing = await getActiveWorkoutSession();
-      const existingSession = await resolveServerSession(existing);
-      if (existingSession) {
-        applySessionState(
-          existingSession.session,
-          existingSession.serverVersion,
-          false,
-          "ready",
-        );
-        return existingSession.session;
-      }
-      if (existing) return null;
-
-      const session = buildActiveSession(workout);
-      const clientEventId = `${session.id}-start-${uid()}`;
-
       try {
-        const started = await startWorkoutSessionInSupabase({
-          sessionId: session.id,
-          workoutId: session.workoutId,
-          workoutName: session.workoutName,
-          deviceId: null,
-          clientEventId,
-          initialState: activeSessionToJson(session),
-        });
-
-        if (!started) {
-          applySessionState(session, null, true, "ready");
-          return session;
+        const existing = await getActiveWorkoutSession();
+        const existingSession = await resolveServerSession(existing);
+        if (existingSession) {
+          applySessionState(
+            existingSession.session,
+            existingSession.serverVersion,
+            false,
+            "ready",
+          );
+          await cleanupWorkoutSessionOutbox({ activeSessionIds: [existingSession.session.id] });
+          return existingSession.session;
         }
-
-        const serverSession = await resolveServerSession(started);
-        if (!serverSession) return session;
-        applySessionState(serverSession.session, serverSession.serverVersion, false, "ready");
-        return serverSession.session;
-      } catch (error) {
-        const active = await getActiveWorkoutSession();
-        const activeSession = await resolveServerSession(active);
-        if (activeSession) {
-          applySessionState(activeSession.session, activeSession.serverVersion, false, "ready");
-          return activeSession.session;
-        }
-        throw error;
+        if (existing) return null;
+      } catch {
+        // Network/auth failures should not block starting a durable local session.
       }
+
+      return startLocalSession(workout);
     },
 
     beginFirstSet: () => {
@@ -688,22 +864,15 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       );
     },
 
-    finishEarly: () =>
-      commit(true, (s) => {
-        if (s.status === "finished" || s.status === "planning") return false;
-        const now = Date.now();
-        for (const ex of s.exercises) {
-          for (const st of ex.sets) {
-            if (st.status === "pending" || st.status === "active") {
-              st.status = "skipped";
-            }
-          }
-        }
-        s.status = "finished";
-        s.finishedAt = now;
-        s.restStartedAt = null;
-        s.pausedAt = null;
-      }),
+    finishEarly: () => {
+      const s = get().session;
+      if (!s || s.status === "finished" || s.status === "planning") return;
+      const now = Date.now();
+      void commitEvent(
+        true,
+        buildEvent(s.id, "WORKOUT_FINISHED", now, { finishedAt: now }, null),
+      );
+    },
 
     abort: () => {
       const id = get().session?.id;
@@ -950,6 +1119,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       let localSnapshot: ActiveSessionCacheSnapshot | null = null;
 
       try {
+        await resetStaleSyncingWorkoutSessionOutboxEvents();
         localSnapshot = await loadSessionSnapshot();
         if (run !== hydrationRun) return;
 
@@ -1023,12 +1193,15 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
             future: [],
           });
           persistLocalSession(localSnapshot?.session ?? get().session, cachedVersion, true);
+          if (localSnapshot?.session.id) void syncSessionOutbox(localSnapshot.session.id);
           return;
         }
 
         if (hasPendingLocal && cachedVersion === resolved.serverVersion) {
           set({ hydrationStatus: "ready", pendingSync: true });
           persistLocalSession(get().session, cachedVersion, true);
+          const currentSession = get().session;
+          if (currentSession) void syncSessionOutbox(currentSession.id);
           return;
         }
 
@@ -1038,10 +1211,24 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           false,
           "ready",
         );
+        void syncSessionOutbox(resolved.session.id);
       } catch (error) {
         console.error("Failed to hydrate active workout session", error);
         if (run === hydrationRun) set({ hydrationStatus: "error" });
       }
+    },
+
+    syncOutbox: async (sessionId) => {
+      const targetSessionId = sessionId ?? get().session?.id;
+      if (targetSessionId) {
+        await syncSessionOutbox(targetSessionId);
+        return;
+      }
+
+      await resetStaleSyncingWorkoutSessionOutboxEvents();
+      const events = await listWorkoutSessionOutboxEvents();
+      const sessionIds = Array.from(new Set(events.map((event) => event.sessionId)));
+      for (const id of sessionIds) await syncSessionOutbox(id);
     },
   };
 });
