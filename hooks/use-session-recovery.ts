@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-import { clearSession, hasStoredSessionFlag, loadSession } from "@/lib/idb-session";
+import { clearSession, hasStoredSessionFlag, loadSessionSnapshot } from "@/lib/idb-session";
 import { useActiveSessionStore } from "@/store";
-import { SESSION_SCHEMA_VERSION, type ActiveSession } from "@/types";
+import type { ActiveSession } from "@/types";
 
 const RESUMABLE = new Set(["executing", "resting", "paused"]);
 
@@ -27,16 +27,13 @@ export function useSessionRecovery(): Recovery {
   useEffect(() => {
     if (hasLiveSession || !hasStoredSessionFlag()) return;
     let cancelled = false;
-    void loadSession().then((stored) => {
+    void loadSessionSnapshot().then((stored) => {
       if (cancelled || !stored) return;
-      if (
-        stored.version !== SESSION_SCHEMA_VERSION ||
-        !RESUMABLE.has(stored.status)
-      ) {
-        void clearSession();
+      if (!RESUMABLE.has(stored.session.status)) {
+        if (!stored.dirty) void clearSession(stored.session.id);
         return;
       }
-      setPending(stored);
+      setPending(stored.session);
     });
     return () => {
       cancelled = true;

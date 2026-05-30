@@ -7,6 +7,11 @@ import {
   getWorkoutSessionEventsAfter,
   startWorkoutSession,
 } from "@/lib/supabase-workout-session-events";
+import {
+  clearSession,
+  loadSessionSnapshot,
+  saveSessionSnapshot,
+} from "@/lib/idb-session";
 import { useActiveSessionStore } from "@/store";
 import type { ActiveSession, Workout, WorkoutSessionJson } from "@/types";
 
@@ -17,10 +22,19 @@ vi.mock("@/lib/supabase-workout-session-events", () => ({
   appendWorkoutSessionEvent: vi.fn(),
 }));
 
+vi.mock("@/lib/idb-session", () => ({
+  loadSessionSnapshot: vi.fn(),
+  saveSessionSnapshot: vi.fn(),
+  clearSession: vi.fn(),
+}));
+
 const appendWorkoutSessionEventMock = vi.mocked(appendWorkoutSessionEvent);
 const getActiveWorkoutSessionMock = vi.mocked(getActiveWorkoutSession);
 const getWorkoutSessionEventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
 const startWorkoutSessionMock = vi.mocked(startWorkoutSession);
+const clearSessionMock = vi.mocked(clearSession);
+const loadSessionSnapshotMock = vi.mocked(loadSessionSnapshot);
+const saveSessionSnapshotMock = vi.mocked(saveSessionSnapshot);
 
 function makeWorkout(): Workout {
   return {
@@ -52,6 +66,7 @@ function resetStore(): void {
     session: null,
     activeSession: null,
     serverVersion: null,
+    pendingSync: false,
     hydrationStatus: "idle",
     past: [],
     future: [],
@@ -60,6 +75,10 @@ function resetStore(): void {
   getWorkoutSessionEventsAfterMock.mockReset();
   startWorkoutSessionMock.mockReset();
   appendWorkoutSessionEventMock.mockReset();
+  clearSessionMock.mockReset();
+  loadSessionSnapshotMock.mockReset();
+  loadSessionSnapshotMock.mockResolvedValue(null);
+  saveSessionSnapshotMock.mockReset();
 }
 
 describe("hydrateActiveWorkoutSession", () => {
@@ -74,6 +93,215 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(useActiveSessionStore.getState().serverVersion).toBeNull();
     expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
     expect(getWorkoutSessionEventsAfterMock).not.toHaveBeenCalled();
+    expect(clearSessionMock).not.toHaveBeenCalled();
+  });
+
+
+  it("restores a local active session immediately before remote hydration", async () => {
+    const local = {
+      ...buildActiveSession(makeWorkout()),
+      status: "paused" as const,
+      pausedAt: Date.now(),
+    };
+    let resolveRemote: (value: null) => void = () => undefined;
+    getActiveWorkoutSessionMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRemote = resolve;
+      }),
+    );
+    loadSessionSnapshotMock.mockResolvedValue({
+      cacheVersion: 2,
+      session: local,
+      serverVersion: 4,
+      dirty: false,
+      savedAt: Date.now(),
+    });
+
+    const hydration = useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(useActiveSessionStore.getState().activeSession?.id).toBe(local.id);
+    expect(useActiveSessionStore.getState().activeSession?.status).toBe("paused");
+    expect(useActiveSessionStore.getState().serverVersion).toBe(4);
+    expect(useActiveSessionStore.getState().hydrationStatus).toBe("loading");
+
+    resolveRemote(null);
+    await hydration;
+    expect(useActiveSessionStore.getState().activeSession).toBeNull();
+    expect(clearSessionMock).toHaveBeenCalledWith(local.id);
+  });
+
+  it("overwrites the local snapshot when remote has a newer version", async () => {
+    const local = buildActiveSession(makeWorkout());
+    const remote: ActiveSession = {
+      ...local,
+      status: "paused",
+      pausedAt: Date.now(),
+      updatedAt: local.updatedAt + 1000,
+    };
+    loadSessionSnapshotMock.mockResolvedValue({
+      cacheVersion: 2,
+      session: local,
+      serverVersion: 2,
+      dirty: false,
+      savedAt: Date.now(),
+    });
+    getActiveWorkoutSessionMock.mockResolvedValue({
+      id: remote.id,
+      userId: "user-1",
+      workoutId: remote.workoutId,
+      workoutName: remote.workoutName,
+      startedAt: Date.now(),
+      totalActiveMs: 0,
+      status: "paused",
+      currentState: asJson(remote),
+      version: 3,
+    });
+    getWorkoutSessionEventsAfterMock.mockResolvedValue([]);
+
+    await useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+
+    expect(useActiveSessionStore.getState().activeSession?.status).toBe("paused");
+    expect(useActiveSessionStore.getState().serverVersion).toBe(3);
+    expect(useActiveSessionStore.getState().pendingSync).toBe(false);
+    expect(saveSessionSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: remote.id, status: "paused" }),
+      { serverVersion: 3, dirty: false },
+    );
+  });
+
+  it("keeps local dirty state when local version is newer than remote", async () => {
+    const local = {
+      ...buildActiveSession(makeWorkout()),
+      status: "paused" as const,
+      pausedAt: Date.now(),
+    };
+    const remote = { ...local, status: "executing" as const, pausedAt: null };
+    loadSessionSnapshotMock.mockResolvedValue({
+      cacheVersion: 2,
+      session: local,
+      serverVersion: 5,
+      dirty: true,
+      savedAt: Date.now(),
+    });
+    getActiveWorkoutSessionMock.mockResolvedValue({
+      id: remote.id,
+      userId: "user-1",
+      workoutId: remote.workoutId,
+      workoutName: remote.workoutName,
+      startedAt: Date.now(),
+      totalActiveMs: 0,
+      status: "active",
+      currentState: asJson(remote),
+      version: 4,
+    });
+    getWorkoutSessionEventsAfterMock.mockResolvedValue([]);
+
+    await useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+
+    expect(useActiveSessionStore.getState().activeSession?.status).toBe("paused");
+    expect(useActiveSessionStore.getState().serverVersion).toBe(5);
+    expect(useActiveSessionStore.getState().pendingSync).toBe(true);
+  });
+
+  it("preserves a dirty local session when remote has no active session", async () => {
+    const local = buildActiveSession(makeWorkout());
+    loadSessionSnapshotMock.mockResolvedValue({
+      cacheVersion: 2,
+      session: local,
+      serverVersion: 6,
+      dirty: true,
+      savedAt: Date.now(),
+    });
+    getActiveWorkoutSessionMock.mockResolvedValue(null);
+
+    await useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+
+    expect(useActiveSessionStore.getState().activeSession?.id).toBe(local.id);
+    expect(useActiveSessionStore.getState().pendingSync).toBe(true);
+    expect(clearSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("ignores stale hydration responses from an earlier call", async () => {
+    const first = buildActiveSession(makeWorkout());
+    const second: ActiveSession = {
+      ...first,
+      id: "session-newer",
+      status: "paused",
+      pausedAt: Date.now(),
+      updatedAt: first.updatedAt + 1,
+    };
+    let resolveFirst: (value: Awaited<ReturnType<typeof getActiveWorkoutSession>>) => void =
+      () => undefined;
+
+    loadSessionSnapshotMock.mockResolvedValue(null);
+    getActiveWorkoutSessionMock
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        id: second.id,
+        userId: "user-1",
+        workoutId: second.workoutId,
+        workoutName: second.workoutName,
+        startedAt: Date.now(),
+        totalActiveMs: 0,
+        status: "paused",
+        currentState: asJson(second),
+        version: 8,
+      });
+    getWorkoutSessionEventsAfterMock.mockResolvedValue([]);
+
+    const firstHydration = useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+    await Promise.resolve();
+    await Promise.resolve();
+    const secondHydration = useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+    await secondHydration;
+
+    resolveFirst({
+      id: first.id,
+      userId: "user-1",
+      workoutId: first.workoutId,
+      workoutName: first.workoutName,
+      startedAt: Date.now(),
+      totalActiveMs: 0,
+      status: "active",
+      currentState: asJson(first),
+      version: 7,
+    });
+    await firstHydration;
+
+    expect(useActiveSessionStore.getState().activeSession?.id).toBe(second.id);
+    expect(useActiveSessionStore.getState().serverVersion).toBe(8);
+  });
+
+  it("handles multiple hydration calls with the latest call winning", async () => {
+    const session = buildActiveSession(makeWorkout());
+    loadSessionSnapshotMock.mockResolvedValue(null);
+    getActiveWorkoutSessionMock.mockResolvedValue({
+      id: session.id,
+      userId: "user-1",
+      workoutId: session.workoutId,
+      workoutName: session.workoutName,
+      startedAt: Date.now(),
+      totalActiveMs: 0,
+      status: "active",
+      currentState: asJson(session),
+      version: 10,
+    });
+    getWorkoutSessionEventsAfterMock.mockResolvedValue([]);
+
+    await Promise.all([
+      useActiveSessionStore.getState().hydrateActiveWorkoutSession(),
+      useActiveSessionStore.getState().hydrateActiveWorkoutSession(),
+    ]);
+
+    expect(useActiveSessionStore.getState().activeSession?.id).toBe(session.id);
+    expect(useActiveSessionStore.getState().serverVersion).toBe(10);
+    expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
   });
 
   it("hydrates current_state and server version from Supabase", async () => {
@@ -194,6 +422,7 @@ describe("hydrateActiveWorkoutSession", () => {
       session,
       activeSession: session,
       serverVersion: 1,
+      pendingSync: false,
       hydrationStatus: "ready",
       past: [],
       future: [],
@@ -249,6 +478,7 @@ describe("hydrateActiveWorkoutSession", () => {
       session,
       activeSession: session,
       serverVersion: 1,
+      pendingSync: false,
       hydrationStatus: "ready",
       past: [],
       future: [],

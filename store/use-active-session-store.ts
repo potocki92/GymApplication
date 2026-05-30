@@ -20,6 +20,12 @@ import {
   reduceWorkoutSessionEvents,
 } from "@/lib/workout-session-event-reducer";
 import { pl } from "@/lib/i18n/pl";
+import {
+  clearSession as clearCachedSession,
+  loadSessionSnapshot,
+  saveSessionSnapshot,
+  type ActiveSessionCacheSnapshot,
+} from "@/lib/idb-session";
 import type { WorkoutSessionEvent } from "@/features/workout-session/domain/workout-session-events";
 import type {
   ActiveSession,
@@ -30,6 +36,12 @@ import type {
 } from "@/types";
 
 const HISTORY_LIMIT = 30;
+const RESUMABLE_STATUSES = new Set<ActiveSession["status"]>([
+  "planning",
+  "executing",
+  "resting",
+  "paused",
+]);
 
 function clone<T>(value: T): T {
   if (typeof structuredClone === "function") return structuredClone(value);
@@ -295,6 +307,7 @@ interface ActiveSessionState {
   session: ActiveSession | null;
   activeSession: ActiveSession | null;
   serverVersion: number | null;
+  pendingSync: boolean;
   hydrationStatus: ActiveSessionHydrationStatus;
   past: ActiveSession[];
   future: ActiveSession[];
@@ -337,25 +350,51 @@ interface ActiveSessionState {
 }
 
 export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
-  async function applyServerSession(active: Awaited<ReturnType<typeof getActiveWorkoutSession>>): Promise<ActiveSession | null> {
-    if (!active) return null;
-    if (!isActiveSessionSnapshot(active.currentState)) {
-      set({ serverVersion: active.version, hydrationStatus: "ready" });
-      return null;
-    }
+  let hydrationRun = 0;
+  let eventQueue = Promise.resolve();
+
+  function persistLocalSession(
+    session: ActiveSession | null,
+    serverVersion = get().serverVersion,
+    dirty = get().pendingSync,
+  ): void {
+    if (!session || !RESUMABLE_STATUSES.has(session.status)) return;
+    void saveSessionSnapshot(session, { serverVersion, dirty });
+  }
+
+  async function resolveServerSession(
+    active: Awaited<ReturnType<typeof getActiveWorkoutSession>>,
+  ): Promise<{ session: ActiveSession; serverVersion: number } | null> {
+    if (!active || !isActiveSessionSnapshot(active.currentState)) return null;
 
     const events = await getWorkoutSessionEventsAfter(active.id, active.version);
     const session = reduceWorkoutSessionEvents(active.currentState, events);
     const serverVersion = events.at(-1)?.sequenceNumber ?? active.version;
+    return { session, serverVersion };
+  }
+
+  function applySessionState(
+    session: ActiveSession | null,
+    serverVersion: number | null,
+    pendingSync: boolean,
+    hydrationStatus: ActiveSessionHydrationStatus,
+  ): void {
     set({
       session,
       activeSession: session,
       serverVersion,
-      hydrationStatus: "ready",
+      pendingSync,
+      hydrationStatus,
       past: [],
       future: [],
     });
-    return session;
+    if (session) {
+      persistLocalSession(session, serverVersion, pendingSync);
+    }
+  }
+
+  function localVersion(snapshot: ActiveSessionCacheSnapshot | null): number | null {
+    return snapshot?.serverVersion ?? null;
   }
 
   /**
@@ -372,19 +411,37 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     const draft = clone(cur);
     if (fn(draft) === false) return;
     draft.updatedAt = Date.now();
+    const serverVersion = get().serverVersion;
     if (pushHistory) {
       set({
         session: draft,
         activeSession: draft,
+        pendingSync: true,
         past: [...get().past, cur].slice(-HISTORY_LIMIT),
         future: [],
       });
     } else {
-      set({ session: draft, activeSession: draft });
+      set({ session: draft, activeSession: draft, pendingSync: true });
     }
+    persistLocalSession(draft, serverVersion, true);
   }
 
   async function commitEvent(
+    pushHistory: boolean,
+    event: WorkoutSessionEvent,
+  ): Promise<void> {
+    if (get().serverVersion == null) {
+      await commitEventNow(pushHistory, event);
+      return;
+    }
+    const run = eventQueue.catch(() => undefined).then(() =>
+      commitEventNow(pushHistory, event),
+    );
+    eventQueue = run.catch(() => undefined);
+    await run;
+  }
+
+  async function commitEventNow(
     pushHistory: boolean,
     event: WorkoutSessionEvent,
   ): Promise<void> {
@@ -394,23 +451,25 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     const next = applyActiveSessionEvent(cur, event);
     if (!next) return;
 
-    const applyLocalState = (serverVersion: number | null) => {
+    const applyLocalState = (serverVersion: number | null, pendingSync: boolean) => {
       if (pushHistory) {
         set({
           session: next,
           activeSession: next,
           serverVersion,
+          pendingSync,
           past: [...get().past, cur].slice(-HISTORY_LIMIT),
           future: [],
         });
       } else {
-        set({ session: next, activeSession: next, serverVersion });
+        set({ session: next, activeSession: next, serverVersion, pendingSync });
       }
+      persistLocalSession(next, serverVersion, pendingSync);
     };
 
     const expectedVersion = get().serverVersion;
     if (expectedVersion == null) {
-      applyLocalState(null);
+      applyLocalState(null, true);
       return;
     }
 
@@ -426,7 +485,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         deviceId: event.deviceId ?? null,
       });
 
-      applyLocalState(persisted?.sequenceNumber ?? expectedVersion + 1);
+      applyLocalState(persisted?.sequenceNumber ?? expectedVersion + 1, false);
     } catch (error) {
       if (isVersionConflict(error)) {
         toast.error(pl.errors.unexpectedTitle, {
@@ -447,13 +506,14 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     session: null,
     activeSession: null,
     serverVersion: null,
+    pendingSync: false,
     hydrationStatus: "idle",
     past: [],
     future: [],
 
     start: (workout) => {
       const session = buildActiveSession(workout);
-      set({ session, activeSession: session, past: [], future: [] });
+      applySessionState(session, null, true, "ready");
     },
 
     startWorkoutSession: async (workout) => {
@@ -461,8 +521,16 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       if (current && current.status !== "finished") return current;
 
       const existing = await getActiveWorkoutSession();
-      const existingSession = await applyServerSession(existing);
-      if (existingSession) return existingSession;
+      const existingSession = await resolveServerSession(existing);
+      if (existingSession) {
+        applySessionState(
+          existingSession.session,
+          existingSession.serverVersion,
+          false,
+          "ready",
+        );
+        return existingSession.session;
+      }
       if (existing) return null;
 
       const session = buildActiveSession(workout);
@@ -479,23 +547,21 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         });
 
         if (!started) {
-          set({
-            session,
-            activeSession: session,
-            serverVersion: null,
-            hydrationStatus: "ready",
-            past: [],
-            future: [],
-          });
+          applySessionState(session, null, true, "ready");
           return session;
         }
 
-        const serverSession = await applyServerSession(started);
-        return serverSession ?? session;
+        const serverSession = await resolveServerSession(started);
+        if (!serverSession) return session;
+        applySessionState(serverSession.session, serverSession.serverVersion, false, "ready");
+        return serverSession.session;
       } catch (error) {
         const active = await getActiveWorkoutSession();
-        const activeSession = await applyServerSession(active);
-        if (activeSession) return activeSession;
+        const activeSession = await resolveServerSession(active);
+        if (activeSession) {
+          applySessionState(activeSession.session, activeSession.serverVersion, false, "ready");
+          return activeSession.session;
+        }
         throw error;
       }
     },
@@ -639,14 +705,31 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         s.pausedAt = null;
       }),
 
-    abort: () =>
-      set({ session: null, activeSession: null, serverVersion: null, past: [], future: [] }),
+    abort: () => {
+      const id = get().session?.id;
+      set({
+        session: null,
+        activeSession: null,
+        serverVersion: null,
+        pendingSync: false,
+        past: [],
+        future: [],
+      });
+      if (id) void clearCachedSession(id);
+    },
 
     save: () => {
       const s = get().session;
       if (!s || s.status !== "finished") return null;
       const completed = toCompletedSession(s);
-      set({ session: null, activeSession: null, serverVersion: null, past: [], future: [] });
+      set({
+        session: null,
+        activeSession: null,
+        serverVersion: null,
+        pendingSync: false,
+        past: [],
+        future: [],
+      });
       return completed;
     },
 
@@ -857,42 +940,107 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       });
     },
 
-    hydrate: (session) => set({ session, activeSession: session, past: [], future: [] }),
+    hydrate: (session) => {
+      applySessionState(session, null, true, "ready");
+    },
 
     hydrateActiveWorkoutSession: async () => {
+      const run = ++hydrationRun;
       set({ hydrationStatus: "loading" });
+      let localSnapshot: ActiveSessionCacheSnapshot | null = null;
+
       try {
+        localSnapshot = await loadSessionSnapshot();
+        if (run !== hydrationRun) return;
+
+        if (localSnapshot) {
+          const currentVersion = get().serverVersion;
+          const cachedVersion = localVersion(localSnapshot);
+          const shouldApplyLocal =
+            get().session == null ||
+            currentVersion == null ||
+            cachedVersion == null ||
+            cachedVersion >= currentVersion;
+
+          if (shouldApplyLocal) {
+            set({
+              session: localSnapshot.session,
+              activeSession: localSnapshot.session,
+              serverVersion: cachedVersion,
+              pendingSync: localSnapshot.dirty,
+              hydrationStatus: "loading",
+              past: [],
+              future: [],
+            });
+          }
+        }
+
         const active = await getActiveWorkoutSession();
+        if (run !== hydrationRun) return;
+
         if (!active) {
-          if (get().activeSession) {
-            set({ hydrationStatus: "ready" });
+          if (localSnapshot?.dirty || get().pendingSync) {
+            set({ hydrationStatus: "ready", pendingSync: true });
             return;
           }
-          set({
-            session: null,
-            activeSession: null,
-            serverVersion: null,
-            hydrationStatus: "ready",
-            past: [],
-            future: [],
-          });
+
+          const cachedId = localSnapshot?.session.id;
+          applySessionState(null, null, false, "ready");
+          if (cachedId) void clearCachedSession(cachedId);
           return;
         }
 
-        const session = await applyServerSession(active);
-        if (!session) {
+        const resolved = await resolveServerSession(active);
+        if (run !== hydrationRun) return;
+
+        if (!resolved) {
+          if (localSnapshot?.dirty || get().pendingSync) {
+            set({ serverVersion: active.version, hydrationStatus: "ready" });
+            return;
+          }
+
+          applySessionState(null, active.version, false, "ready");
+          if (localSnapshot?.session.id) {
+            void clearCachedSession(localSnapshot.session.id);
+          }
+          return;
+        }
+
+        const cachedVersion = localVersion(localSnapshot) ?? get().serverVersion;
+        const hasPendingLocal = localSnapshot?.dirty || get().pendingSync;
+
+        if (
+          cachedVersion != null &&
+          cachedVersion > resolved.serverVersion
+        ) {
           set({
-            session: null,
-            activeSession: null,
-            serverVersion: active.version,
+            session: localSnapshot?.session ?? get().session,
+            activeSession: localSnapshot?.session ?? get().activeSession,
+            serverVersion: cachedVersion,
+            pendingSync: true,
             hydrationStatus: "ready",
             past: [],
             future: [],
           });
+          persistLocalSession(localSnapshot?.session ?? get().session, cachedVersion, true);
+          return;
         }
+
+        if (hasPendingLocal && cachedVersion === resolved.serverVersion) {
+          set({ hydrationStatus: "ready", pendingSync: true });
+          persistLocalSession(get().session, cachedVersion, true);
+          return;
+        }
+
+        applySessionState(
+          resolved.session,
+          resolved.serverVersion,
+          false,
+          "ready",
+        );
       } catch (error) {
         console.error("Failed to hydrate active workout session", error);
-        set({ hydrationStatus: "error" });
+        if (run === hydrationRun) set({ hydrationStatus: "error" });
       }
     },
   };
