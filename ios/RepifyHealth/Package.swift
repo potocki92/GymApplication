@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "FitFlowHealth",
+    name: "RepifyHealth",
     platforms: [
         // HealthKit istnieje na iOS i watchOS. iPad ma tylko podzbiór typów,
         // dlatego kod defensywnie sprawdza HKHealthStore.isHealthDataAvailable().
@@ -11,19 +11,19 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "FitFlowHealthKit",
-            targets: ["FitFlowHealthKit"]
+            name: "RepifyHealthKit",
+            targets: ["RepifyHealthKit"]
         ),
     ],
     targets: [
         .target(
-            name: "FitFlowHealthKit",
-            path: "Sources/FitFlowHealthKit"
+            name: "RepifyHealthKit",
+            path: "Sources/RepifyHealthKit"
         ),
         .testTarget(
-            name: "FitFlowHealthKitTests",
-            dependencies: ["FitFlowHealthKit"],
-            path: "Tests/FitFlowHealthKitTests"
+            name: "RepifyHealthKitTests",
+            dependencies: ["RepifyHealthKit"],
+            path: "Tests/RepifyHealthKitTests"
         ),
     ]
 )

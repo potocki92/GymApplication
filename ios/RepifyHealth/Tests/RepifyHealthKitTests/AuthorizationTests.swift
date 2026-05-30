@@ -1,6 +1,6 @@
 import XCTest
 import HealthKit
-@testable import FitFlowHealthKit
+@testable import RepifyHealthKit
 
 final class AuthorizationTests: XCTestCase {
     func testRequestAuthorizationThrowsWhenUnavailable() async {
