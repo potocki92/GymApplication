@@ -158,7 +158,7 @@ export function ActiveWorkoutView() {
       // Save the current finished session before kicking off a fresh one — the
       // user explicitly asked to repeat, not to abandon results.
       await persistCompletion({});
-      useActiveSessionStore.getState().start(workout);
+      await useActiveSessionStore.getState().startWorkoutSession(workout);
     } catch (e) {
       console.error(e);
       toast.error(t.errors.unexpectedTitle);
