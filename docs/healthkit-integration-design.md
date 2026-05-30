@@ -3,10 +3,43 @@
 > Kompletna architektura i sposób implementacji integracji aplikacji mobilnej iOS (Swift / SwiftUI) z Apple Health / HealthKit.
 > Dokument projektowy. Cel: gotowy do wdrożenia plan dla zespołu iOS/health-tech.
 
-**Status:** Design / RFC
+**Status:** Design / RFC → **wdrażany etapami**
 **Platforma docelowa:** iOS 17+ (z uwagami dla iOS 16)
 **Język / UI:** Swift 5.9+, SwiftUI, async/await
 **Persystencja lokalna:** SQLite via GRDB **lub** Core Data + SQLCipher (porównanie w sekcji 4)
+**Kod:** `ios/FitFlowHealth/` (Swift Package)
+
+> ⚠️ Środowisko CI tego repo to Linux bez toolchainu Swift i bez SDK HealthKit
+> (framework dostępny wyłącznie na platformach Apple). Kod Swift z tego pakietu
+> kompiluje się i jest testowany na macOS + Xcode (`swift test`), nie tutaj.
+
+---
+
+## Status wdrożenia
+
+Tabela śledzi postęp materializacji blueprintu w kodzie. Aktualizowana po każdym etapie.
+
+| Punkt | Zakres | Status | Lokalizacja |
+|---|---|---|---|
+| **1** | **Integracja Apple Health / HealthKit** | ✅ **Zaimplementowany** | `ios/FitFlowHealth/Sources/FitFlowHealthKit/` |
+| 1.1 | Inicjalizacja `HKHealthStore` | ✅ | `HealthKit/HealthKitStoreProvider.swift` |
+| 1.2 | Katalog typów danych (read/write) | ✅ | `HealthKit/HealthDataType.swift` |
+| 1.3 | Autoryzacja read vs write | ✅ | `Authorization/HealthKitAuthorizationService.swift` |
+| 1.4 | Query: sample / statistics / anchored | ✅ | `Queries/HealthKitReader.swift` |
+| 1.5 | Observer + background delivery | ✅ | `Observation/HealthKitObservationService.swift` |
+| 1.6 | Deduplikacja danych | ✅ | `Queries/HealthKitDeduplication.swift` + `HealthKitWriter` |
+| 1.7 | Obsługa braku zgody (empiryczna) | ✅ | `Authorization/HealthAccessResolver.swift` |
+| — | Fasada `HealthKitManager` + seam testowy | ✅ | `HealthKit/HealthKitManager.swift`, `Core/HealthStore.swift` |
+| — | Testy jednostkowe (mock store) | ✅ | `Tests/FitFlowHealthKitTests/` |
+| **2** | Architektura (domena/repo/UI, DI) | ⬜ Do zrobienia | — |
+| **3** | Synchronizacja (HK → Local DB → Backend) | ⬜ Do zrobienia | — |
+| **4** | Prywatność i compliance (szyfrowanie) | ⬜ Do zrobienia | — |
+| **5** | Pełna struktura kodu (Presentation/Domain) | 🟡 Częściowo (warstwa HealthKit) | `ios/FitFlowHealth/` |
+| **6** | Edge cases (pełna obsługa w UI) | 🟡 Częściowo (1.7 + guardy dostępności) | — |
+| **7** | API design (backend) | ⬜ Do zrobienia | — |
+
+**Następny etap:** punkt 2 — warstwa domenowa (modele niezależne od HealthKit),
+`HealthRepository` (protokół + implementacja), mapper HK→Domain, kontener DI.
 
 ---
 
