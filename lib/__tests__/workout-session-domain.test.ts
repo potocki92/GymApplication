@@ -285,4 +285,23 @@ describe("workout session selector memoization", () => {
     expect(state).not.toBeNull();
     expect(getCompletedSets(state!)).toBe(getCompletedSets(state!));
   });
+
+  it("refreshes the completed-set array when a stable sets array is mutated defensively", () => {
+    const state = replayWorkoutSessionEvents(null, [
+      started,
+      event({
+        id: "mutable-set",
+        type: "SET_STARTED",
+        occurredAt: 1_001,
+        payload: { exerciseId: "exercise-1", setIndex: 0, reps: 8, weightKg: 80 },
+      }),
+    ]);
+
+    expect(state).not.toBeNull();
+    expect(getCompletedSets(state!)).toHaveLength(0);
+
+    state!.sets[0].status = "completed";
+
+    expect(getCompletedSets(state!)).toHaveLength(1);
+  });
 });

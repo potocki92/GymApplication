@@ -64,6 +64,15 @@ describe("workout session outbox cache", () => {
     expect(stored.payload).toEqual({ exerciseId: "exercise-1", setIndex: 0 });
   });
 
+  it("ignores cached records with unknown event types", async () => {
+    await putWorkoutSessionOutboxEvent(event({
+      id: "invalid-event-type",
+      eventType: "UNKNOWN_EVENT" as WorkoutSessionOutboxEvent["eventType"],
+    }));
+
+    expect(await listWorkoutSessionOutboxEvents("session-1")).toEqual([]);
+  });
+
   it("cleans synced orphan events but keeps active-session synced events", async () => {
     await putWorkoutSessionOutboxEvent(event({ id: "active", sessionId: "session-1", createdAt: NOW - 1_000 }));
     await putWorkoutSessionOutboxEvent(event({ id: "orphan", sessionId: "session-2", createdAt: NOW - 1_000 }));

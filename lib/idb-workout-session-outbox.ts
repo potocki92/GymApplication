@@ -4,6 +4,7 @@ import {
   openFitflowDb,
   WORKOUT_SESSION_OUTBOX_STORE,
 } from "@/lib/idb-fitflow";
+import { isWorkoutSessionEventType } from "@/lib/workout-session-event-types";
 import { isJsonRecord, isWorkoutSessionJson } from "@/lib/workout-session-serialization";
 import type { WorkoutSessionJson, WorkoutSessionOutboxEvent } from "@/types";
 
@@ -45,7 +46,7 @@ function normalizedOutboxEvent(value: unknown): WorkoutSessionOutboxEvent | null
     typeof item.id !== "string" ||
     typeof item.sessionId !== "string" ||
     typeof item.userId !== "string" ||
-    typeof item.eventType !== "string" ||
+    !isWorkoutSessionEventType(item.eventType) ||
     typeof item.clientEventId !== "string" ||
     typeof item.baseVersion !== "number" ||
     typeof item.localSequenceNumber !== "number" ||
@@ -68,7 +69,7 @@ function normalizedOutboxEvent(value: unknown): WorkoutSessionOutboxEvent | null
 
   return {
     ...(item as Omit<WorkoutSessionOutboxEvent, "payload" | "nextState">),
-    payload: legacyPayload as WorkoutSessionJson,
+    payload: stripLegacyNextState(legacyPayload as WorkoutSessionJson),
     nextState,
   };
 }
@@ -115,7 +116,7 @@ export async function getWorkoutSessionOutboxEvent(
   id: string,
 ): Promise<WorkoutSessionOutboxEvent | null> {
   if (!hasIDB()) {
-    return memoryOutbox.find((event) => event.id === id) ?? null;
+    return normalizedOutboxEvent(memoryOutbox.find((event) => event.id === id));
   }
   const db = await openDb();
   try {
@@ -169,9 +170,11 @@ export async function listWorkoutSessionOutboxEvents(
   sessionId?: string,
 ): Promise<WorkoutSessionOutboxEvent[]> {
   if (!hasIDB()) {
-    const events = sessionId
+    const events = (sessionId
       ? memoryOutbox.filter((event) => event.sessionId === sessionId)
-      : memoryOutbox;
+      : memoryOutbox)
+      .map(normalizedOutboxEvent)
+      .filter((event): event is WorkoutSessionOutboxEvent => event != null);
     return sortOutboxEvents(events);
   }
   const db = await openDb();

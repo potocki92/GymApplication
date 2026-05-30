@@ -1,7 +1,7 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
-import type { WorkoutSessionEventType } from "@/features/workout-session/domain";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { assertWorkoutSessionEventType } from "@/lib/workout-session-event-types";
 import { isWorkoutSessionJson } from "@/lib/workout-session-serialization";
 import type {
   ActiveWorkoutSessionRecord,
@@ -78,32 +78,8 @@ function asWorkoutSessionStatus(status: string): WorkoutSessionPersistenceStatus
   throw new Error(`Unsupported workout session status: ${status}`);
 }
 
-const WORKOUT_SESSION_EVENT_TYPES = new Set<WorkoutSessionEventType>([
-  "WORKOUT_STARTED",
-  "EXERCISE_STARTED",
-  "SET_STARTED",
-  "SET_COMPLETED",
-  "SET_UPDATED",
-  "SET_DELETED",
-  "REST_STARTED",
-  "REST_FINISHED",
-  "REST_SKIPPED",
-  "WORKOUT_PAUSED",
-  "WORKOUT_RESUMED",
-  "WORKOUT_FINISHED",
-  "WORKOUT_ABANDONED",
-  "NOTE_ADDED",
-]);
-
 function emptyJson(value: WorkoutSessionJson | null): WorkoutSessionJson {
   return isWorkoutSessionJson(value) ? value : {};
-}
-
-function asWorkoutSessionEventType(eventType: string): WorkoutSessionEventType {
-  if (WORKOUT_SESSION_EVENT_TYPES.has(eventType as WorkoutSessionEventType)) {
-    return eventType as WorkoutSessionEventType;
-  }
-  throw new Error(`Unsupported workout session event type: ${eventType}`);
 }
 
 export function mapRowToWorkoutSession(
@@ -135,7 +111,7 @@ export function mapRowToWorkoutSessionEvent(
     id: row.id,
     sessionId: row.session_id,
     userId: row.user_id,
-    eventType: asWorkoutSessionEventType(row.event_type),
+    eventType: assertWorkoutSessionEventType(row.event_type),
     payload: emptyJson(row.payload),
     clientEventId: row.client_event_id,
     deviceId: row.device_id,
