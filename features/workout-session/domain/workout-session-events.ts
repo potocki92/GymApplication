@@ -69,6 +69,7 @@ export type WorkoutSessionEvent =
         weightKg?: number;
         rpe?: number | null;
         notes?: string | null;
+        restTargetSec?: number;
       }
     >
   | BaseWorkoutSessionEvent<

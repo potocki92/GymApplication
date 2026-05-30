@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildActiveSession } from "@/lib/session-utils";
+import { buildActiveSession, currentSet } from "@/lib/session-utils";
 import {
+  appendWorkoutSessionEvent,
   getActiveWorkoutSession,
   getWorkoutSessionEventsAfter,
   startWorkoutSession,
@@ -13,8 +14,10 @@ vi.mock("@/lib/supabase-workout-session-events", () => ({
   getActiveWorkoutSession: vi.fn(),
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
+  appendWorkoutSessionEvent: vi.fn(),
 }));
 
+const appendWorkoutSessionEventMock = vi.mocked(appendWorkoutSessionEvent);
 const getActiveWorkoutSessionMock = vi.mocked(getActiveWorkoutSession);
 const getWorkoutSessionEventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
 const startWorkoutSessionMock = vi.mocked(startWorkoutSession);
@@ -56,6 +59,7 @@ function resetStore(): void {
   getActiveWorkoutSessionMock.mockReset();
   getWorkoutSessionEventsAfterMock.mockReset();
   startWorkoutSessionMock.mockReset();
+  appendWorkoutSessionEventMock.mockReset();
 }
 
 describe("hydrateActiveWorkoutSession", () => {
@@ -181,6 +185,96 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(startWorkoutSessionMock).not.toHaveBeenCalled();
     expect(session?.id).toBe(existing.id);
     expect(useActiveSessionStore.getState().serverVersion).toBe(5);
+  });
+
+
+  it("appends active workout actions with expected version and next state", async () => {
+    const session = buildActiveSession(makeWorkout());
+    useActiveSessionStore.setState({
+      session,
+      activeSession: session,
+      serverVersion: 1,
+      hydrationStatus: "ready",
+      past: [],
+      future: [],
+    });
+    appendWorkoutSessionEventMock.mockResolvedValue({
+      id: "event-2",
+      sessionId: session.id,
+      userId: "user-1",
+      eventType: "SET_STARTED",
+      payload: {},
+      clientEventId: "client-event-2",
+      deviceId: null,
+      sequenceNumber: 2,
+      createdAt: Date.now(),
+    });
+
+    useActiveSessionStore.getState().beginFirstSet();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const nextState = appendWorkoutSessionEventMock.mock.calls[0]?.[0].nextState;
+    expect(appendWorkoutSessionEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: session.id,
+        eventType: "SET_STARTED",
+        expectedVersion: 1,
+        nextStatus: "active",
+        deviceId: null,
+        clientEventId: expect.stringContaining("set_started"),
+        nextState: expect.any(Object),
+      }),
+    );
+    expect(nextState).toMatchObject({
+      id: session.id,
+      status: "executing",
+      currentExerciseIndex: 0,
+      currentSetIndex: 0,
+    });
+    expect(useActiveSessionStore.getState().serverVersion).toBe(2);
+    expect(currentSet(useActiveSessionStore.getState().activeSession!)?.status).toBe(
+      "active",
+    );
+  });
+
+  it("hydrates the server session after an append version conflict", async () => {
+    const session = buildActiveSession(makeWorkout());
+    const serverSession: ActiveSession = {
+      ...session,
+      status: "paused",
+      pausedAt: Date.now(),
+      updatedAt: session.updatedAt + 1,
+    };
+    useActiveSessionStore.setState({
+      session,
+      activeSession: session,
+      serverVersion: 1,
+      hydrationStatus: "ready",
+      past: [],
+      future: [],
+    });
+    appendWorkoutSessionEventMock.mockRejectedValue(
+      new Error("Workout session version conflict: expected 1, got 2"),
+    );
+    getActiveWorkoutSessionMock.mockResolvedValue({
+      id: serverSession.id,
+      userId: "user-1",
+      workoutId: serverSession.workoutId,
+      workoutName: serverSession.workoutName,
+      startedAt: Date.now(),
+      totalActiveMs: 0,
+      status: "paused",
+      currentState: asJson(serverSession),
+      version: 2,
+    });
+    getWorkoutSessionEventsAfterMock.mockResolvedValue([]);
+
+    useActiveSessionStore.getState().beginFirstSet();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getActiveWorkoutSessionMock).toHaveBeenCalled();
+    expect(useActiveSessionStore.getState().activeSession?.status).toBe("paused");
+    expect(useActiveSessionStore.getState().serverVersion).toBe(2);
   });
 
 });
