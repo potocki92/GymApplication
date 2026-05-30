@@ -480,6 +480,8 @@ export const pl = {
 
   activeWorkout: {
     title: "Aktywny trening",
+    inProgress: "Trening w toku",
+    returnToWorkout: "Wróć do aktywnego treningu",
     ready: "Gotowy do startu?",
     readySub: "Rozpocznij trening, gdy będziesz gotowy.",
     start: "Rozpocznij",
