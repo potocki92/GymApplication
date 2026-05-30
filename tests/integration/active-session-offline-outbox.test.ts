@@ -158,35 +158,40 @@ describe("active workout Offline Outbox", () => {
   });
 
   it("retries failed sync without deleting the local event", async () => {
-    const session = await startOfflineWorkout();
-    useActiveSessionStore.getState().beginFirstSet();
-    await flushOutbox();
-    setOnline(true);
-    getActiveMock.mockResolvedValue({
-      id: session.id,
-      userId: "user-1",
-      workoutId: session.workoutId,
-      workoutName: session.workoutName,
-      startedAt: Date.now(),
-      totalActiveMs: 0,
-      status: "active",
-      currentState: asJson(session),
-      version: 1,
-    });
-    startMock.mockClear();
-    appendMock.mockClear();
-    appendMock.mockRejectedValueOnce(new Error("network"));
+    vi.useFakeTimers();
+    try {
+      const session = await startOfflineWorkout();
+      useActiveSessionStore.getState().beginFirstSet();
+      await flushOutbox();
+      setOnline(true);
+      getActiveMock.mockResolvedValue({
+        id: session.id,
+        userId: "user-1",
+        workoutId: session.workoutId,
+        workoutName: session.workoutName,
+        startedAt: Date.now(),
+        totalActiveMs: 0,
+        status: "active",
+        currentState: asJson(session),
+        version: 1,
+      });
+      startMock.mockClear();
+      appendMock.mockClear();
+      appendMock.mockRejectedValueOnce(new Error("network"));
 
-    await useActiveSessionStore.getState().syncOutbox(session.id);
+      await useActiveSessionStore.getState().syncOutbox(session.id);
 
-    const failed = (await listWorkoutSessionOutboxEvents(session.id)).find(
-      (event) => event.eventType === "SET_STARTED",
-    );
-    expect(failed?.syncStatus).toBe("failed");
-    expect(failed?.retryCount).toBe(1);
+      const failed = (await listWorkoutSessionOutboxEvents(session.id)).find(
+        (event) => event.eventType === "SET_STARTED",
+      );
+      expect(failed?.syncStatus).toBe("failed");
+      expect(failed?.retryCount).toBe(1);
 
-    await useActiveSessionStore.getState().syncOutbox(session.id);
-    expect(appendMock).toHaveBeenCalled();
+      await useActiveSessionStore.getState().syncOutbox(session.id);
+      expect(appendMock).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("prevents duplicate parallel sync for one session", async () => {
@@ -240,6 +245,69 @@ describe("active workout Offline Outbox", () => {
     await useActiveSessionStore.getState().syncOutbox(session.id);
 
     expect(appendMock).toHaveBeenCalledWith(expect.objectContaining({ sessionId: session.id }));
+  });
+
+  it("does not treat an active recent syncing event as stale by createdAt", async () => {
+    const session = buildActiveSession(makeWorkout());
+    await putWorkoutSessionOutboxEvent({
+      id: `recent-sync-${crypto.randomUUID()}`,
+      sessionId: session.id,
+      userId: "user-1",
+      eventType: "SET_STARTED",
+      payload: { nextState: asJson(session) },
+      clientEventId: `client-${crypto.randomUUID()}`,
+      deviceId: null,
+      baseVersion: 1,
+      localSequenceNumber: 2,
+      createdAt: Date.now() - 30 * 60 * 1000,
+      syncStartedAt: Date.now(),
+      syncStatus: "syncing",
+      retryCount: 0,
+      lastError: null,
+    });
+    setOnline(true);
+
+    appendMock.mockClear();
+    await useActiveSessionStore.getState().syncOutbox(session.id);
+
+    expect(appendMock).not.toHaveBeenCalled();
+    const [event] = await listWorkoutSessionOutboxEvents(session.id);
+    expect(event.syncStatus).toBe("syncing");
+  });
+
+  it("clears a pending retry timeout before a manual sync", async () => {
+    vi.useFakeTimers();
+    try {
+      const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
+      const session = await startOfflineWorkout();
+      useActiveSessionStore.getState().beginFirstSet();
+      await flushOutbox();
+      setOnline(true);
+      getActiveMock.mockResolvedValue({
+        id: session.id,
+        userId: "user-1",
+        workoutId: session.workoutId,
+        workoutName: session.workoutName,
+        startedAt: Date.now(),
+        totalActiveMs: 0,
+        status: "active",
+        currentState: asJson(session),
+        version: 1,
+      });
+      startMock.mockClear();
+      appendMock.mockClear();
+      appendMock.mockRejectedValueOnce(new Error("network"));
+
+      await useActiveSessionStore.getState().syncOutbox(session.id);
+      expect(vi.getTimerCount()).toBe(1);
+
+      await useActiveSessionStore.getState().syncOutbox(session.id);
+
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("restores pending outbox after refresh", async () => {

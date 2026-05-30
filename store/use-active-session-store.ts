@@ -385,6 +385,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
   let hydrationRun = 0;
   let eventQueue = Promise.resolve();
   const syncLocks = new Map<string, Promise<void>>();
+  const syncTimeouts = new Map<string, number>();
 
   function isOnline(): boolean {
     return typeof navigator === "undefined" || navigator.onLine;
@@ -394,9 +395,9 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     const supabase = getSupabaseClient();
     if (!supabase) return OFFLINE_USER_ID;
     try {
-      const { data, error } = await supabase.auth.getUser();
+      const { data, error } = await supabase.auth.getSession();
       if (error) return OFFLINE_USER_ID;
-      return data.user?.id ?? OFFLINE_USER_ID;
+      return data.session?.user.id ?? OFFLINE_USER_ID;
     } catch {
       return OFFLINE_USER_ID;
     }
@@ -575,6 +576,12 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
   }
 
   async function syncSessionOutbox(sessionId: string): Promise<void> {
+    const pendingTimeout = syncTimeouts.get(sessionId);
+    if (pendingTimeout != null) {
+      window.clearTimeout(pendingTimeout);
+      syncTimeouts.delete(sessionId);
+    }
+
     const existing = syncLocks.get(sessionId);
     if (existing) return existing;
 
@@ -597,6 +604,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
       for (const event of events) {
         const current = await updateWorkoutSessionOutboxEvent(event.id, {
           syncStatus: "syncing",
+          syncStartedAt: Date.now(),
           lastError: null,
         });
         if (!current) continue;
@@ -633,6 +641,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
 
           await updateWorkoutSessionOutboxEvent(current.id, {
             syncStatus: "synced",
+            syncStartedAt: null,
             lastError: null,
           });
           if (get().session?.id === sessionId) {
@@ -643,6 +652,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           if (isVersionConflict(error)) {
             await updateWorkoutSessionOutboxEvent(current.id, {
               syncStatus: "conflict",
+              syncStartedAt: null,
               lastError: outboxError(error),
             });
             set({ pendingSync: true });
@@ -653,12 +663,17 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           const retryCount = current.retryCount + 1;
           await updateWorkoutSessionOutboxEvent(current.id, {
             syncStatus: "failed",
+            syncStartedAt: null,
             retryCount,
             lastError: outboxError(error),
           });
           set({ pendingSync: true });
           if (isOnline()) {
-            window.setTimeout(() => void syncSessionOutbox(sessionId), backoffMs(retryCount));
+            const timeoutId = window.setTimeout(() => {
+              syncTimeouts.delete(sessionId);
+              void syncSessionOutbox(sessionId);
+            }, backoffMs(retryCount));
+            syncTimeouts.set(sessionId, timeoutId);
           }
           return;
         }

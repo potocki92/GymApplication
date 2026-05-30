@@ -1,7 +1,12 @@
+import {
+  ACTIVE_SESSION_STORE,
+  hasFitflowIDB,
+  idbTxDone,
+  openFitflowDb,
+} from "@/lib/idb-fitflow";
 import { SESSION_SCHEMA_VERSION, type ActiveSession } from "@/types";
 
-const DB_NAME = "fitflow";
-const STORE = "active-session";
+const STORE = ACTIVE_SESSION_STORE;
 const KEY = "current";
 const FLAG = "fitflow.activeSessionId";
 const CACHE_VERSION = 2;
@@ -28,25 +33,11 @@ interface SaveSessionOptions {
 }
 
 function hasIDB(): boolean {
-  return typeof window !== "undefined" && "indexedDB" in window;
+  return hasFitflowIDB();
 }
 
 function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
-      if (!db.objectStoreNames.contains("workout-session-outbox")) {
-        const outbox = db.createObjectStore("workout-session-outbox", { keyPath: "id" });
-        outbox.createIndex("session-status-sequence", ["sessionId", "syncStatus", "localSequenceNumber"]);
-        outbox.createIndex("client-event", "clientEventId", { unique: true });
-        outbox.createIndex("created-at", "createdAt");
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+  return openFitflowDb();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -127,13 +118,13 @@ export async function saveSessionSnapshot(
 
   try {
     const db = await openDb();
-    await new Promise<void>((resolve, reject) => {
+    try {
       const tx = db.transaction(STORE, "readwrite");
       tx.objectStore(STORE).put(snapshot, KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
+      await idbTxDone(tx);
+    } finally {
+      db.close();
+    }
     try {
       window.localStorage.setItem(FLAG, session.id);
     } catch {
@@ -194,13 +185,13 @@ export async function clearSession(sessionId?: string): Promise<void> {
   if (!hasIDB()) return;
   try {
     const db = await openDb();
-    await new Promise<void>((resolve, reject) => {
+    try {
       const tx = db.transaction(STORE, "readwrite");
       tx.objectStore(STORE).delete(KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
+      await idbTxDone(tx);
+    } finally {
+      db.close();
+    }
   } catch {
     /* ignore */
   }

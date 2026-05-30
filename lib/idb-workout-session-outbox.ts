@@ -1,53 +1,30 @@
+import {
+  hasFitflowIDB,
+  idbTxDone,
+  openFitflowDb,
+  WORKOUT_SESSION_OUTBOX_STORE,
+} from "@/lib/idb-fitflow";
 import type { WorkoutSessionOutboxEvent } from "@/types";
 
-const DB_NAME = "fitflow";
-const DB_VERSION = 2;
-const STORE = "workout-session-outbox";
+const STORE = WORKOUT_SESSION_OUTBOX_STORE;
 const SYNCABLE_STATUSES = new Set<WorkoutSessionOutboxEvent["syncStatus"]>([
   "pending",
   "failed",
-  "syncing",
 ]);
 const ORPHANED_SYNCING_MS = 2 * 60 * 1000;
 const RETAIN_SYNCED_MS = 7 * 24 * 60 * 60 * 1000;
 let memoryOutbox: WorkoutSessionOutboxEvent[] = [];
 
 function hasIDB(): boolean {
-  return typeof window !== "undefined" && "indexedDB" in window;
-}
-
-function upgrade(db: IDBDatabase): void {
-  if (!db.objectStoreNames.contains("active-session")) {
-    db.createObjectStore("active-session");
-  }
-  if (!db.objectStoreNames.contains(STORE)) {
-    const store = db.createObjectStore(STORE, { keyPath: "id" });
-    store.createIndex("session-status-sequence", [
-      "sessionId",
-      "syncStatus",
-      "localSequenceNumber",
-    ]);
-    store.createIndex("client-event", "clientEventId", { unique: true });
-    store.createIndex("created-at", "createdAt");
-  }
+  return hasFitflowIDB();
 }
 
 function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => upgrade(req.result);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error("IndexedDB upgrade blocked"));
-  });
+  return openFitflowDb();
 }
 
 function txDone(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
+  return idbTxDone(tx);
 }
 
 function sortOutboxEvents(events: WorkoutSessionOutboxEvent[]): WorkoutSessionOutboxEvent[] {
@@ -193,9 +170,14 @@ export async function resetStaleSyncingWorkoutSessionOutboxEvents(
   if (!hasIDB()) {
     let count = 0;
     memoryOutbox = memoryOutbox.map((event) => {
-      if (event.syncStatus === "syncing" && now - event.createdAt > ORPHANED_SYNCING_MS) {
+      if (event.syncStatus === "syncing" && now - (event.syncStartedAt ?? 0) > ORPHANED_SYNCING_MS) {
         count += 1;
-        return { ...event, syncStatus: "pending", lastError: "Recovered stale sync lock" };
+        return {
+          ...event,
+          syncStatus: "pending",
+          syncStartedAt: null,
+          lastError: "Recovered stale sync lock",
+        };
       }
       return event;
     });
@@ -212,9 +194,14 @@ export async function resetStaleSyncingWorkoutSessionOutboxEvents(
     });
     let count = 0;
     for (const event of events) {
-      if (event.syncStatus === "syncing" && now - event.createdAt > ORPHANED_SYNCING_MS) {
+      if (event.syncStatus === "syncing" && now - (event.syncStartedAt ?? 0) > ORPHANED_SYNCING_MS) {
         count += 1;
-        store.put({ ...event, syncStatus: "pending", lastError: "Recovered stale sync lock" });
+        store.put({
+          ...event,
+          syncStatus: "pending",
+          syncStartedAt: null,
+          lastError: "Recovered stale sync lock",
+        });
       }
     }
     await txDone(tx);

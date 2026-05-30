@@ -38,6 +38,7 @@ export interface WorkoutSessionOutboxEvent {
   baseVersion: number;
   localSequenceNumber: number;
   createdAt: number;
+  syncStartedAt?: number | null;
   syncStatus: WorkoutSessionOutboxSyncStatus;
   retryCount: number;
   lastError: string | null;
