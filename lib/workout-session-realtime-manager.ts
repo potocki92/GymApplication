@@ -42,10 +42,6 @@ interface ActiveSubscription {
 const RECENT_LIMIT = 512;
 const RECOVERY_DEBOUNCE_MS = 250;
 
-function eventKey(event: WorkoutSessionEventRecord): string {
-  return `${event.sessionId}:${event.sequenceNumber}:${event.clientEventId}:${event.id}`;
-}
-
 function isOpenStatus(status: string): boolean {
   return status === "SUBSCRIBED" || status === "CHANNEL_OPEN" || status === "OPEN";
 }
@@ -70,8 +66,9 @@ export class WorkoutSessionRealtimeManager {
   private status: WorkoutSessionRealtimeStatus = "idle";
   private recovery: Promise<void> | null = null;
   private recoveryTimer: number | null = null;
-  private readonly recentKeys: string[] = [];
-  private readonly seenKeys = new Set<string>();
+  private readonly recentClientEventIds: string[] = [];
+  private readonly seenClientEventIds = new Set<string>();
+  private readonly pendingClientEventIds = new Set<string>();
   private generation = 0;
 
   constructor(private readonly deps: WorkoutSessionRealtimeDependencies) {}
@@ -106,7 +103,9 @@ export class WorkoutSessionRealtimeManager {
       sessionId,
       onInsert: (event) => {
         if (this.active?.generation !== generation) return;
-        void this.handleInsert(event);
+        void this.handleInsert(event).catch(() => {
+          this.scheduleRecovery(RECOVERY_DEBOUNCE_MS);
+        });
       },
       onStatus: (status) => {
         if (this.active?.generation !== generation) return;
@@ -154,7 +153,7 @@ export class WorkoutSessionRealtimeManager {
   private async handleInsert(event: WorkoutSessionEventRecord): Promise<void> {
     const state = this.deps.getState();
     if (event.sessionId !== state.sessionId) return;
-    if (this.shouldIgnore(event, state, false)) return;
+    if (this.shouldIgnore(event, state)) return;
 
     // Supabase events can arrive while hydration is still restoring IDB/server
     // state or after a reconnect gap. Recover from canonical event log instead
@@ -169,29 +168,41 @@ export class WorkoutSessionRealtimeManager {
       return;
     }
 
-    if (this.shouldIgnore(event, state, true)) return;
-    await this.deps.applyEvents([event]);
+    if (this.shouldIgnore(event, state)) return;
+
+    this.pendingClientEventIds.add(event.clientEventId);
+    try {
+      await this.deps.applyEvents([event]);
+      this.markSeen([event]);
+    } finally {
+      this.pendingClientEventIds.delete(event.clientEventId);
+    }
   }
 
   private shouldIgnore(
     event: WorkoutSessionEventRecord,
     state: WorkoutSessionRealtimeState,
-    markSeen: boolean,
   ): boolean {
     if (event.deviceId && state.deviceId && event.deviceId === state.deviceId) return true;
     if (state.ownClientEventIds.has(event.clientEventId)) return true;
     if (event.sequenceNumber <= (state.serverVersion ?? 0)) return true;
+    return (
+      this.seenClientEventIds.has(event.clientEventId) ||
+      this.pendingClientEventIds.has(event.clientEventId)
+    );
+  }
 
-    const key = eventKey(event);
-    if (this.seenKeys.has(key)) return true;
-    if (!markSeen) return false;
-    this.seenKeys.add(key);
-    this.recentKeys.push(key);
-    while (this.recentKeys.length > RECENT_LIMIT) {
-      const oldest = this.recentKeys.shift();
-      if (oldest) this.seenKeys.delete(oldest);
+  private markSeen(events: WorkoutSessionEventRecord[]): void {
+    for (const event of events) {
+      if (this.seenClientEventIds.has(event.clientEventId)) continue;
+      this.seenClientEventIds.add(event.clientEventId);
+      this.recentClientEventIds.push(event.clientEventId);
     }
-    return false;
+
+    while (this.recentClientEventIds.length > RECENT_LIMIT) {
+      const oldest = this.recentClientEventIds.shift();
+      if (oldest) this.seenClientEventIds.delete(oldest);
+    }
   }
 
   private scheduleRecovery(delay: number): void {
@@ -200,7 +211,11 @@ export class WorkoutSessionRealtimeManager {
     const setTimeoutImpl = this.deps.setTimeout ?? ((handler, timeout) => window.setTimeout(handler, timeout));
     this.recoveryTimer = setTimeoutImpl(() => {
       this.recoveryTimer = null;
-      void this.recover();
+      void this.recover().catch(() => {
+        if (!this.active) return;
+        this.status = "closed";
+        this.scheduleRecovery(RECOVERY_DEBOUNCE_MS);
+      });
     }, delay);
   }
 
@@ -227,8 +242,16 @@ export class WorkoutSessionRealtimeManager {
         return;
       }
 
-      const filtered = missing.filter((event) => !this.shouldIgnore(event, this.deps.getState(), true));
-      if (filtered.length > 0) await this.deps.applyEvents(filtered);
+      const filtered = missing.filter((event) => !this.shouldIgnore(event, this.deps.getState()));
+      for (const event of filtered) this.pendingClientEventIds.add(event.clientEventId);
+      try {
+        if (filtered.length > 0) {
+          await this.deps.applyEvents(filtered);
+          this.markSeen(filtered);
+        }
+      } finally {
+        for (const event of filtered) this.pendingClientEventIds.delete(event.clientEventId);
+      }
       if (this.active?.generation === active.generation) this.status = "listening";
     })().finally(() => {
       this.recovery = null;

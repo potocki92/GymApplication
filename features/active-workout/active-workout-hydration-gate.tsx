@@ -18,9 +18,12 @@ export function ActiveWorkoutHydrationGate() {
     });
     void store.syncOutbox();
 
-    const unsubscribeStore = useActiveSessionStore.subscribe((state) => {
+    const unsubscribeStore = useActiveSessionStore.subscribe((state, previousState) => {
       workoutSessionRealtimeManager.ensure(state.session?.id ?? null);
-      if (state.hydrationStatus === "ready") {
+      if (
+        state.hydrationStatus === "ready" &&
+        previousState.hydrationStatus !== "ready"
+      ) {
         workoutSessionRealtimeManager.notifyHydrationReady();
       }
     });

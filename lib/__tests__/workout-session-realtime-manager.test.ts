@@ -104,6 +104,37 @@ describe("WorkoutSessionRealtimeManager", () => {
     expect(env.applyEvents).toHaveBeenCalledWith([record(2)]);
   });
 
+  it("guards duplicate clientEventId even when Supabase delivers another row", async () => {
+    const env = setup();
+    env.manager.ensure("session-1");
+
+    env.insert(record(2, { clientEventId: "same-client-event" }));
+    await Promise.resolve();
+    env.setServerVersion(2);
+    env.insert(record(3, { id: "event-duplicate", clientEventId: "same-client-event" }));
+    await Promise.resolve();
+
+    expect(env.applyEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mark a failed realtime delivery as seen", async () => {
+    const env = setup();
+    env.applyEvents
+      .mockRejectedValueOnce(new Error("transient apply failure"))
+      .mockImplementation(async (events: WorkoutSessionEventRecord[]) => {
+        env.setServerVersion(Math.max(...events.map((event) => event.sequenceNumber)));
+      });
+    env.manager.ensure("session-1");
+
+    env.insert(record(2));
+    await Promise.resolve();
+    await Promise.resolve();
+    env.insert(record(2));
+    await Promise.resolve();
+
+    expect(env.applyEvents).toHaveBeenCalledTimes(2);
+  });
+
   it("runs reconnect replay before continuing realtime listening", async () => {
     const env = setup();
     env.fetchEventsAfter.mockResolvedValue([record(2), record(3)]);
