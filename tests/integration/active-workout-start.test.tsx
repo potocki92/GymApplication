@@ -33,6 +33,7 @@ function resetActiveSession() {
     session: null,
     activeSession: null,
     serverVersion: null,
+    pendingSync: false,
     hydrationStatus: "idle",
     past: [],
     future: [],

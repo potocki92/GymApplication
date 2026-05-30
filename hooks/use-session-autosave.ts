@@ -13,17 +13,27 @@ import { useActiveSessionStore } from "@/store";
  */
 export function useSessionAutosave(): void {
   const session = useActiveSessionStore((s) => s.session);
+  const serverVersion = useActiveSessionStore((s) => s.serverVersion);
+  const pendingSync = useActiveSessionStore((s) => s.pendingSync);
 
   useEffect(() => {
     if (!session) return;
-    const id = window.setTimeout(() => void saveSession(session), 800);
+    const id = window.setTimeout(
+      () => void saveSession(session, { serverVersion, dirty: pendingSync }),
+      800,
+    );
     return () => window.clearTimeout(id);
-  }, [session]);
+  }, [pendingSync, serverVersion, session]);
 
   useEffect(() => {
     const flush = () => {
-      const current = useActiveSessionStore.getState().session;
-      if (current) void saveSession(current);
+      const state = useActiveSessionStore.getState();
+      if (state.session) {
+        void saveSession(state.session, {
+          serverVersion: state.serverVersion,
+          dirty: state.pendingSync,
+        });
+      }
     };
     const interval = window.setInterval(flush, 5000);
     const onVisibility = () => {

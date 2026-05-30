@@ -38,6 +38,7 @@ function reset() {
     session: null,
     activeSession: null,
     serverVersion: null,
+    pendingSync: false,
     hydrationStatus: "idle",
     past: [],
     future: [],
