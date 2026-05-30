@@ -105,6 +105,31 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(clearSessionMock).not.toHaveBeenCalled();
   });
 
+  it("keeps a local dirty session ready when remote hydration fails", async () => {
+    const local = {
+      ...buildActiveSession(makeWorkout()),
+      status: "executing" as const,
+      startedAt: Date.now(),
+    };
+    loadSessionSnapshotMock.mockResolvedValue({
+      cacheVersion: 2,
+      session: local,
+      serverVersion: 3,
+      dirty: true,
+      savedAt: Date.now(),
+    });
+    getActiveWorkoutSessionMock.mockRejectedValue(new Error("network unavailable"));
+
+    await useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+
+    expect(useActiveSessionStore.getState().activeSession?.id).toBe(local.id);
+    expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
+    expect(useActiveSessionStore.getState().pendingSync).toBe(true);
+    expect(saveSessionSnapshotMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: local.id }),
+      expect.objectContaining({ dirty: true }),
+    );
+  });
 
   it("restores a local active session immediately before remote hydration", async () => {
     const local = {
@@ -455,7 +480,6 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(session?.id).toBe(existing.id);
     expect(useActiveSessionStore.getState().serverVersion).toBe(5);
   });
-
 
   it("appends active workout actions with expected version and next state", async () => {
     const session = buildActiveSession(makeWorkout());

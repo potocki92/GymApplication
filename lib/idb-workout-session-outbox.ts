@@ -15,6 +15,13 @@ const SYNCABLE_STATUSES = new Set<WorkoutSessionOutboxEvent["syncStatus"]>([
 ]);
 const ORPHANED_SYNCING_MS = 2 * 60 * 1000;
 const RETAIN_SYNCED_MS = 7 * 24 * 60 * 60 * 1000;
+const VALID_SYNC_STATUSES = new Set<WorkoutSessionOutboxEvent["syncStatus"]>([
+  "pending",
+  "syncing",
+  "synced",
+  "failed",
+  "conflict",
+]);
 let memoryOutbox: WorkoutSessionOutboxEvent[] = [];
 
 function hasIDB(): boolean {
@@ -51,7 +58,7 @@ function normalizedOutboxEvent(value: unknown): WorkoutSessionOutboxEvent | null
     typeof item.baseVersion !== "number" ||
     typeof item.localSequenceNumber !== "number" ||
     typeof item.createdAt !== "number" ||
-    typeof item.syncStatus !== "string" ||
+    !VALID_SYNC_STATUSES.has(item.syncStatus as WorkoutSessionOutboxEvent["syncStatus"]) ||
     typeof item.retryCount !== "number" ||
     !isWorkoutSessionJson(item.payload)
   ) {
@@ -85,7 +92,16 @@ function sanitizeOutboxEvent(event: WorkoutSessionOutboxEvent): WorkoutSessionOu
   return {
     ...event,
     payload: stripLegacyNextState(event.payload),
+    syncStartedAt: event.syncStatus === "syncing" ? (event.syncStartedAt ?? null) : null,
   };
+}
+
+function upsertMemoryOutboxEvent(event: WorkoutSessionOutboxEvent): void {
+  const index = memoryOutbox.findIndex(
+    (item) => item.id === event.id || item.clientEventId === event.clientEventId,
+  );
+  if (index >= 0) memoryOutbox[index] = event;
+  else memoryOutbox.push(event);
 }
 
 export function canUseWorkoutSessionOutbox(): boolean {
@@ -97,18 +113,32 @@ export async function putWorkoutSessionOutboxEvent(
 ): Promise<void> {
   const sanitized = sanitizeOutboxEvent(event);
   if (!hasIDB()) {
-    const index = memoryOutbox.findIndex((item) => item.id === sanitized.id);
-    if (index >= 0) memoryOutbox[index] = sanitized;
-    else memoryOutbox.push(sanitized);
+    upsertMemoryOutboxEvent(sanitized);
     return;
   }
-  const db = await openDb();
   try {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(sanitized);
-    await txDone(tx);
-  } finally {
-    db.close();
+    const db = await openDb();
+    try {
+      const tx = db.transaction(STORE, "readwrite");
+      const store = tx.objectStore(STORE);
+      const clientIndex = store.index("client-event");
+      await new Promise<void>((resolve, reject) => {
+        const req = clientIndex.get(sanitized.clientEventId);
+        req.onsuccess = () => {
+          const existing = normalizedOutboxEvent(req.result);
+          store.put(existing ? { ...sanitized, id: existing.id } : sanitized);
+          resolve();
+        };
+        req.onerror = () => reject(req.error);
+      });
+      await txDone(tx);
+    } finally {
+      db.close();
+    }
+  } catch {
+    // If IndexedDB is temporarily blocked/corrupted, keep the workout syncable in
+    // memory for this runtime instead of throwing from the user action.
+    upsertMemoryOutboxEvent(sanitized);
   }
 }
 

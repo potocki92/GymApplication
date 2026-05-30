@@ -73,9 +73,52 @@ describe("workout session outbox cache", () => {
     expect(await listWorkoutSessionOutboxEvents("session-1")).toEqual([]);
   });
 
+  it("deduplicates retries by clientEventId", async () => {
+    await putWorkoutSessionOutboxEvent(event({ id: "event-original", clientEventId: "same-client" }));
+    await putWorkoutSessionOutboxEvent(
+      event({
+        id: "event-retry",
+        clientEventId: "same-client",
+        retryCount: 2,
+        syncStatus: "failed",
+      }),
+    );
+
+    const stored = await listWorkoutSessionOutboxEvents("session-1");
+
+    expect(stored).toHaveLength(1);
+    expect(stored[0].clientEventId).toBe("same-client");
+    expect(stored[0].retryCount).toBe(2);
+  });
+
+  it("ignores corrupted records with unknown sync status", async () => {
+    await putWorkoutSessionOutboxEvent(
+      event({
+        id: "corrupted-status",
+        syncStatus: "stuck" as WorkoutSessionOutboxEvent["syncStatus"],
+      }),
+    );
+
+    expect(await listWorkoutSessionOutboxEvents("session-1")).toEqual([]);
+  });
+
   it("cleans synced orphan events but keeps active-session synced events", async () => {
-    await putWorkoutSessionOutboxEvent(event({ id: "active", sessionId: "session-1", createdAt: NOW - 1_000 }));
-    await putWorkoutSessionOutboxEvent(event({ id: "orphan", sessionId: "session-2", createdAt: NOW - 1_000 }));
+    await putWorkoutSessionOutboxEvent(
+      event({
+        id: "active",
+        clientEventId: "active-client",
+        sessionId: "session-1",
+        createdAt: NOW - 1_000,
+      }),
+    );
+    await putWorkoutSessionOutboxEvent(
+      event({
+        id: "orphan",
+        clientEventId: "orphan-client",
+        sessionId: "session-2",
+        createdAt: NOW - 1_000,
+      }),
+    );
 
     const removed = await cleanupWorkoutSessionOutbox({
       activeSessionIds: ["session-1"],
