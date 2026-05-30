@@ -1,46 +1,28 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { ArrowDown, ArrowUp, Camera, Minus } from "lucide-react";
 
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { useSignedUrl } from "@/lib/progress-photos/use-signed-url";
 import { summarizeProgress } from "@/lib/progress-photos/streak-utils";
 import { cn } from "@/lib/utils";
 import type { ProgressPhotoRecord } from "@/types";
 
-const ReactCompareImage = dynamic(() => import("react-compare-image"), {
-  ssr: false,
-  loading: () => <Skeleton className="aspect-[3/4] w-full" />,
-});
-
 interface TransformationHeroProps {
-  /** Pose-filtered records (newest first). */
-  filtered: ProgressPhotoRecord[];
   /** All records across poses — drives library-wide counters. */
   allRecords: ProgressPhotoRecord[];
   onAdd: () => void;
 }
 
 export function TransformationHero({
-  filtered,
   allRecords,
   onAdd,
 }: TransformationHeroProps) {
   const t = useDictionary();
 
-  const before = filtered.at(-1) ?? null; // oldest in pose
-  const after = filtered[0] ?? null; // newest in pose
-  const hasPair = !!before && !!after && before.id !== after.id;
-
   const summary = useMemo(() => summarizeProgress(allRecords), [allRecords]);
-
-  const { url: beforeUrl } = useSignedUrl(hasPair ? before.storagePath : null);
-  const { url: afterUrl } = useSignedUrl(hasPair ? after.storagePath : null);
 
   const delta = summary.weightDeltaKg;
   const DeltaIcon = delta == null ? Minus : delta < 0 ? ArrowDown : ArrowUp;
@@ -67,28 +49,6 @@ export function TransformationHero({
           {t.progressPhotos.hero.cta}
         </Button>
       </div>
-
-      {hasPair ? (
-        <div className="mt-4 overflow-hidden rounded-2xl ring-1 ring-border">
-          {beforeUrl && afterUrl ? (
-            <ReactCompareImage
-              leftImage={beforeUrl}
-              rightImage={afterUrl}
-              sliderLineColor="var(--color-primary)"
-              sliderLineWidth={2}
-              leftImageLabel={t.progressPhotos.hero.before}
-              rightImageLabel={t.progressPhotos.hero.after}
-              hover={false}
-            />
-          ) : (
-            <Skeleton className="aspect-[3/4] w-full" />
-          )}
-        </div>
-      ) : (
-        <p className="mt-4 rounded-2xl border border-dashed border-border bg-card/40 p-4 text-sm text-muted-foreground">
-          {t.progressPhotos.hero.noPair}
-        </p>
-      )}
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Stat label={t.progressPhotos.summary.total}>
