@@ -93,6 +93,7 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(useActiveSessionStore.getState().serverVersion).toBeNull();
     expect(useActiveSessionStore.getState().hydrationStatus).toBe("ready");
     expect(getWorkoutSessionEventsAfterMock).not.toHaveBeenCalled();
+    expect(clearSessionMock).not.toHaveBeenCalled();
   });
 
 

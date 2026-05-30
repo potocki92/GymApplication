@@ -715,7 +715,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         past: [],
         future: [],
       });
-      void clearCachedSession(id);
+      if (id) void clearCachedSession(id);
     },
 
     save: () => {
@@ -986,7 +986,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
 
           const cachedId = localSnapshot?.session.id;
           applySessionState(null, null, false, "ready");
-          void clearCachedSession(cachedId);
+          if (cachedId) void clearCachedSession(cachedId);
           return;
         }
 
@@ -1000,7 +1000,9 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           }
 
           applySessionState(null, active.version, false, "ready");
-          void clearCachedSession(localSnapshot?.session.id);
+          if (localSnapshot?.session.id) {
+            void clearCachedSession(localSnapshot.session.id);
+          }
           return;
         }
 

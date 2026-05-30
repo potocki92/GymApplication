@@ -159,7 +159,7 @@ export async function loadSessionSnapshot(): Promise<ActiveSessionCacheSnapshot 
     const snapshot = normalizeSnapshot(result);
     if (!snapshot) return null;
     if (isStale(snapshot)) {
-      await clearSession();
+      await clearSession(snapshot.session.id);
       return null;
     }
     return snapshot;
@@ -176,6 +176,9 @@ export async function loadSession(): Promise<ActiveSession | null> {
 export async function clearSession(sessionId?: string): Promise<void> {
   try {
     const current = window.localStorage.getItem(FLAG);
+    if (sessionId && current && current !== sessionId) {
+      return;
+    }
     if (!sessionId || current === sessionId) {
       window.localStorage.removeItem(FLAG);
     }
