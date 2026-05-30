@@ -8,6 +8,13 @@ export type WorkoutSessionJson =
   | { [key: string]: WorkoutSessionJson }
   | WorkoutSessionJson[];
 
+export type WorkoutSessionOutboxSyncStatus =
+  | "pending"
+  | "syncing"
+  | "synced"
+  | "failed"
+  | "conflict";
+
 export interface WorkoutSessionEventRecord {
   id: string;
   sessionId: string;
@@ -18,6 +25,23 @@ export interface WorkoutSessionEventRecord {
   deviceId?: string | null;
   sequenceNumber: number;
   createdAt: number;
+}
+
+export interface WorkoutSessionOutboxEvent {
+  id: string;
+  sessionId: string;
+  userId: string;
+  eventType: string;
+  payload: WorkoutSessionJson;
+  clientEventId: string;
+  deviceId: string | null;
+  baseVersion: number;
+  localSequenceNumber: number;
+  createdAt: number;
+  syncStartedAt?: number | null;
+  syncStatus: WorkoutSessionOutboxSyncStatus;
+  retryCount: number;
+  lastError: string | null;
 }
 
 export interface ActiveWorkoutSessionRecord {

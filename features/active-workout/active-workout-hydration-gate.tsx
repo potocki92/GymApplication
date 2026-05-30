@@ -11,7 +11,16 @@ import { useActiveSessionStore } from "@/store";
  */
 export function ActiveWorkoutHydrationGate() {
   useEffect(() => {
-    void useActiveSessionStore.getState().hydrateActiveWorkoutSession();
+    const store = useActiveSessionStore.getState();
+    void store.hydrateActiveWorkoutSession();
+    void store.syncOutbox();
+
+    const handleOnline = () => {
+      void useActiveSessionStore.getState().syncOutbox();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
   }, []);
 
   return null;
