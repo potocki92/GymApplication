@@ -11,6 +11,7 @@ import {
 } from "@/lib/session-utils";
 import {
   appendWorkoutSessionEvent,
+  completeWorkoutSession,
   getActiveWorkoutSession,
   getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
@@ -751,6 +752,11 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         draft.finishedAt = now;
         draft.restStartedAt = null;
       });
+      // Finishing here is a local-only commit — finalize the server row so it is
+      // not resurrected as an active session on the next start.
+      if (get().session?.status === "finished") {
+        void completeWorkoutSession(s.id);
+      }
     },
 
     pause: () => {
@@ -774,13 +780,27 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
     },
 
     finishEarly: () => {
-      const s = get().session;
-      if (!s || s.status === "finished" || s.status === "planning") return;
-      const now = Date.now();
-      void commitEvent(
-        true,
-        buildEvent(s.id, "WORKOUT_FINISHED", now, { finishedAt: now }, null),
-      );
+      const id = get().session?.id;
+      commit(true, (s) => {
+        if (s.status === "finished" || s.status === "planning") return false;
+        const now = Date.now();
+        for (const ex of s.exercises) {
+          for (const st of ex.sets) {
+            if (st.status === "pending" || st.status === "active") {
+              st.status = "skipped";
+            }
+          }
+        }
+        s.status = "finished";
+        s.finishedAt = now;
+        s.restStartedAt = null;
+        s.pausedAt = null;
+      });
+      // Ending locally never emits a completing event, so finalize the server row
+      // now — otherwise it stays `active` and the next start would resume it.
+      if (id && get().session?.status === "finished") {
+        void completeWorkoutSession(id);
+      }
     },
 
     abort: () => {
@@ -793,7 +813,10 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         past: [],
         future: [],
       });
-      if (id) void clearCachedSession(id);
+      if (id) {
+        void clearCachedSession(id);
+        void completeWorkoutSession(id);
+      }
     },
 
     save: () => {
@@ -808,6 +831,7 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
         past: [],
         future: [],
       });
+      void completeWorkoutSession(s.id);
       return completed;
     },
 

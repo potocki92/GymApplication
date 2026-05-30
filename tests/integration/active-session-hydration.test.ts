@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildActiveSession, currentSet } from "@/lib/session-utils";
+import { buildActiveSession, computeClock, currentSet } from "@/lib/session-utils";
 import {
   appendWorkoutSessionEvent,
+  completeWorkoutSession,
   getActiveWorkoutSession,
   getWorkoutSessionById,
   getWorkoutSessionEventsAfter,
@@ -22,6 +23,7 @@ vi.mock("@/lib/supabase-workout-session-events", () => ({
   getWorkoutSessionEventsAfter: vi.fn(),
   startWorkoutSession: vi.fn(),
   appendWorkoutSessionEvent: vi.fn(),
+  completeWorkoutSession: vi.fn(),
 }));
 
 vi.mock("@/lib/idb-session", () => ({
@@ -35,6 +37,7 @@ const getActiveWorkoutSessionMock = vi.mocked(getActiveWorkoutSession);
 const getWorkoutSessionEventsAfterMock = vi.mocked(getWorkoutSessionEventsAfter);
 const getWorkoutSessionByIdMock = vi.mocked(getWorkoutSessionById);
 const startWorkoutSessionMock = vi.mocked(startWorkoutSession);
+const completeWorkoutSessionMock = vi.mocked(completeWorkoutSession);
 const clearSessionMock = vi.mocked(clearSession);
 const loadSessionSnapshotMock = vi.mocked(loadSessionSnapshot);
 const saveSessionSnapshotMock = vi.mocked(saveSessionSnapshot);
@@ -78,6 +81,8 @@ function resetStore(): void {
   getWorkoutSessionEventsAfterMock.mockReset();
   getWorkoutSessionByIdMock.mockReset();
   startWorkoutSessionMock.mockReset();
+  completeWorkoutSessionMock.mockReset();
+  completeWorkoutSessionMock.mockResolvedValue();
   appendWorkoutSessionEventMock.mockReset();
   clearSessionMock.mockReset();
   loadSessionSnapshotMock.mockReset();
@@ -543,4 +548,73 @@ describe("hydrateActiveWorkoutSession", () => {
     expect(useActiveSessionStore.getState().serverVersion).toBe(2);
   });
 
+});
+
+describe("terminal session flows finalize the server session", () => {
+  beforeEach(() => resetStore());
+
+  it("finalizes the server session when finishing early", () => {
+    const session: ActiveSession = {
+      ...buildActiveSession(makeWorkout()),
+      status: "executing",
+      startedAt: Date.now(),
+    };
+    useActiveSessionStore.setState({
+      session,
+      activeSession: session,
+      serverVersion: 1,
+      pendingSync: false,
+      hydrationStatus: "ready",
+      past: [],
+      future: [],
+    });
+
+    useActiveSessionStore.getState().finishEarly();
+
+    expect(useActiveSessionStore.getState().session?.status).toBe("finished");
+    expect(completeWorkoutSessionMock).toHaveBeenCalledWith(session.id);
+  });
+
+  it("finalizes the server session when discarding (abort)", () => {
+    const session = buildActiveSession(makeWorkout());
+    useActiveSessionStore.setState({
+      session,
+      activeSession: session,
+      serverVersion: 1,
+      pendingSync: false,
+      hydrationStatus: "ready",
+      past: [],
+      future: [],
+    });
+
+    useActiveSessionStore.getState().abort();
+
+    expect(completeWorkoutSessionMock).toHaveBeenCalledWith(session.id);
+    expect(useActiveSessionStore.getState().session).toBeNull();
+  });
+
+  it("starts a fresh, zeroed session after a finished session was finalized", async () => {
+    // After discard/save the server no longer reports an active session, so a new
+    // start must build a fresh session instead of resuming the previous one.
+    getActiveWorkoutSessionMock.mockResolvedValue(null);
+    getWorkoutSessionEventsAfterMock.mockResolvedValue([]);
+    startWorkoutSessionMock.mockImplementation(async (input) => ({
+      id: input.sessionId,
+      userId: "user-1",
+      workoutId: input.workoutId,
+      workoutName: input.workoutName,
+      startedAt: Date.now(),
+      totalActiveMs: 0,
+      status: "active",
+      currentState: input.initialState,
+      version: 1,
+    }));
+
+    const session = await useActiveSessionStore
+      .getState()
+      .startWorkoutSession(makeWorkout());
+
+    expect(session?.startedAt).toBeNull();
+    expect(computeClock(session, Date.now()).totalMs).toBe(0);
+  });
 });

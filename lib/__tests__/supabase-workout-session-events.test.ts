@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   appendWorkoutSessionEvent,
+  completeWorkoutSession,
   getActiveWorkoutSession,
   getWorkoutSessionEventsAfter,
   getWorkoutSessionById,
@@ -50,6 +51,7 @@ const EVENT_ROW: WorkoutSessionEventRow = {
 
 class QueryMock {
   readonly select = vi.fn(() => this);
+  readonly update = vi.fn(() => this);
   readonly eq = vi.fn(() => this);
   readonly gt = vi.fn(() => this);
   readonly in = vi.fn(() => this);
@@ -65,13 +67,15 @@ class QueryMock {
 function makeClient({
   rpcData = null,
   queryData = [],
+  queryError = null,
   userId = "user-1",
 }: {
   rpcData?: unknown;
   queryData?: unknown;
+  queryError?: { message?: string } | null;
   userId?: string | null;
 }) {
-  const query = new QueryMock(queryData);
+  const query = new QueryMock(queryData, queryError);
   const rpc = vi.fn(async () => ({ data: rpcData, error: null }));
   const from = vi.fn(() => query);
   const getUser = vi.fn(async () => ({
@@ -219,5 +223,31 @@ describe("workout session event Supabase adapter", () => {
     expect(query.eq).toHaveBeenCalledWith("id", "session-1");
     expect(query.limit).toHaveBeenCalledWith(1);
     expect(result?.workoutId).toBe("workout-1");
+  });
+
+  it("finalizes an active session by marking the row completed", async () => {
+    const { client, from, query } = makeClient({ queryData: null });
+    mockClient = client;
+
+    await completeWorkoutSession("session-1");
+
+    expect(from).toHaveBeenCalledWith("workout_sessions");
+    expect(query.update).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "completed" }),
+    );
+    expect(query.eq).toHaveBeenCalledWith("id", "session-1");
+    expect(query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(query.in).toHaveBeenCalledWith("status", ["active", "paused"]);
+  });
+
+  it("swallows Supabase errors so the fire-and-forget call never rejects", async () => {
+    const { client } = makeClient({ queryError: { message: "boom" } });
+    mockClient = client;
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(completeWorkoutSession("session-1")).resolves.toBeUndefined();
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
   });
 });
