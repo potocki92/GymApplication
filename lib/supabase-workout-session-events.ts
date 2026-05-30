@@ -166,16 +166,22 @@ export async function completeWorkoutSession(sessionId: string): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
 
-  const userId = await currentUserId(supabase);
-  if (!userId) return;
+  try {
+    const userId = await currentUserId(supabase);
+    if (!userId) return;
 
-  const { error } = await supabase
-    .from("workout_sessions")
-    .update({ status: "completed", finished_at: new Date().toISOString() })
-    .eq("id", sessionId)
-    .eq("user_id", userId)
-    .in("status", ["active", "paused"]);
-  throwIfSupabaseError(error);
+    const { error } = await supabase
+      .from("workout_sessions")
+      .update({ status: "completed", finished_at: new Date().toISOString() })
+      .eq("id", sessionId)
+      .eq("user_id", userId)
+      .in("status", ["active", "paused"]);
+    throwIfSupabaseError(error);
+  } catch (error) {
+    // Best-effort finalize: called fire-and-forget from terminal session flows,
+    // so a network/Supabase failure must never surface as an unhandled rejection.
+    console.error("Failed to finalize workout session", error);
+  }
 }
 
 export async function getActiveWorkoutSession(): Promise<ActiveWorkoutSessionRecord | null> {
