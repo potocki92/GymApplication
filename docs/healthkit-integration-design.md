@@ -7,7 +7,7 @@
 **Platforma docelowa:** iOS 17+ (z uwagami dla iOS 16)
 **Język / UI:** Swift 5.9+, SwiftUI, async/await
 **Persystencja lokalna:** SQLite via GRDB **lub** Core Data + SQLCipher (porównanie w sekcji 4)
-**Kod:** `ios/FitFlowHealth/` (Swift Package)
+**Kod:** `ios/RepifyHealth/` (Swift Package)
 
 > ⚠️ Środowisko CI tego repo to Linux bez toolchainu Swift i bez SDK HealthKit
 > (framework dostępny wyłącznie na platformach Apple). Kod Swift z tego pakietu
@@ -21,7 +21,7 @@ Tabela śledzi postęp materializacji blueprintu w kodzie. Aktualizowana po każ
 
 | Punkt | Zakres | Status | Lokalizacja |
 |---|---|---|---|
-| **1** | **Integracja Apple Health / HealthKit** | ✅ **Zaimplementowany** | `ios/FitFlowHealth/Sources/FitFlowHealthKit/` |
+| **1** | **Integracja Apple Health / HealthKit** | ✅ **Zaimplementowany** | `ios/RepifyHealth/Sources/RepifyHealthKit/` |
 | 1.1 | Inicjalizacja `HKHealthStore` | ✅ | `HealthKit/HealthKitStoreProvider.swift` |
 | 1.2 | Katalog typów danych (read/write) | ✅ | `HealthKit/HealthDataType.swift` |
 | 1.3 | Autoryzacja read vs write | ✅ | `Authorization/HealthKitAuthorizationService.swift` |
@@ -30,16 +30,22 @@ Tabela śledzi postęp materializacji blueprintu w kodzie. Aktualizowana po każ
 | 1.6 | Deduplikacja danych | ✅ | `Queries/HealthKitDeduplication.swift` + `HealthKitWriter` |
 | 1.7 | Obsługa braku zgody (empiryczna) | ✅ | `Authorization/HealthAccessResolver.swift` |
 | — | Fasada `HealthKitManager` + seam testowy | ✅ | `HealthKit/HealthKitManager.swift`, `Core/HealthStore.swift` |
-| — | Testy jednostkowe (mock store) | ✅ | `Tests/FitFlowHealthKitTests/` |
-| **2** | Architektura (domena/repo/UI, DI) | ⬜ Do zrobienia | — |
-| **3** | Synchronizacja (HK → Local DB → Backend) | ⬜ Do zrobienia | — |
+| — | Testy jednostkowe (mock store) | ✅ | `Tests/RepifyHealthKitTests/` |
+| **2** | **Architektura (domena/repo, mapper, DI)** | ✅ **Zaimplementowany** | `Domain/`, `Data/`, `DI/` |
+| 2.3 | Modele domenowe (bez HealthKit) | ✅ | `Domain/HealthMetric.swift`, `SleepSession.swift`, `WorkoutSummary.swift`, `DashboardSnapshot.swift` |
+| 2.4 | Mapper HK → Domain (anti-corruption) | ✅ | `Data/HealthKitMapper.swift` |
+| 2.5 | `HealthRepository` + use case'y | ✅ | `Domain/HealthRepository.swift`, `Domain/UseCases.swift`, `Data/HealthRepositoryImpl.swift` |
+| 2.6 | Dependency Injection (composition root) | ✅ | `DI/AppContainer.swift` |
+| 2.7 | Testy domeny / use case'ów (mock repo) | ✅ | `Tests/RepifyHealthKitTests/{DomainModel,UseCase,HealthKitMapper}Tests.swift` |
+| **3** | Synchronizacja (HK → Local DB → Backend) | 🟡 Częściowo (delta + anchory; brak persystencji) | `Data/HealthKitDataSource.swift`, `Data/HealthAnchorStore.swift` |
 | **4** | Prywatność i compliance (szyfrowanie) | ⬜ Do zrobienia | — |
-| **5** | Pełna struktura kodu (Presentation/Domain) | 🟡 Częściowo (warstwa HealthKit) | `ios/FitFlowHealth/` |
+| **5** | Pełna struktura kodu (Presentation/Domain) | 🟡 Częściowo (Domain + Data; brak Presentation) | `ios/RepifyHealth/` |
 | **6** | Edge cases (pełna obsługa w UI) | 🟡 Częściowo (1.7 + guardy dostępności) | — |
 | **7** | API design (backend) | ⬜ Do zrobienia | — |
 
-**Następny etap:** punkt 2 — warstwa domenowa (modele niezależne od HealthKit),
-`HealthRepository` (protokół + implementacja), mapper HK→Domain, kontener DI.
+**Następny etap:** punkt 3 — trwała persystencja lokalna (GRDB/SQLCipher) jako
+`LocalHealthDataSource`, trwały `HealthAnchorStore` i pełny pipeline
+HealthKit → Local DB → Backend (obecnie delta liczona, ale jeszcze nieskładowana).
 
 ---
 
@@ -103,9 +109,9 @@ final class HealthKitStoreProvider {
 
 ```xml
 <key>NSHealthShareUsageDescription</key>
-<string>FitFlow odczytuje kroki, tętno, sen i kalorie, aby pokazać Twój pulpit zdrowotny i analizę trendów.</string>
+<string>Repify odczytuje kroki, tętno, sen i kalorie, aby pokazać Twój pulpit zdrowotny i analizę trendów.</string>
 <key>NSHealthUpdateUsageDescription</key>
-<string>FitFlow zapisuje ukończone treningi i aktywność do Apple Health, aby uzupełnić Twoją historię zdrowia.</string>
+<string>Repify zapisuje ukończone treningi i aktywność do Apple Health, aby uzupełnić Twoją historię zdrowia.</string>
 ```
 
 > Brak tych kluczy = natychmiastowy crash przy `requestAuthorization`. Brak sensownego opisu = odrzucenie w App Store review.
@@ -627,9 +633,9 @@ func resolve(local: HealthRecord, remote: HealthRecord) -> HealthRecord {
 Modularny monolit jako Swift Package z targetami odpowiadającymi warstwom:
 
 ```
-FitFlowHealth/
+RepifyHealth/
 ├── App/
-│   ├── FitFlowApp.swift                 # @main, scenePhase, AppContainer
+│   ├── RepifyApp.swift                  # @main, scenePhase, AppContainer
 │   └── AppContainer.swift               # composition root / DI
 │
 ├── Presentation/

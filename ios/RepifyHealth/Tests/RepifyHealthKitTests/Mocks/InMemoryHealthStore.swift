@@ -1,6 +1,6 @@
 import Foundation
 import HealthKit
-@testable import FitFlowHealthKit
+@testable import RepifyHealthKit
 
 /// Deterministyczny mock seamu `HealthStore` do testów (sekcja 2.7 blueprintu).
 ///
