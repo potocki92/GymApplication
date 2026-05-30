@@ -856,6 +856,9 @@ export const pl = {
     timeline: {
       before: "Początek",
       after: "Teraz",
+      weightSeries: "Waga",
+      weightEmpty: "Brak danych wagowych",
+      weightEmptyHint: "Dodaj wagę przy zdjęciach, aby zobaczyć wykres.",
     },
     card: {
       noWeight: "—",
