@@ -4,7 +4,9 @@ import {
   openFitflowDb,
   WORKOUT_SESSION_OUTBOX_STORE,
 } from "@/lib/idb-fitflow";
-import type { WorkoutSessionOutboxEvent } from "@/types";
+import { isWorkoutSessionEventType } from "@/lib/workout-session-event-types";
+import { isJsonRecord, isWorkoutSessionJson } from "@/lib/workout-session-serialization";
+import type { WorkoutSessionJson, WorkoutSessionOutboxEvent } from "@/types";
 
 const STORE = WORKOUT_SESSION_OUTBOX_STORE;
 const SYNCABLE_STATUSES = new Set<WorkoutSessionOutboxEvent["syncStatus"]>([
@@ -37,21 +39,53 @@ function sortOutboxEvents(events: WorkoutSessionOutboxEvent[]): WorkoutSessionOu
   });
 }
 
-function isOutboxEvent(value: unknown): value is WorkoutSessionOutboxEvent {
-  if (value == null || typeof value !== "object" || Array.isArray(value)) return false;
+function normalizedOutboxEvent(value: unknown): WorkoutSessionOutboxEvent | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return null;
   const item = value as Record<string, unknown>;
-  return (
-    typeof item.id === "string" &&
-    typeof item.sessionId === "string" &&
-    typeof item.userId === "string" &&
-    typeof item.eventType === "string" &&
-    typeof item.clientEventId === "string" &&
-    typeof item.baseVersion === "number" &&
-    typeof item.localSequenceNumber === "number" &&
-    typeof item.createdAt === "number" &&
-    typeof item.syncStatus === "string" &&
-    typeof item.retryCount === "number"
-  );
+  if (
+    typeof item.id !== "string" ||
+    typeof item.sessionId !== "string" ||
+    typeof item.userId !== "string" ||
+    !isWorkoutSessionEventType(item.eventType) ||
+    typeof item.clientEventId !== "string" ||
+    typeof item.baseVersion !== "number" ||
+    typeof item.localSequenceNumber !== "number" ||
+    typeof item.createdAt !== "number" ||
+    typeof item.syncStatus !== "string" ||
+    typeof item.retryCount !== "number" ||
+    !isWorkoutSessionJson(item.payload)
+  ) {
+    return null;
+  }
+
+  const legacyPayload = item.payload;
+  const nextState = isWorkoutSessionJson(item.nextState)
+    ? item.nextState
+    : isJsonRecord(legacyPayload) && isWorkoutSessionJson(legacyPayload.nextState)
+      ? legacyPayload.nextState
+      : null;
+
+  if (!nextState) return null;
+
+  return {
+    ...(item as Omit<WorkoutSessionOutboxEvent, "payload" | "nextState">),
+    payload: stripLegacyNextState(legacyPayload as WorkoutSessionJson),
+    nextState,
+  };
+}
+
+function stripLegacyNextState(payload: WorkoutSessionJson): WorkoutSessionJson {
+  if (!isJsonRecord(payload) || !("nextState" in payload)) return payload;
+  const rest = { ...payload };
+  delete rest.nextState;
+  return rest;
+}
+
+function sanitizeOutboxEvent(event: WorkoutSessionOutboxEvent): WorkoutSessionOutboxEvent {
+  return {
+    ...event,
+    payload: stripLegacyNextState(event.payload),
+  };
 }
 
 export function canUseWorkoutSessionOutbox(): boolean {
@@ -61,16 +95,17 @@ export function canUseWorkoutSessionOutbox(): boolean {
 export async function putWorkoutSessionOutboxEvent(
   event: WorkoutSessionOutboxEvent,
 ): Promise<void> {
+  const sanitized = sanitizeOutboxEvent(event);
   if (!hasIDB()) {
-    const index = memoryOutbox.findIndex((item) => item.id === event.id);
-    if (index >= 0) memoryOutbox[index] = event;
-    else memoryOutbox.push(event);
+    const index = memoryOutbox.findIndex((item) => item.id === sanitized.id);
+    if (index >= 0) memoryOutbox[index] = sanitized;
+    else memoryOutbox.push(sanitized);
     return;
   }
   const db = await openDb();
   try {
     const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(event);
+    tx.objectStore(STORE).put(sanitized);
     await txDone(tx);
   } finally {
     db.close();
@@ -81,14 +116,14 @@ export async function getWorkoutSessionOutboxEvent(
   id: string,
 ): Promise<WorkoutSessionOutboxEvent | null> {
   if (!hasIDB()) {
-    return memoryOutbox.find((event) => event.id === id) ?? null;
+    return normalizedOutboxEvent(memoryOutbox.find((event) => event.id === id));
   }
   const db = await openDb();
   try {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readonly");
       const req = tx.objectStore(STORE).get(id);
-      req.onsuccess = () => resolve(isOutboxEvent(req.result) ? req.result : null);
+      req.onsuccess = () => resolve(normalizedOutboxEvent(req.result));
       req.onerror = () => reject(req.error);
     });
   } finally {
@@ -103,7 +138,7 @@ export async function updateWorkoutSessionOutboxEvent(
   if (!hasIDB()) {
     const index = memoryOutbox.findIndex((event) => event.id === id);
     if (index < 0) return null;
-    memoryOutbox[index] = { ...memoryOutbox[index], ...patch };
+    memoryOutbox[index] = sanitizeOutboxEvent({ ...memoryOutbox[index], ...patch });
     return memoryOutbox[index];
   }
   const db = await openDb();
@@ -113,12 +148,12 @@ export async function updateWorkoutSessionOutboxEvent(
     const updated = await new Promise<WorkoutSessionOutboxEvent | null>((resolve, reject) => {
       const req = store.get(id);
       req.onsuccess = () => {
-        const current = isOutboxEvent(req.result) ? req.result : null;
+        const current = normalizedOutboxEvent(req.result);
         if (!current) {
           resolve(null);
           return;
         }
-        const next = { ...current, ...patch };
+        const next = sanitizeOutboxEvent({ ...current, ...patch });
         store.put(next);
         resolve(next);
       };
@@ -135,9 +170,11 @@ export async function listWorkoutSessionOutboxEvents(
   sessionId?: string,
 ): Promise<WorkoutSessionOutboxEvent[]> {
   if (!hasIDB()) {
-    const events = sessionId
+    const events = (sessionId
       ? memoryOutbox.filter((event) => event.sessionId === sessionId)
-      : memoryOutbox;
+      : memoryOutbox)
+      .map(normalizedOutboxEvent)
+      .filter((event): event is WorkoutSessionOutboxEvent => event != null);
     return sortOutboxEvents(events);
   }
   const db = await openDb();
@@ -146,7 +183,9 @@ export async function listWorkoutSessionOutboxEvents(
       const tx = db.transaction(STORE, "readonly");
       const req = tx.objectStore(STORE).getAll();
       req.onsuccess = () => {
-        const all = ((req.result as unknown[]) ?? []).filter(isOutboxEvent);
+        const all = ((req.result as unknown[]) ?? [])
+          .map(normalizedOutboxEvent)
+          .filter((event): event is WorkoutSessionOutboxEvent => event != null);
         resolve(sessionId ? all.filter((event) => event.sessionId === sessionId) : all);
       };
       req.onerror = () => reject(req.error);
@@ -189,7 +228,9 @@ export async function resetStaleSyncingWorkoutSessionOutboxEvents(
     const store = tx.objectStore(STORE);
     const events = await new Promise<WorkoutSessionOutboxEvent[]>((resolve, reject) => {
       const req = store.getAll();
-      req.onsuccess = () => resolve(((req.result as unknown[]) ?? []).filter(isOutboxEvent));
+      req.onsuccess = () => resolve(((req.result as unknown[]) ?? [])
+        .map(normalizedOutboxEvent)
+        .filter((event): event is WorkoutSessionOutboxEvent => event != null));
       req.onerror = () => reject(req.error);
     });
     let count = 0;
@@ -233,7 +274,9 @@ export async function cleanupWorkoutSessionOutbox(options: {
     const store = tx.objectStore(STORE);
     const events = await new Promise<WorkoutSessionOutboxEvent[]>((resolve, reject) => {
       const req = store.getAll();
-      req.onsuccess = () => resolve(((req.result as unknown[]) ?? []).filter(isOutboxEvent));
+      req.onsuccess = () => resolve(((req.result as unknown[]) ?? [])
+        .map(normalizedOutboxEvent)
+        .filter((event): event is WorkoutSessionOutboxEvent => event != null));
       req.onerror = () => reject(req.error);
     });
     let count = 0;

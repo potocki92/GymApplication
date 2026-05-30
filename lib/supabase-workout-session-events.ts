@@ -1,6 +1,8 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { assertWorkoutSessionEventType } from "@/lib/workout-session-event-types";
+import { isWorkoutSessionJson } from "@/lib/workout-session-serialization";
 import type {
   ActiveWorkoutSessionRecord,
   AppendWorkoutSessionEventInput,
@@ -77,7 +79,7 @@ function asWorkoutSessionStatus(status: string): WorkoutSessionPersistenceStatus
 }
 
 function emptyJson(value: WorkoutSessionJson | null): WorkoutSessionJson {
-  return value ?? {};
+  return isWorkoutSessionJson(value) ? value : {};
 }
 
 export function mapRowToWorkoutSession(
@@ -109,7 +111,7 @@ export function mapRowToWorkoutSessionEvent(
     id: row.id,
     sessionId: row.session_id,
     userId: row.user_id,
-    eventType: row.event_type,
+    eventType: assertWorkoutSessionEventType(row.event_type),
     payload: emptyJson(row.payload),
     clientEventId: row.client_event_id,
     deviceId: row.device_id,

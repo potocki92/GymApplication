@@ -1,3 +1,5 @@
+import type { WorkoutSessionEventType } from "@/features/workout-session/domain/workout-session-events";
+
 export type WorkoutSessionPersistenceStatus = "active" | "paused" | "completed";
 
 export type WorkoutSessionJson =
@@ -19,7 +21,7 @@ export interface WorkoutSessionEventRecord {
   id: string;
   sessionId: string;
   userId: string;
-  eventType: string;
+  eventType: WorkoutSessionEventType;
   payload: WorkoutSessionJson;
   clientEventId: string;
   deviceId?: string | null;
@@ -31,8 +33,10 @@ export interface WorkoutSessionOutboxEvent {
   id: string;
   sessionId: string;
   userId: string;
-  eventType: string;
+  eventType: WorkoutSessionEventType;
   payload: WorkoutSessionJson;
+  /** Local-only snapshot used to update current_state during sync; not duplicated inside event payload. */
+  nextState: WorkoutSessionJson;
   clientEventId: string;
   deviceId: string | null;
   baseVersion: number;
@@ -72,7 +76,7 @@ export interface StartWorkoutSessionInput {
 
 export interface AppendWorkoutSessionEventInput {
   sessionId: string;
-  eventType: string;
+  eventType: WorkoutSessionEventType;
   payload: WorkoutSessionJson;
   clientEventId: string;
   deviceId?: string | null;
