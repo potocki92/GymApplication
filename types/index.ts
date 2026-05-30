@@ -112,5 +112,7 @@ export type {
   StartWorkoutSessionInput,
   WorkoutSessionEventRecord,
   WorkoutSessionJson,
+  WorkoutSessionOutboxEvent,
+  WorkoutSessionOutboxSyncStatus,
   WorkoutSessionPersistenceStatus,
 } from "./workout-session-event";
