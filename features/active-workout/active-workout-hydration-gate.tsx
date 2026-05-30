@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { workoutSessionRealtimeManager } from "@/lib/workout-session-realtime";
 import { useActiveSessionStore } from "@/store";
 
 /**
@@ -12,15 +13,38 @@ import { useActiveSessionStore } from "@/store";
 export function ActiveWorkoutHydrationGate() {
   useEffect(() => {
     const store = useActiveSessionStore.getState();
-    void store.hydrateActiveWorkoutSession();
+    void store.hydrateActiveWorkoutSession().then(() => {
+      workoutSessionRealtimeManager.notifyHydrationReady();
+    });
     void store.syncOutbox();
 
-    const handleOnline = () => {
+    const unsubscribeStore = useActiveSessionStore.subscribe((state) => {
+      workoutSessionRealtimeManager.ensure(state.session?.id ?? null);
+      if (state.hydrationStatus === "ready") {
+        workoutSessionRealtimeManager.notifyHydrationReady();
+      }
+    });
+    workoutSessionRealtimeManager.ensure(store.session?.id ?? null);
+
+    const handleRecoverySignal = () => {
       void useActiveSessionStore.getState().syncOutbox();
+      workoutSessionRealtimeManager.notifyWakeOrOnline();
     };
 
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") handleRecoverySignal();
+    };
+
+    window.addEventListener("online", handleRecoverySignal);
+    window.addEventListener("focus", handleRecoverySignal);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      unsubscribeStore();
+      window.removeEventListener("online", handleRecoverySignal);
+      window.removeEventListener("focus", handleRecoverySignal);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      void workoutSessionRealtimeManager.stop();
+    };
   }, []);
 
   return null;
