@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Timer } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogoText } from "@/components/shared/logo";
+import { Logo, Wordmark } from "@/components/shared/logo";
 import {
   Tooltip,
   TooltipContent,
@@ -25,18 +25,19 @@ export function Sidebar() {
   const timer = useActiveSessionTimer();
 
   return (
-    <aside className="group/sidebar sticky top-0 hidden h-screen shrink-0 flex-col gap-2 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground shadow-2xl shadow-black/25 md:flex md:w-[4.75rem] md:hover:w-64 md:focus-within:w-64 motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-out">
-      {/* Brand */}
+    <aside className="group/sidebar sticky top-0 z-30 hidden h-screen shrink-0 flex-col gap-2 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground shadow-xl shadow-black/20 md:flex md:w-[4.75rem] md:hover:w-64 md:focus-within:w-64 motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-out">
+      {/* Brand — fixed square mark + revealing wordmark (no clipping). */}
       <Link
         href="/"
-        className="mb-4 flex w-10 items-center justify-start overflow-hidden rounded-xl px-0 py-1.5 md:group-hover/sidebar:w-36 md:group-focus-within/sidebar:w-36 motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-out"
         aria-label="REPIFY"
+        className="mb-3 flex items-center justify-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-sidebar-accent/50 md:group-hover/sidebar:justify-start md:group-focus-within/sidebar:justify-start"
       >
-        <LogoText
-          width={148}
-          preload
-          alt=""
-          className="w-36 max-w-none"
+        <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-inset ring-sidebar-border">
+          <Logo size={36} alt="" className="size-full" />
+        </span>
+        <Wordmark
+          withTagline
+          className="max-w-0 -translate-x-1 overflow-hidden whitespace-nowrap opacity-0 motion-safe:transition-[max-width,opacity,transform] motion-safe:duration-200 motion-safe:ease-out md:group-hover/sidebar:max-w-44 md:group-hover/sidebar:translate-x-0 md:group-hover/sidebar:opacity-100 md:group-focus-within/sidebar:max-w-44 md:group-focus-within/sidebar:translate-x-0 md:group-focus-within/sidebar:opacity-100"
         />
       </Link>
 
@@ -73,49 +74,51 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Active workout timer */}
-      {timer.isActive ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              href="/workout/active"
-              aria-label={t.activeWorkout.returnToWorkout}
-              className="group flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 justify-center md:group-hover/sidebar:justify-start md:group-focus-within/sidebar:justify-start"
-            >
-              <span className="relative flex size-5 shrink-0 items-center justify-center">
-                <Timer className="size-5" />
-                {!timer.isPaused ? (
-                  <span className="absolute -right-0.5 -top-0.5 inline-flex size-2 animate-ping rounded-full bg-primary" />
-                ) : null}
-              </span>
-              <span className="max-w-0 -translate-x-1 overflow-hidden whitespace-nowrap font-mono tabular-nums opacity-0 motion-safe:transition-[max-width,opacity,transform] motion-safe:duration-200 motion-safe:ease-out md:group-hover/sidebar:max-w-40 md:group-hover/sidebar:translate-x-0 md:group-hover/sidebar:opacity-100 md:group-focus-within/sidebar:max-w-40 md:group-focus-within/sidebar:translate-x-0 md:group-focus-within/sidebar:opacity-100">
-                {formatClock(timer.totalMs)}
-              </span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="lg:hidden">
-            {t.activeWorkout.inProgress} · {formatClock(timer.totalMs)}
-          </TooltipContent>
-        </Tooltip>
-      ) : null}
+      <div className="flex flex-col gap-1 border-t border-sidebar-border/60 pt-3">
+        {/* Active workout timer */}
+        {timer.isActive ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/workout/active"
+                aria-label={t.activeWorkout.returnToWorkout}
+                className="group flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 justify-center md:group-hover/sidebar:justify-start md:group-focus-within/sidebar:justify-start"
+              >
+                <span className="relative flex size-5 shrink-0 items-center justify-center">
+                  <Timer className="size-5" />
+                  {!timer.isPaused ? (
+                    <span className="absolute -right-0.5 -top-0.5 inline-flex size-2 animate-ping rounded-full bg-primary" />
+                  ) : null}
+                </span>
+                <span className="max-w-0 -translate-x-1 overflow-hidden whitespace-nowrap font-mono tabular-nums opacity-0 motion-safe:transition-[max-width,opacity,transform] motion-safe:duration-200 motion-safe:ease-out md:group-hover/sidebar:max-w-40 md:group-hover/sidebar:translate-x-0 md:group-hover/sidebar:opacity-100 md:group-focus-within/sidebar:max-w-40 md:group-focus-within/sidebar:translate-x-0 md:group-focus-within/sidebar:opacity-100">
+                  {formatClock(timer.totalMs)}
+                </span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="lg:hidden">
+              {t.activeWorkout.inProgress} · {formatClock(timer.totalMs)}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
 
-      {/* User */}
-      <Link
-        href="/settings"
-        className="flex items-center justify-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-sidebar-accent md:group-hover/sidebar:justify-start md:group-focus-within/sidebar:justify-start"
-      >
-        <Avatar className="size-9 shrink-0">
-          <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold">
-            {user.initials}
-          </AvatarFallback>
-        </Avatar>
-        <span className="flex min-w-0 max-w-0 -translate-x-1 flex-col overflow-hidden opacity-0 motion-safe:transition-[max-width,opacity,transform] motion-safe:duration-200 motion-safe:ease-out md:group-hover/sidebar:max-w-44 md:group-hover/sidebar:translate-x-0 md:group-hover/sidebar:opacity-100 md:group-focus-within/sidebar:max-w-44 md:group-focus-within/sidebar:translate-x-0 md:group-focus-within/sidebar:opacity-100">
-          <span className="truncate text-sm font-medium">{user.name}</span>
-          <span className="truncate text-xs text-sidebar-foreground/60">
-            {t.nav.viewProfile}
+        {/* User */}
+        <Link
+          href="/settings"
+          className="flex items-center justify-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-sidebar-accent md:group-hover/sidebar:justify-start md:group-focus-within/sidebar:justify-start"
+        >
+          <Avatar className="size-9 shrink-0">
+            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-semibold">
+              {user.initials}
+            </AvatarFallback>
+          </Avatar>
+          <span className="flex min-w-0 max-w-0 -translate-x-1 flex-col overflow-hidden opacity-0 motion-safe:transition-[max-width,opacity,transform] motion-safe:duration-200 motion-safe:ease-out md:group-hover/sidebar:max-w-44 md:group-hover/sidebar:translate-x-0 md:group-hover/sidebar:opacity-100 md:group-focus-within/sidebar:max-w-44 md:group-focus-within/sidebar:translate-x-0 md:group-focus-within/sidebar:opacity-100">
+            <span className="truncate text-sm font-medium">{user.name}</span>
+            <span className="truncate text-xs text-sidebar-foreground/60">
+              {t.nav.viewProfile}
+            </span>
           </span>
-        </span>
-      </Link>
+        </Link>
+      </div>
     </aside>
   );
 }
