@@ -149,6 +149,49 @@ export function photosByDay(
   return out;
 }
 
+/* ----------------------------- plan editing ----------------------------- */
+
+export interface MoveWorkoutResult {
+  plan: WeeklyPlan;
+  /** False when the move was a no-op (same day, empty source, or occupied target). */
+  moved: boolean;
+  /** The relocated workout (with refreshed id + date), present only when `moved`. */
+  workout?: Workout;
+}
+
+/**
+ * Moves the workout on `from` to the empty `to` slot within a week. Pure: returns
+ * a new plan, leaving the input untouched. The relocated workout gets a fresh
+ * `id` (so persistence never collides with the still-present source row) and its
+ * `date` is recomputed for the target weekday.
+ */
+export function moveWorkoutBetweenDays(
+  plan: WeeklyPlan,
+  from: Weekday,
+  to: Weekday,
+  newId: string,
+): MoveWorkoutResult {
+  if (from === to) return { plan, moved: false };
+
+  const source = plan.days.find((d) => d.weekday === from);
+  const target = plan.days.find((d) => d.weekday === to);
+  if (!source?.workout || target?.workout) return { plan, moved: false };
+
+  const workout: Workout = {
+    ...source.workout,
+    id: newId,
+    date: weekdayToISO(plan.weekStart, to),
+  };
+
+  const days = plan.days.map((day) => {
+    if (day.weekday === from) return { weekday: from, rest: false };
+    if (day.weekday === to) return { weekday: to, rest: false, workout };
+    return day;
+  });
+
+  return { plan: { ...plan, days }, moved: true, workout };
+}
+
 /* ----------------------------- type styling ----------------------------- */
 
 /**

@@ -1,10 +1,12 @@
 import { create } from "zustand";
 
 import { REFERENCE_TODAY, WEEKLY_PLAN } from "@/data";
+import { moveWorkoutBetweenDays } from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
+  loadPlanForWeek,
   loadPlanFromSupabase,
   removeWorkoutFromSupabase,
   setCompletedInSupabase,
@@ -83,6 +85,8 @@ export function weekdayToISO(weekStart: string, weekday: Weekday): string {
 interface PlanState {
   plan: WeeklyPlan;
   hydrated: boolean;
+  /** Cache of non-template calendar weeks, keyed by Monday-anchored ISO weekStart. */
+  viewedWeeks: Record<string, WeeklyPlan>;
   hydrate: () => Promise<void>;
   rehydrate: () => Promise<void>;
   addWorkout: (weekday: Weekday, workout: Workout) => void;
@@ -91,6 +95,12 @@ interface PlanState {
   setRest: (weekday: Weekday) => void;
   toggleCompleted: (weekday: Weekday) => void;
   setWorkoutCompleted: (workoutId: string, completed: boolean) => Promise<void>;
+  /** Loads a calendar week into `viewedWeeks` (no-op for the template week). */
+  loadViewedWeek: (weekStart: string) => Promise<void>;
+  /** Returns the plan for a given week (the template plan or a cached week). */
+  weekPlan: (weekStart: string) => WeeklyPlan;
+  /** Moves a workout between days within a week; returns false on a no-op move. */
+  moveWorkout: (weekStart: string, from: Weekday, to: Weekday) => boolean;
 }
 
 function replaceDay(plan: WeeklyPlan, weekday: Weekday, next: WorkoutDay): WeeklyPlan {
@@ -106,6 +116,21 @@ function emptyPlan(): WeeklyPlan {
     weekStart: WEEKLY_PLAN.weekStart,
     days: WEEKDAY_ORDER.map((weekday) => ({ weekday, rest: false })),
   };
+}
+
+function emptyWeek(weekStart: string): WeeklyPlan {
+  return {
+    id: `plan-${weekStart}`,
+    weekStart,
+    days: WEEKDAY_ORDER.map((weekday) => ({ weekday, rest: false })),
+  };
+}
+
+function newWorkoutId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `workout-${crypto.randomUUID()}`;
+  }
+  return `workout-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function activeUserId(): string | null {
@@ -159,6 +184,7 @@ function cachePlanAfterSync(
 export const usePlanStore = create<PlanState>((set, get) => ({
   plan: WEEKLY_PLAN,
   hydrated: false,
+  viewedWeeks: {},
 
   hydrate: async () => {
     if (get().hydrated) return;
@@ -302,6 +328,68 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         }
       }
     }
+  },
+
+  weekPlan: (weekStart) => {
+    const state = get();
+    if (weekStart === state.plan.weekStart) return state.plan;
+    return state.viewedWeeks[weekStart] ?? emptyWeek(weekStart);
+  },
+
+  loadViewedWeek: async (weekStart) => {
+    // The template week lives in `plan`; only non-template weeks are cached.
+    if (weekStart === get().plan.weekStart) return;
+    if (get().viewedWeeks[weekStart]) return;
+
+    const userId = activeUserId();
+    const week = userId
+      ? await loadPlanForWeek(userId, weekStart)
+      : emptyWeek(weekStart);
+    set((state) => ({
+      viewedWeeks: { ...state.viewedWeeks, [weekStart]: week },
+    }));
+  },
+
+  moveWorkout: (weekStart, from, to) => {
+    const isTemplate = weekStart === get().plan.weekStart;
+    const current = isTemplate
+      ? get().plan
+      : get().viewedWeeks[weekStart] ?? emptyWeek(weekStart);
+
+    const result = moveWorkoutBetweenDays(current, from, to, newWorkoutId());
+    if (!result.moved || !result.workout) return false;
+
+    if (isTemplate) {
+      set({ plan: result.plan });
+    } else {
+      set((state) => ({
+        viewedWeeks: { ...state.viewedWeeks, [weekStart]: result.plan },
+      }));
+    }
+
+    const userId = activeUserId();
+    if (userId) {
+      const workout = result.workout;
+      // Delete the source slot before writing the target so the relocated row
+      // never coexists with its origin (the workout already has a fresh id).
+      const sync = removeWorkoutFromSupabase(from, userId, weekStart).then(() =>
+        upsertWorkoutToSupabase(to, workout, userId, weekStart),
+      );
+      if (isTemplate) {
+        cachePlanAfterSync(
+          userId,
+          result.plan,
+          sync,
+          "Failed to sync moved workout",
+        );
+      } else {
+        void sync.catch((error) =>
+          console.error("Failed to sync moved workout", error),
+        );
+      }
+    }
+
+    return true;
   },
 }));
 

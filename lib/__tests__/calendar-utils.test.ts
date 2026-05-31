@@ -5,6 +5,7 @@ import {
   buildMonthGrid,
   groupSessionsByDay,
   metricsByDay,
+  moveWorkoutBetweenDays,
   photosByDay,
   plannedWorkoutsByDay,
 } from "@/lib/calendar-utils";
@@ -111,6 +112,44 @@ describe("metricsByDay / photosByDay tie-breaking", () => {
       photo("b", "2024-05-20", 200),
     ];
     expect(photosByDay(photos).get("2024-05-20")?.id).toBe("b");
+  });
+});
+
+describe("moveWorkoutBetweenDays", () => {
+  const plan: WeeklyPlan = {
+    id: "p",
+    weekStart: "2024-05-20",
+    days: [
+      { weekday: "monday", rest: false, workout: workout("legs") },
+      { weekday: "tuesday", rest: false },
+      { weekday: "wednesday", rest: true },
+      { weekday: "thursday", rest: false, workout: workout("pull") },
+      { weekday: "friday", rest: false },
+      { weekday: "saturday", rest: false },
+      { weekday: "sunday", rest: false },
+    ],
+  };
+
+  it("moves a workout to an empty day with a fresh id and recomputed date", () => {
+    const result = moveWorkoutBetweenDays(plan, "monday", "tuesday", "new-id");
+    expect(result.moved).toBe(true);
+    expect(result.workout?.id).toBe("new-id");
+    expect(result.workout?.date).toBe("2024-05-21"); // Tuesday of the week
+    expect(result.plan.days.find((d) => d.weekday === "monday")?.workout).toBeUndefined();
+    expect(result.plan.days.find((d) => d.weekday === "tuesday")?.workout?.name).toBe("legs");
+    // input untouched
+    expect(plan.days[0].workout?.id).toBe("legs");
+  });
+
+  it("is a no-op when the target day is occupied", () => {
+    const result = moveWorkoutBetweenDays(plan, "monday", "thursday", "new-id");
+    expect(result.moved).toBe(false);
+    expect(result.plan).toBe(plan);
+  });
+
+  it("is a no-op when the source day is empty or same as target", () => {
+    expect(moveWorkoutBetweenDays(plan, "friday", "saturday", "x").moved).toBe(false);
+    expect(moveWorkoutBetweenDays(plan, "monday", "monday", "x").moved).toBe(false);
   });
 });
 

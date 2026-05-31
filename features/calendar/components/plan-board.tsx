@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -11,17 +12,41 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import { GripVertical, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, GripVertical, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { WORKOUT_TYPE_DOT_CLASSES } from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
-import { formatMinutes } from "@/lib/format";
+import { formatDatePL, formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePlanStore } from "@/store";
+import { currentLocalISODate, usePlanStore } from "@/store";
 import type { Weekday, WorkoutDay } from "@/types";
+
+function parseLocalDate(iso: string): Date {
+  return new Date(`${iso}T00:00:00`);
+}
+
+function toLocalISODate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function weekStartOf(iso: string): string {
+  const date = parseLocalDate(iso);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return toLocalISODate(date);
+}
+
+function addDaysISO(iso: string, days: number): string {
+  const date = parseLocalDate(iso);
+  date.setDate(date.getDate() + days);
+  return toLocalISODate(date);
+}
 
 function DraggableWorkout({ day }: { day: WorkoutDay }) {
   const t = useDictionary();
@@ -104,35 +129,75 @@ function DayColumn({ day }: { day: WorkoutDay }) {
 export function PlanBoard() {
   const t = useDictionary();
   const plan = usePlanStore((s) => s.plan);
-  const addWorkout = usePlanStore((s) => s.addWorkout);
-  const removeWorkout = usePlanStore((s) => s.removeWorkout);
+  const viewedWeeks = usePlanStore((s) => s.viewedWeeks);
+  const loadViewedWeek = usePlanStore((s) => s.loadViewedWeek);
+  const moveWorkout = usePlanStore((s) => s.moveWorkout);
+
+  const [weekStart, setWeekStart] = useState(() => plan.weekStart);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  const dayByWeekday = new Map(plan.days.map((d) => [d.weekday, d]));
+  useEffect(() => {
+    void loadViewedWeek(weekStart);
+  }, [weekStart, loadViewedWeek]);
+
+  const weekPlan =
+    weekStart === plan.weekStart ? plan : viewedWeeks[weekStart];
+
+  const dayByWeekday = useMemo(() => {
+    const days = weekPlan?.days ?? WEEKDAY_ORDER.map((weekday) => ({ weekday, rest: false }));
+    return new Map(days.map((d) => [d.weekday, d] as const));
+  }, [weekPlan]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const from = event.active.id as Weekday;
     const to = event.over?.id as Weekday | undefined;
     if (!to || from === to) return;
 
-    const source = dayByWeekday.get(from);
-    const target = dayByWeekday.get(to);
-    if (!source?.workout) return;
-    if (target?.workout) {
+    if (dayByWeekday.get(to)?.workout) {
       toast.error(t.calendar.dnd.dayOccupied);
       return;
     }
-
-    removeWorkout(from);
-    addWorkout(to, source.workout);
-    toast.success(t.calendar.dnd.movedTo);
+    if (moveWorkout(weekStart, from, to)) {
+      toast.success(t.calendar.dnd.movedTo);
+    }
   };
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{t.calendar.dnd.hint}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">{t.calendar.dnd.hint}</p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">
+            {t.calendar.weekOf} {formatDatePL(weekStart)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekStart(weekStartOf(currentLocalISODate()))}
+          >
+            {t.calendar.today}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setWeekStart((w) => addDaysISO(w, -7))}
+            aria-label={t.calendar.prevWeek}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setWeekStart((w) => addDaysISO(w, 7))}
+            aria-label={t.calendar.nextWeek}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
+
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {WEEKDAY_ORDER.map((weekday) => (
