@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useHistoryStore } from "@/store";
 import type { ActiveSession } from "@/types";
+import { AddExerciseSheet } from "./add-exercise-sheet";
 
 function StatTile({
   icon,
@@ -297,6 +298,13 @@ export function SessionSummary({
           <Save className="size-5" />
           {saving ? t.activeWorkout.summary.saving : t.activeWorkout.summary.save}
         </Button>
+
+        {/* Adding an exercise re-opens the session so it can be performed; it
+            affects this session only, never the weekly plan. */}
+        <AddExerciseSheet session={session} />
+        <p className="text-center text-xs text-muted-foreground">
+          {t.activeWorkout.addExerciseHint}
+        </p>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {onRepeat ? (

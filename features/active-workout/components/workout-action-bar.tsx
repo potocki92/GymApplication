@@ -24,6 +24,7 @@ import { useDictionary } from "@/hooks/use-dictionary";
 import { cn } from "@/lib/utils";
 import { useActiveSessionStore } from "@/store";
 import type { ActiveSession, SessionStatus } from "@/types";
+import { AddExerciseSheet } from "./add-exercise-sheet";
 import { SessionControls } from "./session-controls";
 
 function canSkipExercise(session: ActiveSession): boolean {
@@ -187,7 +188,8 @@ export function WorkoutActionBar({
             <SheetHeader>
               <SheetTitle>{t.activeWorkout.overflowMenuTitle}</SheetTitle>
             </SheetHeader>
-            <div className="px-4 pb-6">
+            <div className="space-y-3 px-4 pb-6">
+              <AddExerciseSheet session={session} onAdded={closeMenu} />
               <SessionControls
                 status={status}
                 onExit={() => {

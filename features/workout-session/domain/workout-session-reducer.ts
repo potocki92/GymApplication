@@ -273,6 +273,12 @@ export function applyWorkoutSessionEvent(
       };
     }
 
+    case "EXERCISE_ADDED": {
+      // This projection materializes exercises lazily from their sets, so adding
+      // an exercise is a no-op here — its sets register on SET_STARTED/COMPLETED.
+      return ensureState(state, event);
+    }
+
     case "NOTE_ADDED": {
       const current = ensureState(state, event);
       return {

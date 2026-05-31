@@ -5,6 +5,7 @@ export type WorkoutSessionEventType =
   | "SET_COMPLETED"
   | "SET_UPDATED"
   | "SET_DELETED"
+  | "EXERCISE_ADDED"
   | "REST_STARTED"
   | "REST_FINISHED"
   | "REST_SKIPPED"
@@ -75,6 +76,16 @@ export type WorkoutSessionEvent =
   | BaseWorkoutSessionEvent<
       "SET_DELETED",
       { exerciseId: string; setIndex: number }
+    >
+  | BaseWorkoutSessionEvent<
+      "EXERCISE_ADDED",
+      {
+        exerciseId: string;
+        sets: number;
+        reps: string;
+        weightKg: number;
+        restSec: number;
+      }
     >
   | BaseWorkoutSessionEvent<
       "REST_STARTED",

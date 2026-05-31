@@ -191,6 +191,10 @@ export const pl = {
     emptyDay: "Brak treningu",
     editWorkout: "Edytuj trening",
     markRest: "Oznacz jako odpoczynek",
+    deleteWorkout: "Usuń trening",
+    deleteConfirmTitle: "Usunąć ten trening?",
+    deleteConfirmDesc: "Trening zostanie trwale usunięty z tego dnia w planie.",
+    deleted: "Trening został usunięty.",
   },
 
   calendar: {
@@ -556,6 +560,11 @@ export const pl = {
     redo: "Ponów",
     addSet: "Dodaj serię",
     removeSet: "Usuń serię",
+    addExercise: "Dodaj ćwiczenie",
+    addExerciseSheetTitle: "Dodaj ćwiczenie do sesji",
+    addExerciseHint: "Dotyczy tylko tej sesji — plan tygodniowy się nie zmieni.",
+    exerciseAddedToast: "Ćwiczenie dodane do tej sesji.",
+    alreadyInSession: "Już w sesji",
     timers: {
       total: "Czas treningu",
       set: "Czas serii",

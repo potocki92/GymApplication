@@ -281,4 +281,82 @@ describe("workout session event replay", () => {
     expect(durationMs).toBeLessThan(1_000);
   });
 
+  it("appends a new exercise with pending sets without touching existing ones", () => {
+    const session = buildActiveSession(makeWorkout());
+    const event = {
+      id: "exercise-added-1",
+      type: "EXERCISE_ADDED" as const,
+      occurredAt: NOW + 2,
+      payload: {
+        exerciseId: "incline-press",
+        sets: 3,
+        reps: "10-12",
+        weightKg: 60,
+        restSec: 75,
+      },
+      clientEventId: "exercise-added-1",
+      deviceId: "device-a",
+    };
+
+    const result = applyWorkoutSessionEvent(session, event);
+
+    expect(result?.exercises).toHaveLength(2);
+    const added = result?.exercises[1];
+    expect(added?.exerciseId).toBe("incline-press");
+    expect(added?.order).toBe(1);
+    expect(added?.sets).toHaveLength(3);
+    expect(added?.sets.every((s) => s.status === "pending")).toBe(true);
+    expect(added?.sets.map((s) => s.setNumber)).toEqual([1, 2, 3]);
+    // existing exercise untouched, session still planning
+    expect(result?.exercises[0].sets).toHaveLength(2);
+    expect(result?.status).toBe("planning");
+  });
+
+  it("re-opens a finished session to executing when an exercise is added", () => {
+    const session = buildActiveSession(makeWorkout());
+    session.status = "finished";
+    session.finishedAt = NOW + 1;
+    const event = {
+      id: "exercise-added-2",
+      type: "EXERCISE_ADDED" as const,
+      occurredAt: NOW + 2,
+      payload: {
+        exerciseId: "incline-press",
+        sets: 2,
+        reps: "8-12",
+        weightKg: 50,
+        restSec: 60,
+      },
+      clientEventId: "exercise-added-2",
+      deviceId: "device-a",
+    };
+
+    const result = applyWorkoutSessionEvent(session, event);
+
+    expect(result?.status).toBe("executing");
+    expect(result?.finishedAt).toBeNull();
+    expect(result?.currentExerciseIndex).toBe(1);
+    expect(result?.currentSetIndex).toBe(0);
+    expect(result?.exercises[1].sets[0].status).toBe("active");
+  });
+
+  it("keeps EXERCISE_ADDED replay deterministic (no random ids)", () => {
+    const session = buildActiveSession(makeWorkout());
+    const added = pendingOutbox(session, 2, "EXERCISE_ADDED", {
+      exerciseId: "incline-press",
+      sets: 2,
+      reps: "10-12",
+      weightKg: 40,
+      restSec: 90,
+    });
+    const record = outboxEventToRecord(added, 2);
+
+    const first = replayWorkoutSessionEvents(session, [record]);
+    const second = replayWorkoutSessionEvents(session, [record]);
+
+    expect(first.session).toEqual(second.session);
+    expect(first.skippedEventIds).toEqual([]);
+    expect(first.session?.exercises).toHaveLength(2);
+  });
+
 });
