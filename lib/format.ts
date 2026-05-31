@@ -25,6 +25,21 @@ const WEEKDAYS_FULL_PL = [
 
 const WEEKDAYS_SHORT_PL = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"];
 
+const MONTHS_NOMINATIVE_PL = [
+  "Styczeń",
+  "Luty",
+  "Marzec",
+  "Kwiecień",
+  "Maj",
+  "Czerwiec",
+  "Lipiec",
+  "Sierpień",
+  "Wrzesień",
+  "Październik",
+  "Listopad",
+  "Grudzień",
+];
+
 const NBSP = " ";
 
 /** Thousands-grouped number using a non-breaking space, e.g. 48250 -> "48 250". */
@@ -91,4 +106,9 @@ export function formatWeekdayDatePL(iso: string): string {
 export function formatShortWeekdayDatePL(iso: string): string {
   const d = parseISODate(iso);
   return `${WEEKDAYS_SHORT_PL[d.getDay()]}, ${formatDatePL(iso)}`;
+}
+
+/** (year, 0-based month) -> "Maj 2024". */
+export function formatMonthYearPL(year: number, month: number): string {
+  return `${MONTHS_NOMINATIVE_PL[month]} ${year}`;
 }

@@ -193,6 +193,60 @@ export const pl = {
     markRest: "Oznacz jako odpoczynek",
   },
 
+  calendar: {
+    title: "Kalendarz treningów",
+    subtitle: "Zaplanowane i wykonane treningi w jednym widoku",
+    views: {
+      month: "Miesiąc",
+      activity: "Aktywność",
+      plan: "Planowanie",
+      timeline: "Oś czasu",
+    },
+    prevMonth: "Poprzedni miesiąc",
+    nextMonth: "Następny miesiąc",
+    prevWeek: "Poprzedni tydzień",
+    nextWeek: "Następny tydzień",
+    today: "Dziś",
+    weekOf: "Tydzień od",
+    legend: {
+      planned: "Zaplanowany",
+      done: "Wykonany",
+    },
+    detail: {
+      title: "Szczegóły dnia",
+      planned: "Zaplanowany trening",
+      completed: "Wykonane treningi",
+      noWorkout: "Brak treningu w tym dniu",
+      start: "Rozpocznij trening",
+      edit: "Edytuj trening",
+      volume: "Objętość",
+      duration: "Czas",
+      rating: "Ocena",
+    },
+    streak: {
+      current: "Aktualna seria",
+      longest: "Najdłuższa seria",
+      total: "Treningi (52 tyg.)",
+      unit: "dni",
+      workoutsUnit: "treningów",
+    },
+    activity: {
+      title: "Mapa aktywności",
+      subtitle: "Twoja konsekwencja w ostatnich 52 tygodniach",
+    },
+    overlay: {
+      weight: "Waga",
+      photo: "Zdjęcie",
+      noData: "Brak danych pomiarowych",
+    },
+    dnd: {
+      hint: "Przeciągnij trening na inny dzień, aby go przenieść.",
+      movedTo: "Trening przeniesiony",
+      dayOccupied: "Ten dzień ma już zaplanowany trening",
+      addHere: "Dodaj trening",
+    },
+  },
+
   workoutForm: {
     titleNew: "Nowy trening",
     titleEdit: "Edytuj trening",

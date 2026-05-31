@@ -212,6 +212,36 @@ export function buildWorkoutStreak(
   return streak;
 }
 
+/** Longest run of consecutive calendar days that contain at least one session. */
+export function buildLongestStreak(sessions: SessionHistoryRecord[]): number {
+  if (sessions.length === 0) return 0;
+  const days = Array.from(new Set(sessions.map((s) => utcDayKey(s.finishedAt)))).sort();
+
+  let longest = 1;
+  let current = 1;
+  for (let i = 1; i < days.length; i += 1) {
+    const prev = new Date(`${days[i - 1]}T00:00:00Z`);
+    prev.setUTCDate(prev.getUTCDate() + 1);
+    if (prev.toISOString().slice(0, 10) === days[i]) {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 1;
+    }
+  }
+  return longest;
+}
+
+/** Count of completed sessions whose finish date falls within the last `weeks` weeks. */
+export function countSessionsInWeeks(
+  sessions: SessionHistoryRecord[],
+  weeks: number,
+  now: Date = new Date(),
+): number {
+  const cutoff = now.getTime() - weeks * 7 * DAY_MS;
+  return sessions.filter((s) => s.finishedAt >= cutoff).length;
+}
+
 export interface WeeklyTotals {
   workouts: number;
   durationMin: number;

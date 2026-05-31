@@ -62,20 +62,33 @@ function throwIfSupabaseError(error: { message?: string } | null): void {
   if (error) throw new Error(error.message ?? "Supabase write failed");
 }
 
-function emptyPlan(): WeeklyPlan {
+function emptyPlanForWeek(weekStart: string): WeeklyPlan {
   return {
-    id: "plan-user",
-    weekStart: WEEK_START,
+    id: weekStart === WEEK_START ? "plan-user" : `plan-${weekStart}`,
+    weekStart,
     days: WEEKDAY_ORDER.map((weekday) => ({ weekday, rest: false })),
   };
 }
 
+/** Loads the recurring template week (legacy single-week plan). */
 export async function loadPlanFromSupabase(userId: string): Promise<WeeklyPlan> {
+  return loadPlanForWeek(userId, WEEK_START);
+}
+
+/** Loads the plan for a specific calendar week (Monday-anchored ISO `weekStart`). */
+export async function loadPlanForWeek(
+  userId: string,
+  weekStart: string,
+): Promise<WeeklyPlan> {
   const supabase = getClient();
-  if (!supabase) return emptyPlan();
+  if (!supabase) return emptyPlanForWeek(weekStart);
 
   const [workoutsRes, exercisesRes] = await Promise.all([
-    supabase.from("workouts").select("*").eq("user_id", userId),
+    supabase
+      .from("workouts")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("week_start", weekStart),
     supabase
       .from("workout_exercises")
       .select("*")
@@ -83,7 +96,7 @@ export async function loadPlanFromSupabase(userId: string): Promise<WeeklyPlan> 
       .order("order_index", { ascending: true }),
   ]);
 
-  if (workoutsRes.error || exercisesRes.error) return emptyPlan();
+  if (workoutsRes.error || exercisesRes.error) return emptyPlanForWeek(weekStart);
 
   const exercisesByWorkout = new Map<string, WorkoutExercise[]>();
   for (const row of (exercisesRes.data as WorkoutExerciseRow[]) ?? []) {
@@ -108,18 +121,19 @@ export async function loadPlanFromSupabase(userId: string): Promise<WeeklyPlan> 
       exercises: exercisesByWorkout.get(row.id) ?? [],
       estimatedDurationMin: row.estimated_duration_min,
       completed: row.completed,
-      date: weekdayToISO(WEEK_START, weekday),
+      date: weekdayToISO(weekStart, weekday),
     };
     return { weekday, rest: false, workout };
   });
 
-  return { id: "plan-user", weekStart: WEEK_START, days };
+  return { id: emptyPlanForWeek(weekStart).id, weekStart, days };
 }
 
 export async function upsertWorkoutToSupabase(
   weekday: Weekday,
   workout: Workout,
   userId: string,
+  weekStart: string = WEEK_START,
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
@@ -129,6 +143,7 @@ export async function upsertWorkoutToSupabase(
       id: workout.id,
       user_id: userId,
       weekday,
+      week_start: weekStart,
       rest: false,
       name: workout.name,
       type: workout.type ?? null,
@@ -136,7 +151,7 @@ export async function upsertWorkoutToSupabase(
       completed: workout.completed,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: "user_id,weekday" },
+    { onConflict: "user_id,week_start,weekday" },
   );
 
   // Replace-all is cheap (a handful of rows per workout) and avoids tracking
@@ -170,6 +185,7 @@ export async function upsertWorkoutToSupabase(
 export async function removeWorkoutFromSupabase(
   weekday: Weekday,
   userId: string,
+  weekStart: string = WEEK_START,
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
@@ -178,6 +194,7 @@ export async function removeWorkoutFromSupabase(
     .from("workouts")
     .delete()
     .eq("user_id", userId)
+    .eq("week_start", weekStart)
     .eq("weekday", weekday);
   throwIfSupabaseError(error);
 }
@@ -185,6 +202,7 @@ export async function removeWorkoutFromSupabase(
 export async function setRestInSupabase(
   weekday: Weekday,
   userId: string,
+  weekStart: string = WEEK_START,
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
@@ -194,13 +212,15 @@ export async function setRestInSupabase(
     .from("workouts")
     .delete()
     .eq("user_id", userId)
+    .eq("week_start", weekStart)
     .eq("weekday", weekday);
   throwIfSupabaseError(deleteError);
 
   const { error: insertError } = await supabase.from("workouts").insert({
-    id: `rest-${userId}-${weekday}`,
+    id: `rest-${userId}-${weekStart}-${weekday}`,
     user_id: userId,
     weekday,
+    week_start: weekStart,
     rest: true,
     name: null,
     type: null,
@@ -214,6 +234,7 @@ export async function setCompletedInSupabase(
   weekday: Weekday,
   userId: string,
   completed: boolean,
+  weekStart: string = WEEK_START,
 ): Promise<void> {
   const supabase = getClient();
   if (!supabase) return;
@@ -221,6 +242,7 @@ export async function setCompletedInSupabase(
     .from("workouts")
     .update({ completed, updated_at: new Date().toISOString() })
     .eq("user_id", userId)
+    .eq("week_start", weekStart)
     .eq("weekday", weekday)
     .eq("rest", false);
   throwIfSupabaseError(error);
