@@ -36,6 +36,11 @@ function weekdayToISO(weekStart: string, weekday: Weekday): string {
   return toLocalISODate(d);
 }
 
+/** Monday-based weekday for a local ISO date (Mon … Sun). */
+export function weekdayFromISO(iso: string): Weekday {
+  return WEEKDAY_ORDER[mondayBasedIndex(parseLocalDate(iso))];
+}
+
 /* ----------------------------- month grid ----------------------------- */
 
 export interface CalendarCell {
@@ -111,12 +116,16 @@ export function groupSessionsByDay(
   return out;
 }
 
-/** Maps each planned workout of a weekly plan to its concrete ISO date. */
-export function plannedWorkoutsByDay(plan: WeeklyPlan): Map<string, Workout> {
-  const out = new Map<string, Workout>();
+/**
+ * Maps each planned workout of the recurring weekly template to its weekday.
+ * Keyed by weekday (not an absolute date) so the template repeats across every
+ * calendar week — look up a date's workout via `weekdayFromISO(iso)`.
+ */
+export function plannedWorkoutsByDay(plan: WeeklyPlan): Map<Weekday, Workout> {
+  const out = new Map<Weekday, Workout>();
   for (const day of plan.days) {
     if (day.rest || !day.workout) continue;
-    out.set(weekdayToISO(plan.weekStart, day.weekday), day.workout);
+    out.set(day.weekday, day.workout);
   }
   return out;
 }

@@ -8,6 +8,7 @@ import {
   moveWorkoutBetweenDays,
   photosByDay,
   plannedWorkoutsByDay,
+  weekdayFromISO,
 } from "@/lib/calendar-utils";
 import type {
   BodyMetricRecord,
@@ -89,11 +90,18 @@ describe("plannedWorkoutsByDay", () => {
     ],
   };
 
-  it("maps training days to their concrete ISO dates", () => {
+  it("maps training days to their weekday (recurring template)", () => {
     const map = plannedWorkoutsByDay(plan);
-    expect(map.get("2024-05-20")?.id).toBe("legs");
-    expect(map.get("2024-05-23")?.id).toBe("pull");
-    expect(map.has("2024-05-21")).toBe(false); // rest day
+    expect(map.get("monday")?.id).toBe("legs");
+    expect(map.get("thursday")?.id).toBe("pull");
+    expect(map.has("tuesday")).toBe(false); // rest day
+  });
+
+  it("resolves a template workout for any matching weekday via weekdayFromISO", () => {
+    const map = plannedWorkoutsByDay(plan);
+    // 2026-06-01 is a Monday; the Monday template workout repeats onto it.
+    expect(weekdayFromISO("2026-06-01")).toBe("monday");
+    expect(map.get(weekdayFromISO("2026-06-01"))?.id).toBe("legs");
   });
 });
 

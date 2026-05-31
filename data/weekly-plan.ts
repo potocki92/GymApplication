@@ -1,7 +1,6 @@
 import type { WeeklyPlan, Workout, WorkoutExercise } from "@/types";
 
-/** Reference "today" the mock data is anchored to (a Thursday). */
-export const REFERENCE_TODAY = "2024-05-23";
+/** Stable persistence key for the recurring weekly template (a Monday). */
 export const WEEK_START = "2024-05-20";
 
 let exSeq = 0;

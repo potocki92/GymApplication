@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -12,10 +12,9 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { WORKOUT_TYPE_DOT_CLASSES } from "@/lib/calendar-utils";
@@ -39,12 +38,6 @@ function toLocalISODate(date: Date): string {
 function weekStartOf(iso: string): string {
   const date = parseLocalDate(iso);
   date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
-  return toLocalISODate(date);
-}
-
-function addDaysISO(iso: string, days: number): string {
-  const date = parseLocalDate(iso);
-  date.setDate(date.getDate() + days);
   return toLocalISODate(date);
 }
 
@@ -128,27 +121,19 @@ function DayColumn({ day }: { day: WorkoutDay }) {
 
 export function PlanBoard() {
   const t = useDictionary();
+  // The plan is a single recurring weekly template; the board always renders it,
+  // labeled with the current real-world week for context.
   const plan = usePlanStore((s) => s.plan);
-  const viewedWeeks = usePlanStore((s) => s.viewedWeeks);
-  const loadViewedWeek = usePlanStore((s) => s.loadViewedWeek);
   const moveWorkout = usePlanStore((s) => s.moveWorkout);
 
-  const [weekStart, setWeekStart] = useState(() => plan.weekStart);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  useEffect(() => {
-    void loadViewedWeek(weekStart);
-  }, [weekStart, loadViewedWeek]);
-
-  const weekPlan =
-    weekStart === plan.weekStart ? plan : viewedWeeks[weekStart];
-
-  const dayByWeekday = useMemo(() => {
-    const days = weekPlan?.days ?? WEEKDAY_ORDER.map((weekday) => ({ weekday, rest: false }));
-    return new Map(days.map((d) => [d.weekday, d] as const));
-  }, [weekPlan]);
+  const dayByWeekday = useMemo(
+    () => new Map(plan.days.map((d) => [d.weekday, d] as const)),
+    [plan.days],
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const from = event.active.id as Weekday;
@@ -159,7 +144,7 @@ export function PlanBoard() {
       toast.error(t.calendar.dnd.dayOccupied);
       return;
     }
-    if (moveWorkout(weekStart, from, to)) {
+    if (moveWorkout(plan.weekStart, from, to)) {
       toast.success(t.calendar.dnd.movedTo);
     }
   };
@@ -168,33 +153,8 @@ export function PlanBoard() {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-medium">
-          {t.calendar.weekOf} {formatDatePL(weekStart)}
+          {t.calendar.weekOf} {formatDatePL(weekStartOf(currentLocalISODate()))}
         </span>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setWeekStart(weekStartOf(currentLocalISODate()))}
-          >
-            {t.calendar.today}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setWeekStart((w) => addDaysISO(w, -7))}
-            aria-label={t.calendar.prevWeek}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setWeekStart((w) => addDaysISO(w, 7))}
-            aria-label={t.calendar.nextWeek}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
       </div>
       <p className="text-xs text-muted-foreground">{t.calendar.dnd.hint}</p>
 
