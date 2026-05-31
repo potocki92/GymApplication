@@ -9,7 +9,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-heading: var(--font-sans);
+  --font-display: var(--font-display);
+  /* Headings + brand wordmark upgrade to Satoshi for free. */
+  --font-heading: var(--font-display);
+  /* Numeric/metric display reuses the mono face for tabular alignment. */
+  --font-numeric: var(--font-mono);
+
+  /* Motion — Tailwind v4 generates ease-out-quint / ease-spring + duration utils. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 140ms;
+  --duration-med: 240ms;
+  --duration-slow: 420ms;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -117,6 +128,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.929 0.235 122);
+
+  /* Glass header — frosted near-black pane over scrolling content. */
+  --header-bg: oklch(0.067 0 0 / 0.72);
+  --header-border: oklch(1 0 0 / 8%);
+  --header-blur: 20px;
 }
 
 /* Mirrored block so `.dark` selectors in shadcn primitives still match — there is
@@ -165,6 +181,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.929 0.235 122);
+
+  --header-bg: oklch(0.067 0 0 / 0.72);
+  --header-border: oklch(1 0 0 / 8%);
+  --header-blur: 20px;
 }
 
 @layer base {

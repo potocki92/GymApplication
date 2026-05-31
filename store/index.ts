@@ -33,3 +33,8 @@ export {
   useGarminIntegrationStore,
   selectGarminConnected,
 } from "./use-garmin-integration-store";
+export {
+  useUiStore,
+  selectSidebarCollapsed,
+  selectCommandOpen,
+} from "./ui-store";
