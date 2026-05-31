@@ -74,11 +74,11 @@ export function CalendarDayCell({
         <div className="flex items-center gap-1">
           <span
             className={cn(
-              "size-1.5 shrink-0 rounded-full",
+              "size-2 shrink-0 rounded-full sm:size-1.5",
               workoutTypeDotClass(plannedWorkout.type),
             )}
           />
-          <span className="truncate text-[0.65rem] leading-tight sm:text-xs">
+          <span className="hidden truncate text-xs leading-tight sm:inline">
             {plannedWorkout.name}
           </span>
         </div>

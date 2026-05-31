@@ -36,20 +36,20 @@ export function CalendarView() {
 
       <Tabs value={mode} onValueChange={(value) => setMode(value as CalendarMode)}>
         <TabsList className="w-full">
-          <TabsTrigger value="month">
-            <LayoutGrid />
+          <TabsTrigger value="month" className="text-xs sm:text-sm">
+            <LayoutGrid className="hidden sm:block" />
             {t.calendar.views.month}
           </TabsTrigger>
-          <TabsTrigger value="activity">
-            <Activity />
+          <TabsTrigger value="activity" className="text-xs sm:text-sm">
+            <Activity className="hidden sm:block" />
             {t.calendar.views.activity}
           </TabsTrigger>
-          <TabsTrigger value="plan">
-            <CalendarDays />
+          <TabsTrigger value="plan" className="text-xs sm:text-sm">
+            <CalendarDays className="hidden sm:block" />
             {t.calendar.views.plan}
           </TabsTrigger>
-          <TabsTrigger value="timeline">
-            <LineChart />
+          <TabsTrigger value="timeline" className="text-xs sm:text-sm">
+            <LineChart className="hidden sm:block" />
             {t.calendar.views.timeline}
           </TabsTrigger>
         </TabsList>

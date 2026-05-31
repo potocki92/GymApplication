@@ -166,12 +166,11 @@ export function PlanBoard() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">{t.calendar.dnd.hint}</p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            {t.calendar.weekOf} {formatDatePL(weekStart)}
-          </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-medium">
+          {t.calendar.weekOf} {formatDatePL(weekStart)}
+        </span>
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="outline"
             size="sm"
@@ -197,9 +196,10 @@ export function PlanBoard() {
           </Button>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground">{t.calendar.dnd.hint}</p>
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-7">
           {WEEKDAY_ORDER.map((weekday) => (
             <DayColumn key={weekday} day={dayByWeekday.get(weekday)!} />
           ))}

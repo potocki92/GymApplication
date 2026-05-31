@@ -7,15 +7,10 @@ import { Camera, Coffee, Dumbbell, Pencil, Play, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { WORKOUT_TYPE_BADGE_CLASSES } from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
-import {
-  formatDurationLong,
-  formatVolume,
-  formatWeekdayDatePL,
-} from "@/lib/format";
+import { formatDurationLong, formatVolume } from "@/lib/format";
 import { useSignedUrl } from "@/lib/progress-photos/use-signed-url";
 import { cn } from "@/lib/utils";
 import { useActiveSessionStore } from "@/store";
@@ -67,14 +62,7 @@ export function DayDetailPanel({
   const isEmpty = !plannedWorkout && completedSessions.length === 0 && !metric && !photo;
 
   return (
-    <Card>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-heading text-sm font-semibold capitalize">
-            {formatWeekdayDatePL(iso)}
-          </h3>
-        </div>
-
+    <div className="space-y-4">
         {plannedWorkout ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
@@ -183,7 +171,6 @@ export function DayDetailPanel({
             {t.calendar.detail.noWorkout}
           </p>
         ) : null}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

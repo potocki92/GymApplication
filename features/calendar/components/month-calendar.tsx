@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { BottomSheet, BottomSheetBody } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
@@ -14,7 +15,7 @@ import {
   plannedWorkoutsByDay,
 } from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
-import { formatMonthYearPL } from "@/lib/format";
+import { formatMonthYearPL, formatWeekdayDatePL } from "@/lib/format";
 import type {
   BodyMetricRecord,
   ProgressPhotoRecord,
@@ -68,70 +69,78 @@ export function MonthCalendar({
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold capitalize">
-            {formatMonthYearPL(year, month)}
-          </h2>
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => goToMonth(-1)}
-              aria-label={t.calendar.prevMonth}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => goToMonth(1)}
-              aria-label={t.calendar.nextMonth}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1">
-          {WEEKDAY_ORDER.map((weekday) => (
-            <span
-              key={weekday}
-              className="pb-1 text-center text-[0.65rem] font-medium uppercase text-muted-foreground sm:text-xs"
-            >
-              {t.weekdays.short[weekday]}
-            </span>
-          ))}
-          {grid.map((cell) => (
-            <CalendarDayCell
-              key={cell.iso}
-              iso={cell.iso}
-              day={cell.day}
-              inCurrentMonth={cell.inCurrentMonth}
-              isToday={cell.isToday}
-              selected={cell.iso === selectedISO}
-              plannedWorkout={plannedMap.get(cell.iso)}
-              completedSessions={sessionsMap.get(cell.iso)}
-              metric={metricsMap.get(cell.iso)}
-              hasPhoto={photosMap.has(cell.iso)}
-              showOverlay={showOverlay}
-              onSelect={setSelectedISO}
-            />
-          ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-lg font-bold capitalize">
+          {formatMonthYearPL(year, month)}
+        </h2>
+        <div className="flex gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => goToMonth(-1)}
+            aria-label={t.calendar.prevMonth}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => goToMonth(1)}
+            aria-label={t.calendar.nextMonth}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
       </div>
 
-      {selectedISO ? (
-        <DayDetailPanel
-          iso={selectedISO}
-          plannedWorkout={plannedMap.get(selectedISO)}
-          completedSessions={sessionsMap.get(selectedISO)}
-          metric={metricsMap.get(selectedISO)}
-          photo={photosMap.get(selectedISO)}
-          showOverlay={showOverlay}
-        />
-      ) : null}
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+        {WEEKDAY_ORDER.map((weekday) => (
+          <span
+            key={weekday}
+            className="pb-1 text-center text-[0.65rem] font-medium uppercase text-muted-foreground sm:text-xs"
+          >
+            {t.weekdays.short[weekday]}
+          </span>
+        ))}
+        {grid.map((cell) => (
+          <CalendarDayCell
+            key={cell.iso}
+            iso={cell.iso}
+            day={cell.day}
+            inCurrentMonth={cell.inCurrentMonth}
+            isToday={cell.isToday}
+            selected={cell.iso === selectedISO}
+            plannedWorkout={plannedMap.get(cell.iso)}
+            completedSessions={sessionsMap.get(cell.iso)}
+            metric={metricsMap.get(cell.iso)}
+            hasPhoto={photosMap.has(cell.iso)}
+            showOverlay={showOverlay}
+            onSelect={setSelectedISO}
+          />
+        ))}
+      </div>
+
+      <BottomSheet
+        open={selectedISO !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedISO(null);
+        }}
+        title={selectedISO ? formatWeekdayDatePL(selectedISO) : t.calendar.detail.title}
+      >
+        <BottomSheetBody>
+          {selectedISO ? (
+            <DayDetailPanel
+              iso={selectedISO}
+              plannedWorkout={plannedMap.get(selectedISO)}
+              completedSessions={sessionsMap.get(selectedISO)}
+              metric={metricsMap.get(selectedISO)}
+              photo={photosMap.get(selectedISO)}
+              showOverlay={showOverlay}
+            />
+          ) : null}
+        </BottomSheetBody>
+      </BottomSheet>
     </div>
   );
 }
