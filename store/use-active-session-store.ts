@@ -1085,10 +1085,10 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           Date.now(),
           {
             exerciseId: exercise.id,
-            sets: Math.max(1, exercise.defaultSets),
-            reps: exercise.defaultReps,
+            sets: Math.max(1, exercise.defaultSets ?? 1),
+            reps: exercise.defaultReps ?? "8-12",
             weightKg: exercise.defaultWeightKg ?? 0,
-            restSec: exercise.defaultRestSec,
+            restSec: exercise.defaultRestSec ?? 0,
           },
           getWorkoutSessionDeviceId(),
         ),

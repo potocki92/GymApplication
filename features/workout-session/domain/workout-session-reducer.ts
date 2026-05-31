@@ -274,9 +274,21 @@ export function applyWorkoutSessionEvent(
     }
 
     case "EXERCISE_ADDED": {
-      // This projection materializes exercises lazily from their sets, so adding
-      // an exercise is a no-op here — its sets register on SET_STARTED/COMPLETED.
-      return ensureState(state, event);
+      // Sets are materialized lazily from SET_STARTED/COMPLETED, so the new
+      // exercise itself adds no set rows here. But adding an exercise to a
+      // finished session re-opens it for execution — mirror the ActiveSession
+      // reducer so both projections stay consistent (status active, finishedAt
+      // cleared) instead of leaving a stale "completed" state.
+      const current = ensureState(state, event);
+      if (current.status === "completed") {
+        return {
+          ...current,
+          status: "active",
+          finishedAt: null,
+          currentExerciseId: event.payload.exerciseId,
+        };
+      }
+      return current;
     }
 
     case "NOTE_ADDED": {
