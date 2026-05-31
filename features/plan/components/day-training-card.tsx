@@ -2,15 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { CircleCheckBig, Coffee, Play, Plus } from "lucide-react";
+import { CircleCheckBig, Coffee, Play, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useActiveSessionStore } from "@/store";
+import { useActiveSessionStore, usePlanStore } from "@/store";
 import type { WorkoutDay } from "@/types";
 
 export function DayTrainingCard({
@@ -23,6 +32,8 @@ export function DayTrainingCard({
   const t = useDictionary();
   const router = useRouter();
   const startSession = useActiveSessionStore((s) => s.startWorkoutSession);
+  const removeWorkout = usePlanStore((s) => s.removeWorkout);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { weekday, rest, workout } = day;
   const href = `/plan/new?day=${weekday}`;
 
@@ -37,7 +48,15 @@ export function DayTrainingCard({
     }
   };
 
+  const handleDelete = () => {
+    if (!workout) return;
+    setConfirmDelete(false);
+    removeWorkout(weekday);
+    toast.success(t.plan.deleted);
+  };
+
   return (
+    <>
     <Card
       className={cn(
         "h-full transition-shadow hover:shadow-md",
@@ -84,12 +103,25 @@ export function DayTrainingCard({
                 {t.activeWorkout.start}
               </Button>
             ) : null}
-            <Link
-              href={href}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {t.plan.editWorkout}
-            </Link>
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                href={href}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {t.plan.editWorkout}
+              </Link>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:text-destructive"
+                aria-label={t.plan.deleteWorkout}
+                title={t.plan.deleteWorkout}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-1 flex-col justify-center">
@@ -103,5 +135,23 @@ export function DayTrainingCard({
         )}
       </CardContent>
     </Card>
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.plan.deleteConfirmTitle}</DialogTitle>
+            <DialogDescription>{t.plan.deleteConfirmDesc}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+              {t.common.cancel}
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              {t.plan.deleteWorkout}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

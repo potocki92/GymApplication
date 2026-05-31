@@ -218,6 +218,45 @@ function applyWorkoutSessionEventDraft(
       break;
     }
 
+    case "EXERCISE_ADDED": {
+      const setCount = Math.max(0, Math.round(event.payload.sets));
+      if (setCount < 1) return false;
+      const order = next.exercises.length;
+      const exerciseElementId = `${event.id}-ex`;
+      const newExercise: ActiveSession["exercises"][number] = {
+        id: exerciseElementId,
+        exerciseId: event.payload.exerciseId,
+        order,
+        targetReps: event.payload.reps,
+        targetWeightKg: Math.max(0, event.payload.weightKg),
+        sets: Array.from({ length: setCount }, (_, i) => ({
+          id: `${exerciseElementId}-set-${i + 1}`,
+          setNumber: i + 1,
+          status: "pending" as const,
+          targetReps: event.payload.reps,
+          targetWeightKg: Math.max(0, event.payload.weightKg),
+          actualReps: null,
+          actualWeightKg: null,
+          restTargetSec: Math.max(0, Math.round(event.payload.restSec)),
+          startedAt: null,
+          completedAt: null,
+          rpe: null,
+          notes: null,
+        })),
+      };
+      next.exercises.push(newExercise);
+
+      // Adding an exercise after the workout was finished re-opens the session so
+      // the new exercise can actually be performed. The view follows `status`.
+      if (next.status === "finished") {
+        next.finishedAt = null;
+        next.currentExerciseIndex = order;
+        next.currentSetIndex = 0;
+        activateCurrentSet(next, now);
+      }
+      break;
+    }
+
     case "REST_STARTED": {
       next.status = "resting";
       next.restStartedAt = event.payload.startedAt ?? now;
@@ -397,6 +436,21 @@ export function workoutSessionEventFromRecord(
       const setIndex = numberValue(payload.setIndex);
       if (!exerciseId || setIndex == null) return null;
       return { ...base, type: "SET_DELETED", payload: { exerciseId, setIndex } };
+    }
+    case "EXERCISE_ADDED": {
+      const exerciseId = stringValue(payload.exerciseId);
+      if (!exerciseId) return null;
+      return {
+        ...base,
+        type: "EXERCISE_ADDED",
+        payload: {
+          exerciseId,
+          sets: numberValue(payload.sets) ?? 1,
+          reps: stringValue(payload.reps) ?? "8-12",
+          weightKg: numberValue(payload.weightKg) ?? 0,
+          restSec: numberValue(payload.restSec) ?? 0,
+        },
+      };
     }
     case "REST_STARTED": {
       const durationSec = numberValue(payload.durationSec);

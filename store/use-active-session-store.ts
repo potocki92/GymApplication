@@ -45,6 +45,7 @@ import type { WorkoutSessionEvent } from "@/features/workout-session/domain/work
 import type {
   ActiveSession,
   CompletedSession,
+  Exercise,
   LoggedSet,
   Workout,
   WorkoutSessionJson,
@@ -156,6 +157,8 @@ interface ActiveSessionState {
   setRestForCurrentSet: (sec: number) => void;
   addSet: (exerciseIndex: number) => void;
   removeSet: (exerciseIndex: number, setId: string) => void;
+  /** Add a catalog exercise to the current session only (never touches the plan). */
+  addExerciseToSession: (exercise: Exercise) => void;
 
   // history
   undo: () => void;
@@ -1066,6 +1069,27 @@ export const useActiveSessionStore = create<ActiveSessionState>((set, get) => {
           "SET_DELETED",
           now,
           { exerciseId: exercise.id, setIndex },
+          getWorkoutSessionDeviceId(),
+        ),
+      );
+    },
+
+    addExerciseToSession: (exercise) => {
+      const s = get().session;
+      if (!s) return;
+      void commitEvent(
+        true,
+        buildEvent(
+          s.id,
+          "EXERCISE_ADDED",
+          Date.now(),
+          {
+            exerciseId: exercise.id,
+            sets: Math.max(1, exercise.defaultSets ?? 1),
+            reps: exercise.defaultReps ?? "8-12",
+            weightKg: exercise.defaultWeightKg ?? 0,
+            restSec: exercise.defaultRestSec ?? 0,
+          },
           getWorkoutSessionDeviceId(),
         ),
       );
