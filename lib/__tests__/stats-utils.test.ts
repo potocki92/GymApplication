@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildActivityCalendar,
+  buildLongestStreak,
   buildMeasurementDeltas,
   buildStrengthProgress,
   buildTimeline,
@@ -10,6 +11,7 @@ import {
   buildWeightSummary,
   buildWorkoutCounts,
   buildWorkoutStreak,
+  countSessionsInWeeks,
   pickMotivation,
 } from "@/lib/stats-utils";
 import type {
@@ -367,5 +369,45 @@ describe("pickMotivation", () => {
       { total: 0, thisWeek: 0, thisMonth: 0, last30Days: 0, trendPct: null },
     );
     expect(out.tone).toBe("neutral");
+  });
+});
+
+describe("buildLongestStreak", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const base = Date.UTC(2024, 4, 1, 12); // 2024-05-01 noon UTC
+
+  it("returns 0 with no sessions", () => {
+    expect(buildLongestStreak([])).toBe(0);
+  });
+
+  it("finds the longest consecutive-day run, ignoring gaps", () => {
+    const sessions = [
+      session({ id: "a", finishedAt: base }), // day 0
+      session({ id: "b", finishedAt: base + DAY }), // day 1
+      session({ id: "c", finishedAt: base + 2 * DAY }), // day 2
+      session({ id: "d", finishedAt: base + 5 * DAY }), // gap, day 5
+    ];
+    expect(buildLongestStreak(sessions)).toBe(3);
+  });
+
+  it("collapses multiple sessions on the same day", () => {
+    const sessions = [
+      session({ id: "a", finishedAt: base }),
+      session({ id: "b", finishedAt: base + 3 * 60 * 60 * 1000 }),
+    ];
+    expect(buildLongestStreak(sessions)).toBe(1);
+  });
+});
+
+describe("countSessionsInWeeks", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = new Date(Date.UTC(2024, 4, 30, 12));
+
+  it("counts only sessions within the window", () => {
+    const sessions = [
+      session({ id: "recent", finishedAt: now.getTime() - DAY }),
+      session({ id: "old", finishedAt: now.getTime() - 100 * DAY }),
+    ];
+    expect(countSessionsInWeeks(sessions, 4, now)).toBe(1);
   });
 });
