@@ -13,6 +13,7 @@ import {
   metricsByDay,
   photosByDay,
   plannedWorkoutsByDay,
+  weekdayFromISO,
 } from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import { formatMonthYearPL, formatWeekdayDatePL } from "@/lib/format";
@@ -111,7 +112,7 @@ export function MonthCalendar({
             inCurrentMonth={cell.inCurrentMonth}
             isToday={cell.isToday}
             selected={cell.iso === selectedISO}
-            plannedWorkout={plannedMap.get(cell.iso)}
+            plannedWorkout={plannedMap.get(weekdayFromISO(cell.iso))}
             completedSessions={sessionsMap.get(cell.iso)}
             metric={metricsMap.get(cell.iso)}
             hasPhoto={photosMap.has(cell.iso)}
@@ -132,7 +133,7 @@ export function MonthCalendar({
           {selectedISO ? (
             <DayDetailPanel
               iso={selectedISO}
-              plannedWorkout={plannedMap.get(selectedISO)}
+              plannedWorkout={plannedMap.get(weekdayFromISO(selectedISO))}
               completedSessions={sessionsMap.get(selectedISO)}
               metric={metricsMap.get(selectedISO)}
               photo={photosMap.get(selectedISO)}

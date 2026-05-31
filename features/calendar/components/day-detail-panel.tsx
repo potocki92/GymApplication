@@ -8,8 +8,7 @@ import { Camera, Coffee, Dumbbell, Pencil, Play, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { WORKOUT_TYPE_BADGE_CLASSES } from "@/lib/calendar-utils";
-import { WEEKDAY_ORDER } from "@/lib/constants";
+import { WORKOUT_TYPE_BADGE_CLASSES, weekdayFromISO } from "@/lib/calendar-utils";
 import { formatDurationLong, formatVolume } from "@/lib/format";
 import { useSignedUrl } from "@/lib/progress-photos/use-signed-url";
 import { cn } from "@/lib/utils";
@@ -18,14 +17,8 @@ import type {
   BodyMetricRecord,
   ProgressPhotoRecord,
   SessionHistoryRecord,
-  Weekday,
   Workout,
 } from "@/types";
-
-function weekdayFromISO(iso: string): Weekday {
-  const index = (new Date(`${iso}T00:00:00`).getDay() + 6) % 7;
-  return WEEKDAY_ORDER[index];
-}
 
 export function DayDetailPanel({
   iso,

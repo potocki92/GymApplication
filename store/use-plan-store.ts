@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { REFERENCE_TODAY, WEEKLY_PLAN } from "@/data";
+import { WEEKLY_PLAN } from "@/data";
 import { moveWorkoutBetweenDays } from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
@@ -404,10 +404,13 @@ export function selectCompletedCount(plan: WeeklyPlan): number {
 }
 
 /** Most recent completed workout before the reference date. */
-export function selectLastWorkout(plan: WeeklyPlan): Workout | undefined {
+export function selectLastWorkout(
+  plan: WeeklyPlan,
+  referenceDateISO = currentLocalISODate(),
+): Workout | undefined {
   return selectTrainingDays(plan)
     .map((d) => d.workout!)
-    .filter((w) => w.completed && (w.date ?? "") < REFERENCE_TODAY)
+    .filter((w) => w.completed && (w.date ?? "") < referenceDateISO)
     .sort((a, b) => (a.date! < b.date! ? 1 : -1))[0];
 }
 
@@ -415,7 +418,7 @@ export function selectLastWorkout(plan: WeeklyPlan): Workout | undefined {
 export function selectNextWorkout(
   plan: WeeklyPlan,
   completedWorkoutIds: ReadonlySet<string> = new Set(),
-  referenceDateISO = REFERENCE_TODAY,
+  referenceDateISO = currentLocalISODate(),
 ): Workout | undefined {
   const referenceWeekStart = weekStartISO(parseLocalDate(referenceDateISO));
   const todayIndex = weekdayIndexFromISO(referenceDateISO);
@@ -447,9 +450,13 @@ export function selectNextWorkout(
   return nextWorkout?.workout;
 }
 
-/** Days that fall strictly after the reference date (for the "upcoming" list). */
-export function selectUpcomingDays(plan: WeeklyPlan): WorkoutDay[] {
+/** Template days that fall later in the current week than today (the "upcoming" list). */
+export function selectUpcomingDays(
+  plan: WeeklyPlan,
+  referenceDateISO = currentLocalISODate(),
+): WorkoutDay[] {
+  const todayIndex = weekdayIndexFromISO(referenceDateISO);
   return plan.days.filter(
-    (d) => weekdayToISO(plan.weekStart, d.weekday) > REFERENCE_TODAY,
+    (d) => WEEKDAY_ORDER.indexOf(d.weekday) > todayIndex,
   );
 }

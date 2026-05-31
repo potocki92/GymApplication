@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { REFERENCE_TODAY } from "@/data";
 import {
   completedWorkoutIdsForWeek,
   selectNextWorkout,
+  selectUpcomingDays,
 } from "@/store/use-plan-store";
 import type {
   SessionHistoryRecord,
@@ -11,6 +11,9 @@ import type {
   WeeklyPlan,
   Workout,
 } from "@/types";
+
+/** A Thursday — used as the explicit "today" reference in these tests. */
+const THURSDAY = "2024-05-23";
 
 function workout(
   partial: Partial<Workout> & Pick<Workout, "id" | "date" | "completed">,
@@ -63,7 +66,7 @@ describe("selectNextWorkout", () => {
           workout({
             id: "completed-today",
             completed: true,
-            date: REFERENCE_TODAY,
+            date: THURSDAY,
           }),
         ),
         day(
@@ -75,7 +78,7 @@ describe("selectNextWorkout", () => {
       ],
     };
 
-    expect(selectNextWorkout(plan)?.id).toBe("next-open");
+    expect(selectNextWorkout(plan, new Set(), THURSDAY)?.id).toBe("next-open");
   });
 
   it("skips workouts completed in session history for the current week", () => {
@@ -92,7 +95,7 @@ describe("selectNextWorkout", () => {
           workout({
             id: "completed-in-history",
             completed: false,
-            date: REFERENCE_TODAY,
+            date: THURSDAY,
           }),
         ),
         day(
@@ -104,7 +107,9 @@ describe("selectNextWorkout", () => {
       ],
     };
 
-    expect(selectNextWorkout(plan, completedIds)?.id).toBe("next-open");
+    expect(selectNextWorkout(plan, completedIds, THURSDAY)?.id).toBe(
+      "next-open",
+    );
   });
 
   it("returns workout dates anchored to the active calendar week", () => {
@@ -128,6 +133,28 @@ describe("selectNextWorkout", () => {
     expect(selectNextWorkout(plan, new Set(), "2026-05-28")?.date).toBe(
       "2026-05-29",
     );
+  });
+});
+
+describe("selectUpcomingDays", () => {
+  it("returns only template days later in the week than today", () => {
+    const plan: WeeklyPlan = {
+      id: "plan-test",
+      weekStart: "2024-05-20",
+      days: [
+        day("monday", workout({ id: "mon", completed: true, date: "2024-05-20" })),
+        day("tuesday"),
+        day("wednesday"),
+        day("thursday", workout({ id: "thu", completed: false, date: "2024-05-23" })),
+        day("friday"),
+        day("saturday", workout({ id: "sat", completed: false, date: "2024-05-25" })),
+        day("sunday"),
+      ],
+    };
+
+    // Reference is a Thursday (index 3): only Fri/Sat/Sun qualify.
+    const upcoming = selectUpcomingDays(plan, THURSDAY).map((d) => d.weekday);
+    expect(upcoming).toEqual(["friday", "saturday", "sunday"]);
   });
 });
 
