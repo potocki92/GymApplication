@@ -1,15 +1,35 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const inter = Inter({
+// Body — Geist (variable).
+const geistSans = Geist({
   variable: "--font-sans",
   subsets: ["latin", "latin-ext"],
   display: "swap",
+});
+
+// Metrics / mono — Geist Mono (tabular numerics, kbd chips, timers).
+const geistMono = Geist_Mono({
+  variable: "--font-mono",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+});
+
+// Display — Satoshi (self-hosted, athletic headings + numeric display).
+const satoshi = localFont({
+  variable: "--font-display",
+  display: "swap",
+  src: [
+    { path: "./fonts/Satoshi-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/Satoshi-Bold.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/Satoshi-Black.woff2", weight: "900", style: "normal" },
+  ],
 });
 
 const siteUrl =
@@ -42,7 +62,7 @@ export default function RootLayout({
   return (
     <html
       lang="pl"
-      className={`${inter.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${satoshi.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background text-foreground">

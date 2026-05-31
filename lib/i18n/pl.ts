@@ -21,6 +21,26 @@ export const pl = {
     viewProfile: "Zobacz profil",
     add: "Dodaj",
     menu: "Menu",
+    collapse: "Zwiń menu",
+    expand: "Rozwiń menu",
+    notifications: "Powiadomienia",
+    searchPlaceholder: "Szukaj ćwiczeń, planów, rekordów…",
+    sections: {
+      train: "Trenuj",
+      progress: "Postępy",
+      account: "Konto",
+    },
+  },
+
+  commandPalette: {
+    placeholder: "Szukaj lub przejdź do…",
+    empty: "Brak wyników",
+    groupNav: "Nawigacja",
+    groupActions: "Szybkie akcje",
+    startWorkout: "Rozpocznij trening",
+    logWeight: "Dodaj pomiar",
+    connectGarmin: "Połącz Garmin",
+    kbdHint: "⌘K",
   },
 
   auth: {
