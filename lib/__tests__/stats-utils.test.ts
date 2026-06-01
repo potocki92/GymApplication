@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildActivityCalendar,
+  buildDailyVolumeSeries,
   buildLongestStreak,
   buildMeasurementDeltas,
   buildStrengthProgress,
@@ -409,5 +410,41 @@ describe("countSessionsInWeeks", () => {
       session({ id: "old", finishedAt: now.getTime() - 100 * DAY }),
     ];
     expect(countSessionsInWeeks(sessions, 4, now)).toBe(1);
+  });
+});
+
+describe("buildDailyVolumeSeries", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = new Date(Date.UTC(2024, 4, 30, 12));
+
+  it("emits a dense per-day window oldest → newest with zero gaps", () => {
+    const sessions = [
+      session({ id: "today", finishedAt: now.getTime(), totalVolumeKg: 5000 }),
+      session({ id: "2ago", finishedAt: now.getTime() - 2 * DAY, totalVolumeKg: 3000 }),
+    ];
+    const { points, total } = buildDailyVolumeSeries(sessions, 7, now);
+    expect(points).toHaveLength(7);
+    expect(points.at(-1)).toBe(5000); // today is last
+    expect(points.at(-3)).toBe(3000); // two days ago
+    expect(total).toBe(8000);
+  });
+
+  it("sums multiple sessions that land on the same day", () => {
+    const sessions = [
+      session({ id: "a", finishedAt: now.getTime(), totalVolumeKg: 2000 }),
+      session({ id: "b", finishedAt: now.getTime() - 1000, totalVolumeKg: 1500 }),
+    ];
+    expect(buildDailyVolumeSeries(sessions, 7, now).points.at(-1)).toBe(3500);
+  });
+
+  it("computes trend vs. the preceding window, null without prior data", () => {
+    const current = session({ id: "cur", finishedAt: now.getTime(), totalVolumeKg: 1200 });
+    const prior = session({
+      id: "prev",
+      finishedAt: now.getTime() - 8 * DAY,
+      totalVolumeKg: 1000,
+    });
+    expect(buildDailyVolumeSeries([current, prior], 7, now).trendPct).toBe(20);
+    expect(buildDailyVolumeSeries([current], 7, now).trendPct).toBeNull();
   });
 });

@@ -274,6 +274,55 @@ export function buildWeeklyTotals(
   };
 }
 
+export interface DailyVolumeSeries {
+  /** Per-day total volume (kg) over the window, oldest → newest, gaps as 0. */
+  points: number[];
+  /** Sum of the window. */
+  total: number;
+  /** % change vs. the preceding equal-length window. null when no prior data. */
+  trendPct: number | null;
+}
+
+/**
+ * Dense daily training-volume series for the last `days` days (UTC, ending
+ * today) plus the window total and a trend vs. the preceding window. Powers the
+ * volume stat tile and its sparkline — pure aggregation, no backend.
+ */
+export function buildDailyVolumeSeries(
+  sessions: SessionHistoryRecord[],
+  days = 7,
+  now: Date = new Date(),
+): DailyVolumeSeries {
+  const today = new Date(now);
+  today.setUTCHours(0, 0, 0, 0);
+
+  const byDay = new Map<string, number>();
+  for (const s of sessions) {
+    const key = utcDayKey(s.finishedAt);
+    byDay.set(key, (byDay.get(key) ?? 0) + s.totalVolumeKg);
+  }
+
+  const points: number[] = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - i);
+    points.push(Math.round(byDay.get(d.toISOString().slice(0, 10)) ?? 0));
+  }
+
+  let prevTotal = 0;
+  for (let i = 2 * days - 1; i >= days; i -= 1) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - i);
+    prevTotal += byDay.get(d.toISOString().slice(0, 10)) ?? 0;
+  }
+
+  const total = points.reduce((sum, v) => sum + v, 0);
+  const trendPct =
+    prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+
+  return { points, total, trendPct };
+}
+
 function activityLevelFromCount(count: number): ActivityLevel {
   if (count <= 0) return 0;
   if (count === 1) return 2;

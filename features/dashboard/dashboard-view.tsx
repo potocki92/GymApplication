@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { Reveal } from "@/components/shared/motion/reveal";
 import { SectionHeader } from "@/components/shared/section-header";
 import { QuickAddWeightCard } from "@/features/metrics/quick-add-weight-card";
 import { WeeklyPlan } from "@/features/plan/components/weekly-plan";
@@ -11,7 +12,6 @@ import {
   buildActivityCalendar,
   buildWeeklyTotals,
   buildWorkoutCounts,
-  buildWorkoutStreak,
 } from "@/lib/stats-utils";
 import {
   completedWorkoutIdsForWeek,
@@ -26,11 +26,11 @@ import { DashboardHeader } from "./components/dashboard-header";
 import { LastWorkoutCard } from "./components/last-workout-card";
 import { NextWorkoutCard } from "./components/next-workout-card";
 import { QuickActionsCard } from "./components/quick-actions-card";
-import { StreakCard } from "./components/streak-card";
 import { TopPRsCard } from "./components/top-prs-card";
 import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
 import { WeightProgressCard } from "./components/weight-progress-card";
+import { StatRow } from "./sections/stat-row";
 
 /** Week-columns rendered in the activity heatmap. */
 const ACTIVITY_WEEKS = 18;
@@ -62,10 +62,6 @@ export function DashboardView() {
     () => buildWorkoutCounts(sessions, now),
     [sessions, now],
   );
-  const streak = useMemo(
-    () => buildWorkoutStreak(sessions, now),
-    [sessions, now],
-  );
   const weekly = useMemo(
     () => buildWeeklyTotals(sessions, now),
     [sessions, now],
@@ -78,57 +74,72 @@ export function DashboardView() {
 
   return (
     <div className="space-y-6">
-      <DashboardHeader />
+      <Reveal index={0}>
+        <DashboardHeader />
+      </Reveal>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="sm:col-span-2 lg:col-span-3">
-          <QuickActionsCard />
+      <Reveal index={1}>
+        <QuickActionsCard />
+      </Reveal>
+
+      {/* Quick-glance KPI row */}
+      <Reveal index={2}>
+        <StatRow />
+      </Reveal>
+
+      {/* Hero: next workout (wide) + weekly goal ring */}
+      <Reveal index={3}>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <NextWorkoutCard workout={nextWorkout} />
+          </div>
+          <WeeklyProgressCard done={counts.thisWeek} target={weeklyTarget} />
         </div>
+      </Reveal>
 
-        <div className="sm:col-span-2 lg:col-span-3">
-          <WeightProgressCard />
-        </div>
+      <Reveal index={4}>
+        <WeightProgressCard />
+      </Reveal>
 
-        <WeeklyProgressCard done={counts.thisWeek} target={weeklyTarget} />
-        <div className="sm:col-span-2 lg:col-span-1">
-          <StreakCard days={streak} />
-        </div>
+      {/* Activity heatmap */}
+      <Reveal index={5}>
+        <ActivityHeatmap activity={activity} />
+      </Reveal>
 
-        <div className="sm:col-span-2 lg:col-span-3">
-          <ActivityHeatmap activity={activity} />
-        </div>
-
-        <LastWorkoutCard session={lastWorkout} />
-        <NextWorkoutCard workout={nextWorkout} />
-        <div className="sm:col-span-2 lg:col-span-1">
+      {/* Detail row: last workout · weekly stats · quick weight */}
+      <Reveal index={6}>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <LastWorkoutCard session={lastWorkout} />
           <WeeklyStatsCard
             workouts={weekly.workouts}
             durationMin={weekly.durationMin}
             volumeKg={weekly.volumeKg}
             kcal={weekly.kcal}
           />
+          <QuickAddWeightCard />
         </div>
+      </Reveal>
 
-        <QuickAddWeightCard />
-        <div className="sm:col-span-2 lg:col-span-2">
-          <TopPRsCard />
-        </div>
-      </div>
+      <Reveal index={7}>
+        <TopPRsCard />
+      </Reveal>
 
-      <section className="space-y-3">
-        <SectionHeader
-          title={t.dashboard.weeklyPlan}
-          action={
-            <Link
-              href="/plan"
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              {t.dashboard.seeFullPlan}
-            </Link>
-          }
-        />
-        <WeeklyPlan />
-      </section>
+      <Reveal index={8}>
+        <section className="space-y-3">
+          <SectionHeader
+            title={t.dashboard.weeklyPlan}
+            action={
+              <Link
+                href="/plan"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {t.dashboard.seeFullPlan}
+              </Link>
+            }
+          />
+          <WeeklyPlan />
+        </section>
+      </Reveal>
     </div>
   );
 }
