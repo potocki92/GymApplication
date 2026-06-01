@@ -297,6 +297,7 @@ export const pl = {
       Mobilność: "Mobilność",
     },
     dayLabel: "Dzień tygodnia",
+    detailsTitle: "Szczegóły treningu",
     addExercise: "Dodaj ćwiczenie",
     addExerciseToWorkout: "Dodaj ćwiczenie do treningu",
     searchExercise: "Szukaj ćwiczenia...",

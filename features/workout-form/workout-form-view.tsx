@@ -3,11 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Dumbbell } from "lucide-react";
+import { ArrowLeft, Check, Dumbbell, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { pluralPl } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -37,6 +44,10 @@ export function WorkoutFormView() {
 
   const count = exercises.length;
   const hasExercises = count > 0;
+
+  // On mobile the picker lives in a bottom sheet (the desktop layout keeps it
+  // inline in a sticky side column).
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Briefly pulse the count badge whenever the number of exercises grows.
   const [bump, setBump] = useState(false);
@@ -117,14 +128,16 @@ export function WorkoutFormView() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)] lg:gap-5">
         <Card className="order-1 lg:col-start-1 lg:row-start-1">
           <CardHeader>
-            <CardTitle>{t.workoutForm.titleNew}</CardTitle>
+            <CardTitle>{t.workoutForm.detailsTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             <WorkoutForm />
           </CardContent>
         </Card>
 
-        <div className="order-2 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+        {/* Desktop: inline sticky picker. On mobile the picker opens in the
+            bottom sheet below, so the column stays focused on the workout. */}
+        <div className="order-2 hidden lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block lg:self-start">
           <Card>
             <CardHeader>
               <CardTitle>{t.workoutForm.addExerciseToWorkout}</CardTitle>
@@ -150,7 +163,17 @@ export function WorkoutFormView() {
               {count}
             </span>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full lg:hidden"
+              onClick={() => setPickerOpen(true)}
+            >
+              <Plus className="size-4" />
+              {t.workoutForm.addExercise}
+            </Button>
+
             {exercises.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-8 text-center sm:py-10">
                 <Dumbbell className="size-6 text-muted-foreground" />
@@ -169,6 +192,19 @@ export function WorkoutFormView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile-only picker sheet. */}
+      <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
+        <SheetContent side="bottom" className="max-h-[88vh] lg:hidden">
+          <SheetHeader>
+            <SheetTitle>{t.workoutForm.addExerciseToWorkout}</SheetTitle>
+            <SheetDescription>{t.workoutForm.noExercisesHint}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <ExercisePicker />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl shadow-background/80 backdrop-blur sm:hidden">
         <Button
