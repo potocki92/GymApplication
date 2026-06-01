@@ -46,6 +46,12 @@ const isoDate = z
     return d.getUTCFullYear() >= minYear && d.getUTCFullYear() <= maxYear;
   }, "invalidDate");
 
+/** A plain calendar date (no age bounds) — used for the training program start. */
+const calendarDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate")
+  .refine((v) => !Number.isNaN(new Date(`${v}T00:00:00Z`).getTime()), "invalidDate");
+
 /** Required fields for the multi-step onboarding wizard. */
 export const onboardingSchema = z.object({
   gender: z.enum(GENDER_VALUES),
@@ -86,6 +92,8 @@ export const profileSettingsSchema = z.object({
   notificationsEnabled: z.boolean().optional(),
   notificationsWorkoutReminders: z.boolean().optional(),
   notificationsProgressUpdates: z.boolean().optional(),
+  programStartDate: calendarDate.optional(),
+  programWeeks: z.number().int().min(1).max(52).optional(),
 });
 
 export type ProfileSettingsInput = z.infer<typeof profileSettingsSchema>;

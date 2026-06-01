@@ -25,6 +25,21 @@ const WEEKDAYS_FULL_PL = [
 
 const WEEKDAYS_SHORT_PL = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"];
 
+const MONTHS_ABBR_PL = [
+  "sty",
+  "lut",
+  "mar",
+  "kwi",
+  "maj",
+  "cze",
+  "lip",
+  "sie",
+  "wrz",
+  "paź",
+  "lis",
+  "gru",
+];
+
 const MONTHS_NOMINATIVE_PL = [
   "Styczeń",
   "Luty",
@@ -94,6 +109,12 @@ function parseISODate(iso: string): Date {
 export function formatDatePL(iso: string): string {
   const d = parseISODate(iso);
   return `${d.getDate()} ${MONTHS_GENITIVE_PL[d.getMonth()]}`;
+}
+
+/** ISO date -> `{ day: 31, month: "maj" }` for compact day/month chips. */
+export function formatDayMonthPL(iso: string): { day: number; month: string } {
+  const d = parseISODate(iso);
+  return { day: d.getDate(), month: MONTHS_ABBR_PL[d.getMonth()] };
 }
 
 /** ISO date -> "Wtorek, 21 maja". */

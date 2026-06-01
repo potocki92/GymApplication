@@ -5,6 +5,7 @@ import type {
   Weekday,
   WeeklyPlan,
   Workout,
+  WorkoutDay,
   WorkoutType,
 } from "@/types";
 
@@ -199,6 +200,49 @@ export function moveWorkoutBetweenDays(
   });
 
   return { plan: { ...plan, days }, moved: true, workout };
+}
+
+export interface SwapWorkoutResult {
+  plan: WeeklyPlan;
+  /** False when the swap was a no-op (same day or a missing day). */
+  swapped: boolean;
+}
+
+/**
+ * Exchanges the contents (workout or rest) of two weekdays within a week. Pure:
+ * returns a new plan, leaving the input untouched. Each relocated workout keeps
+ * its id but has its `date` recomputed for the target weekday.
+ */
+export function swapWorkoutDays(
+  plan: WeeklyPlan,
+  dayA: Weekday,
+  dayB: Weekday,
+): SwapWorkoutResult {
+  if (dayA === dayB) return { plan, swapped: false };
+
+  const a = plan.days.find((d) => d.weekday === dayA);
+  const b = plan.days.find((d) => d.weekday === dayB);
+  if (!a || !b) return { plan, swapped: false };
+
+  const place = (target: Weekday, source: WorkoutDay): WorkoutDay =>
+    source.workout
+      ? {
+          weekday: target,
+          rest: false,
+          workout: { ...source.workout, date: weekdayToISO(plan.weekStart, target) },
+        }
+      : { weekday: target, rest: source.rest };
+
+  const toA = place(dayA, b);
+  const toB = place(dayB, a);
+
+  const days = plan.days.map((day) => {
+    if (day.weekday === dayA) return toA;
+    if (day.weekday === dayB) return toB;
+    return day;
+  });
+
+  return { plan: { ...plan, days }, swapped: true };
 }
 
 /* ----------------------------- type styling ----------------------------- */

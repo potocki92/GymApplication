@@ -48,7 +48,7 @@ const legsMonday = workout(
   "Nogi — Przysiady + Hip Thrust",
   "Nogi",
   60,
-  true,
+  false,
   "2024-05-20",
   [
     we("ex-squat", 4, "6-10", 100, 120),
@@ -65,7 +65,7 @@ const pushTuesday = workout(
   "Push — Klatka + Barki + Triceps",
   "Push",
   60,
-  true,
+  false,
   "2024-05-21",
   [
     we("ex-bench-press", 4, "8-12", 80, 90),
@@ -98,7 +98,7 @@ const legsFriday = workout(
   "Nogi — Wykroki + Łydki",
   "Nogi",
   60,
-  true,
+  false,
   "2024-05-24",
   [
     we("ex-squat", 4, "8-10", 90, 120),
