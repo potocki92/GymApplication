@@ -6,6 +6,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -44,6 +45,8 @@ const schema = profileSettingsSchema.pick({
   preferredWorkoutDurationMin: true,
   preferredWorkoutTypes: true,
   availableEquipment: true,
+  programStartDate: true,
+  programWeeks: true,
 });
 
 type FormValues = {
@@ -53,6 +56,8 @@ type FormValues = {
   preferredWorkoutDurationMin?: number;
   preferredWorkoutTypes?: PreferredWorkoutType[];
   availableEquipment?: Equipment[];
+  programStartDate?: string;
+  programWeeks?: number;
 };
 
 export function TrainingSection({ profile }: { profile: UserProfile }) {
@@ -69,6 +74,8 @@ export function TrainingSection({ profile }: { profile: UserProfile }) {
       preferredWorkoutDurationMin: profile.preferredWorkoutDurationMin ?? undefined,
       preferredWorkoutTypes: profile.preferredWorkoutTypes,
       availableEquipment: profile.availableEquipment,
+      programStartDate: profile.programStartDate ?? undefined,
+      programWeeks: profile.programWeeks ?? undefined,
     },
   });
 
@@ -80,6 +87,8 @@ export function TrainingSection({ profile }: { profile: UserProfile }) {
       preferredWorkoutDurationMin: profile.preferredWorkoutDurationMin ?? undefined,
       preferredWorkoutTypes: profile.preferredWorkoutTypes,
       availableEquipment: profile.availableEquipment,
+      programStartDate: profile.programStartDate ?? undefined,
+      programWeeks: profile.programWeeks ?? undefined,
     });
   }, [profile, form]);
 
@@ -188,6 +197,30 @@ export function TrainingSection({ profile }: { profile: UserProfile }) {
           )}
         />
       </FormField>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label={t.onboarding.programStart} htmlFor="programStartDate">
+          <Input
+            id="programStartDate"
+            type="date"
+            {...form.register("programStartDate", {
+              setValueAs: (v) => (v === "" || v == null ? undefined : String(v)),
+            })}
+          />
+        </FormField>
+
+        <FormField label={t.onboarding.programWeeks} htmlFor="programWeeks">
+          <Input
+            id="programWeeks"
+            type="number"
+            min={1}
+            max={52}
+            {...form.register("programWeeks", {
+              setValueAs: (v) => (v === "" || v == null ? undefined : Number(v)),
+            })}
+          />
+        </FormField>
+      </div>
 
       <FormField label={t.onboarding.workoutTypes}>
         <Controller

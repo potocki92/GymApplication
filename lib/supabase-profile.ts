@@ -39,6 +39,8 @@ interface ProfileRow {
   notifications_enabled: boolean | null;
   notifications_workout_reminders: boolean | null;
   notifications_progress_updates: boolean | null;
+  program_start_date: string | null;
+  program_weeks: number | null;
   updated_at: string | null;
 }
 
@@ -134,6 +136,8 @@ function mapRowToProfile(row: ProfileRow): UserProfile {
     notificationsEnabled: row.notifications_enabled ?? true,
     notificationsWorkoutReminders: row.notifications_workout_reminders ?? true,
     notificationsProgressUpdates: row.notifications_progress_updates ?? true,
+    programStartDate: row.program_start_date,
+    programWeeks: num(row.program_weeks),
     updatedAt: row.updated_at,
   };
 }
@@ -162,6 +166,8 @@ const COLUMN_MAP: Record<keyof Omit<UserProfile, "id" | "email" | "updatedAt">, 
   notificationsEnabled: "notifications_enabled",
   notificationsWorkoutReminders: "notifications_workout_reminders",
   notificationsProgressUpdates: "notifications_progress_updates",
+  programStartDate: "program_start_date",
+  programWeeks: "program_weeks",
 };
 
 export type ProfilePatch = Partial<Omit<UserProfile, "id" | "email" | "updatedAt">>;

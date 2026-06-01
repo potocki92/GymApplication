@@ -74,5 +74,10 @@ export interface UserProfile {
   notificationsWorkoutReminders: boolean;
   notificationsProgressUpdates: boolean;
 
+  /** ISO date the current training program started. Drives the "Week N/M" badge. */
+  programStartDate: string | null;
+  /** Total length of the current training program in weeks. */
+  programWeeks: number | null;
+
   updatedAt: string | null;
 }

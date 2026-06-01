@@ -1,22 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
 
 import { Reveal } from "@/components/shared/motion/reveal";
-import { SectionHeader } from "@/components/shared/section-header";
 import { QuickAddWeightCard } from "@/features/metrics/quick-add-weight-card";
-import { WeeklyPlan } from "@/features/plan/components/weekly-plan";
-import { useDictionary } from "@/hooks/use-dictionary";
 import {
   buildActivityCalendar,
   buildWeeklyTotals,
   buildWorkoutCounts,
 } from "@/lib/stats-utils";
+import { currentProgramWeek } from "@/lib/program-utils";
 import {
   completedWorkoutIdsForWeek,
   currentLocalISODate,
   selectNextWorkout,
+  selectUpcomingWorkouts,
   usePlanStore,
   useProfileStore,
   useSessionHistoryStore,
@@ -24,9 +22,10 @@ import {
 import { ActivityHeatmap } from "./components/activity-heatmap";
 import { DashboardHeader } from "./components/dashboard-header";
 import { LastWorkoutCard } from "./components/last-workout-card";
-import { NextWorkoutCard } from "./components/next-workout-card";
 import { QuickActionsCard } from "./components/quick-actions-card";
+import { TodayWorkoutCard } from "./components/today-workout-card";
 import { TopPRsCard } from "./components/top-prs-card";
+import { UpcomingCard } from "./components/upcoming-card";
 import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
 import { WeightProgressCard } from "./components/weight-progress-card";
@@ -38,7 +37,6 @@ const ACTIVITY_WEEKS = 18;
 const DEFAULT_WEEKLY_TARGET = 4;
 
 export function DashboardView() {
-  const t = useDictionary();
   const plan = usePlanStore((s) => s.plan);
   const sessions = useSessionHistoryStore((s) => s.sessions);
   const profile = useProfileStore((s) => s.profile);
@@ -49,15 +47,15 @@ export function DashboardView() {
   );
   // Pin "now" per mount so every derived widget agrees on the week boundary.
   const now = useMemo(() => new Date(), []);
+  const todayISO = currentLocalISODate(now);
   const completedWorkoutIds = useMemo(
     () => completedWorkoutIdsForWeek(sessions, now),
     [sessions, now],
   );
-  const nextWorkout = selectNextWorkout(
-    plan,
-    completedWorkoutIds,
-    currentLocalISODate(now),
-  );
+  const nextWorkout = selectNextWorkout(plan, completedWorkoutIds, todayISO);
+  const isTodayWorkout = nextWorkout?.date === todayISO;
+  const programWeek = currentProgramWeek(profile, now);
+  const upcoming = selectUpcomingWorkouts(plan, completedWorkoutIds, todayISO);
   const counts = useMemo(
     () => buildWorkoutCounts(sessions, now),
     [sessions, now],
@@ -91,7 +89,11 @@ export function DashboardView() {
       <Reveal index={3}>
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <NextWorkoutCard workout={nextWorkout} />
+            <TodayWorkoutCard
+              workout={nextWorkout}
+              isToday={isTodayWorkout}
+              programWeek={programWeek}
+            />
           </div>
           <WeeklyProgressCard done={counts.thisWeek} target={weeklyTarget} />
         </div>
@@ -125,20 +127,7 @@ export function DashboardView() {
       </Reveal>
 
       <Reveal index={8}>
-        <section className="space-y-3">
-          <SectionHeader
-            title={t.dashboard.weeklyPlan}
-            action={
-              <Link
-                href="/plan"
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {t.dashboard.seeFullPlan}
-              </Link>
-            }
-          />
-          <WeeklyPlan />
-        </section>
+        <UpcomingCard items={upcoming} />
       </Reveal>
     </div>
   );

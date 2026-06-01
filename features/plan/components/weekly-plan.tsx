@@ -26,8 +26,7 @@ export function WeeklyPlan() {
           key={day.weekday}
           day={day}
           completed={
-            !!day.workout &&
-            (day.workout.completed || completedWorkoutIds.has(day.workout.id))
+            !!day.workout && completedWorkoutIds.has(day.workout.id)
           }
         />
       ))}

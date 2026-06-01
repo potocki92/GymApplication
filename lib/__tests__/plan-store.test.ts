@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   completedWorkoutIdsForWeek,
   selectNextWorkout,
+  selectTodayWorkout,
   selectUpcomingDays,
+  selectUpcomingWorkouts,
 } from "@/store/use-plan-store";
 import type {
   SessionHistoryRecord,
@@ -53,7 +55,9 @@ function session(
 }
 
 describe("selectNextWorkout", () => {
-  it("skips completed workouts scheduled for today", () => {
+  it("ignores the stale template `completed` flag and returns today's workout", () => {
+    // The recurring template carries a persistent `completed: true`; completion
+    // for the active week must come from session history, not this flag.
     const plan: WeeklyPlan = {
       id: "plan-test",
       weekStart: "2024-05-20",
@@ -64,7 +68,7 @@ describe("selectNextWorkout", () => {
         day(
           "thursday",
           workout({
-            id: "completed-today",
+            id: "flagged-today",
             completed: true,
             date: THURSDAY,
           }),
@@ -78,7 +82,7 @@ describe("selectNextWorkout", () => {
       ],
     };
 
-    expect(selectNextWorkout(plan, new Set(), THURSDAY)?.id).toBe("next-open");
+    expect(selectNextWorkout(plan, new Set(), THURSDAY)?.id).toBe("flagged-today");
   });
 
   it("skips workouts completed in session history for the current week", () => {
@@ -155,6 +159,67 @@ describe("selectUpcomingDays", () => {
     // Reference is a Thursday (index 3): only Fri/Sat/Sun qualify.
     const upcoming = selectUpcomingDays(plan, THURSDAY).map((d) => d.weekday);
     expect(upcoming).toEqual(["friday", "saturday", "sunday"]);
+  });
+});
+
+describe("selectTodayWorkout", () => {
+  const plan: WeeklyPlan = {
+    id: "plan-test",
+    weekStart: "2024-05-20",
+    days: [
+      day("monday"),
+      day("tuesday"),
+      day("wednesday"),
+      day("thursday", workout({ id: "thu", completed: false, date: THURSDAY })),
+      day("friday"),
+      day("saturday"),
+      day("sunday"),
+    ],
+  };
+
+  it("returns today's workout dated to the active week", () => {
+    const result = selectTodayWorkout(plan, new Set(), THURSDAY);
+    expect(result?.id).toBe("thu");
+    expect(result?.date).toBe(THURSDAY);
+  });
+
+  it("returns undefined on a rest day", () => {
+    expect(selectTodayWorkout(plan, new Set(), "2024-05-24")).toBeUndefined();
+  });
+
+  it("returns undefined once the workout is completed this week", () => {
+    expect(
+      selectTodayWorkout(plan, new Set(["thu"]), THURSDAY),
+    ).toBeUndefined();
+  });
+});
+
+describe("selectUpcomingWorkouts", () => {
+  const plan: WeeklyPlan = {
+    id: "plan-test",
+    weekStart: "2024-05-20",
+    days: [
+      day("monday", workout({ id: "mon", completed: true, date: "2024-05-20" })),
+      day("tuesday"),
+      day("wednesday"),
+      day("thursday", workout({ id: "thu", completed: false, date: "2024-05-23" })),
+      day("friday", workout({ id: "fri", completed: false, date: "2024-05-24" })),
+      day("saturday"),
+      day("sunday"),
+    ],
+  };
+
+  it("includes today and later, flagging today and dating to the active week", () => {
+    const upcoming = selectUpcomingWorkouts(plan, new Set(), "2026-05-28");
+    // 2026-05-28 is a Thursday → Thu (today) + Fri.
+    expect(upcoming.map((u) => u.workout.id)).toEqual(["thu", "fri"]);
+    expect(upcoming[0]).toMatchObject({ isToday: true, date: "2026-05-28" });
+    expect(upcoming[1]).toMatchObject({ isToday: false, date: "2026-05-29" });
+  });
+
+  it("excludes workouts already completed this week", () => {
+    const upcoming = selectUpcomingWorkouts(plan, new Set(["thu"]), "2026-05-28");
+    expect(upcoming.map((u) => u.workout.id)).toEqual(["fri"]);
   });
 });
 

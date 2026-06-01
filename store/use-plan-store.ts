@@ -1,7 +1,10 @@
 import { create } from "zustand";
 
 import { WEEKLY_PLAN } from "@/data";
-import { moveWorkoutBetweenDays } from "@/lib/calendar-utils";
+import {
+  moveWorkoutBetweenDays,
+  swapWorkoutDays as swapDaysInPlan,
+} from "@/lib/calendar-utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import { readDashboardCache, writeDashboardCache } from "@/lib/dashboard-cache";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -101,6 +104,8 @@ interface PlanState {
   weekPlan: (weekStart: string) => WeeklyPlan;
   /** Moves a workout between days within a week; returns false on a no-op move. */
   moveWorkout: (weekStart: string, from: Weekday, to: Weekday) => boolean;
+  /** Swaps the contents of two days in the template week; returns false on a no-op. */
+  swapWorkoutDays: (dayA: Weekday, dayB: Weekday) => boolean;
 }
 
 function replaceDay(plan: WeeklyPlan, weekday: Weekday, next: WorkoutDay): WeeklyPlan {
@@ -391,6 +396,32 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     return true;
   },
+
+  swapWorkoutDays: (dayA, dayB) => {
+    const result = swapDaysInPlan(get().plan, dayA, dayB);
+    if (!result.swapped) return false;
+
+    set({ plan: result.plan });
+
+    const userId = activeUserId();
+    if (userId) {
+      const syncDay = (weekday: Weekday): Promise<unknown> => {
+        const day = result.plan.days.find((d) => d.weekday === weekday);
+        return day?.workout
+          ? upsertWorkoutToSupabase(weekday, day.workout, userId)
+          : removeWorkoutFromSupabase(weekday, userId);
+      };
+      const sync = Promise.all([syncDay(dayA), syncDay(dayB)]).then(() => undefined);
+      cachePlanAfterSync(
+        userId,
+        result.plan,
+        sync,
+        "Failed to sync swapped workouts",
+      );
+    }
+
+    return true;
+  },
 }));
 
 /* ----------------------------- selectors ----------------------------- */
@@ -434,11 +465,10 @@ export function selectNextWorkout(
       date: addDaysISO(referenceWeekStart, weekdayIndex),
     };
 
-    if (
-      weekdayIndex < todayIndex ||
-      workout.completed ||
-      completedWorkoutIds.has(workout.id)
-    ) {
+    // Completion is sourced from session history for the active week, not the
+    // recurring template's persistent `completed` flag (which would leak across
+    // weeks). See `completedWorkoutIdsForWeek`.
+    if (weekdayIndex < todayIndex || completedWorkoutIds.has(workout.id)) {
       continue;
     }
 
@@ -448,6 +478,57 @@ export function selectNextWorkout(
   }
 
   return nextWorkout?.workout;
+}
+
+/** Today's planned workout (dated to the active week), unless already done this week. */
+export function selectTodayWorkout(
+  plan: WeeklyPlan,
+  completedWorkoutIds: ReadonlySet<string> = new Set(),
+  referenceDateISO = currentLocalISODate(),
+): Workout | undefined {
+  const todayIndex = weekdayIndexFromISO(referenceDateISO);
+  const day = plan.days.find(
+    (d) => WEEKDAY_ORDER.indexOf(d.weekday) === todayIndex,
+  );
+  if (!day || day.rest || !day.workout) return undefined;
+  if (completedWorkoutIds.has(day.workout.id)) return undefined;
+  return { ...day.workout, date: referenceDateISO };
+}
+
+export interface UpcomingWorkout {
+  workout: Workout;
+  /** ISO date within the active week. */
+  date: string;
+  isToday: boolean;
+}
+
+/**
+ * Planned workouts from today onward in the active week, dated to that week and
+ * excluding ones already completed this week (per session history).
+ */
+export function selectUpcomingWorkouts(
+  plan: WeeklyPlan,
+  completedWorkoutIds: ReadonlySet<string> = new Set(),
+  referenceDateISO = currentLocalISODate(),
+): UpcomingWorkout[] {
+  const referenceWeekStart = weekStartISO(parseLocalDate(referenceDateISO));
+  const todayIndex = weekdayIndexFromISO(referenceDateISO);
+
+  const out: UpcomingWorkout[] = [];
+  for (const day of plan.days) {
+    if (day.rest || !day.workout) continue;
+    const weekdayIndex = WEEKDAY_ORDER.indexOf(day.weekday);
+    if (weekdayIndex < todayIndex || completedWorkoutIds.has(day.workout.id)) {
+      continue;
+    }
+    const date = addDaysISO(referenceWeekStart, weekdayIndex);
+    out.push({
+      workout: { ...day.workout, date },
+      date,
+      isToday: weekdayIndex === todayIndex,
+    });
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
 /** Template days that fall later in the current week than today (the "upcoming" list). */

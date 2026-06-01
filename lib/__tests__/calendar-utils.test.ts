@@ -8,6 +8,7 @@ import {
   moveWorkoutBetweenDays,
   photosByDay,
   plannedWorkoutsByDay,
+  swapWorkoutDays,
   weekdayFromISO,
 } from "@/lib/calendar-utils";
 import type {
@@ -15,6 +16,7 @@ import type {
   ProgressPhotoRecord,
   SessionHistoryRecord,
   WeeklyPlan,
+  Workout,
 } from "@/types";
 
 describe("addMonths", () => {
@@ -192,3 +194,65 @@ function photo(
     updatedAt: createdAt,
   };
 }
+
+describe("swapWorkoutDays", () => {
+  function w(id: string, date: string): Workout {
+    return {
+      id,
+      name: id,
+      type: "Custom",
+      exercises: [],
+      estimatedDurationMin: 45,
+      completed: false,
+      date,
+    };
+  }
+
+  const plan: WeeklyPlan = {
+    id: "plan-test",
+    weekStart: "2024-05-20",
+    days: [
+      { weekday: "monday", rest: false, workout: w("mon", "2024-05-20") },
+      { weekday: "tuesday", rest: true },
+      { weekday: "wednesday", rest: true },
+      { weekday: "thursday", rest: false, workout: w("thu", "2024-05-23") },
+      { weekday: "friday", rest: true },
+      { weekday: "saturday", rest: true },
+      { weekday: "sunday", rest: true },
+    ],
+  };
+
+  it("exchanges two workout days and recomputes each date", () => {
+    const { plan: next, swapped } = swapWorkoutDays(plan, "monday", "thursday");
+    expect(swapped).toBe(true);
+
+    const mon = next.days.find((d) => d.weekday === "monday");
+    const thu = next.days.find((d) => d.weekday === "thursday");
+    expect(mon?.workout?.id).toBe("thu");
+    expect(mon?.workout?.date).toBe("2024-05-20");
+    expect(thu?.workout?.id).toBe("mon");
+    expect(thu?.workout?.date).toBe("2024-05-23");
+  });
+
+  it("swapping with a rest day moves the workout and frees the source", () => {
+    const { plan: next, swapped } = swapWorkoutDays(plan, "thursday", "friday");
+    expect(swapped).toBe(true);
+
+    const thu = next.days.find((d) => d.weekday === "thursday");
+    const fri = next.days.find((d) => d.weekday === "friday");
+    expect(thu?.rest).toBe(true);
+    expect(thu?.workout).toBeUndefined();
+    expect(fri?.workout?.id).toBe("thu");
+    expect(fri?.workout?.date).toBe("2024-05-24");
+  });
+
+  it("is a no-op when both days are the same", () => {
+    expect(swapWorkoutDays(plan, "monday", "monday").swapped).toBe(false);
+  });
+
+  it("does not mutate the input plan", () => {
+    const snapshot = JSON.stringify(plan);
+    swapWorkoutDays(plan, "monday", "thursday");
+    expect(JSON.stringify(plan)).toBe(snapshot);
+  });
+});
