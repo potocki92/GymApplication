@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { CircleCheckBig, Coffee, Play, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { useActiveSessionStore, usePlanStore } from "@/store";
 import type { WorkoutDay } from "@/types";
 
-export function DayTrainingCard({
+export function DayTrainingRow({
   day,
   completed = day.workout?.completed ?? false,
 }: {
@@ -57,75 +56,69 @@ export function DayTrainingCard({
 
   return (
     <>
-    <Card
-      className={cn(
-        "h-full transition-shadow hover:shadow-md",
-        rest && "border-dashed bg-muted/30 ring-foreground/5",
-      )}
-    >
-      <CardContent className="flex h-full flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-heading text-sm font-semibold">
-            {t.weekdays.full[weekday]}
-          </span>
+      <div
+        className={cn(
+          "flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between",
+          rest && "bg-muted/20",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-3">
           {workout ? (
             completed ? (
               <CircleCheckBig className="size-5 shrink-0 text-success" />
             ) : (
-              <span className="size-4 shrink-0 rounded-full border-2 border-muted-foreground/30" />
+              <span className="size-5 shrink-0 rounded-full border-2 border-muted-foreground/30" />
             )
-          ) : null}
+          ) : (
+            <span className="size-5 shrink-0" aria-hidden />
+          )}
+          <span className="w-28 shrink-0 font-heading text-sm font-semibold">
+            {t.weekdays.full[weekday]}
+          </span>
+          <div className="min-w-0">
+            {rest ? (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Coffee className="size-4 shrink-0" />
+                {t.plan.restDay}
+              </p>
+            ) : workout ? (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{workout.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t.plan.exercises}: {workout.exercises.length} ·{" "}
+                  {formatMinutes(workout.estimatedDurationMin)}
+                </p>
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        {rest ? (
-          <div className="flex flex-1 flex-col gap-2">
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Coffee className="size-4" />
-              {t.plan.restDay}
-            </p>
-            <Link
-              href={href}
-              className="mt-auto text-sm font-medium text-primary hover:underline"
-            >
-              {t.plan.addWorkout}
-            </Link>
-          </div>
-        ) : workout ? (
-          <div className="flex flex-1 flex-col gap-2">
-            <p className="line-clamp-2 text-sm font-medium">{workout.name}</p>
-            <p className="mt-auto text-xs text-muted-foreground">
-              {t.plan.exercises}: {workout.exercises.length} ·{" "}
-              {formatMinutes(workout.estimatedDurationMin)}
-            </p>
+        {workout ? (
+          <div className="flex items-center gap-2 sm:shrink-0 sm:pl-2">
             {!completed ? (
-              <Button size="sm" className="w-full" onClick={() => void handleStart()}>
+              <Button size="sm" onClick={() => void handleStart()}>
                 <Play className="size-4" />
                 {t.activeWorkout.start}
               </Button>
             ) : null}
-            <div className="flex items-center justify-between gap-2">
-              <Link
-                href={href}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {t.plan.editWorkout}
-              </Link>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="text-muted-foreground hover:text-destructive"
-                aria-label={t.plan.deleteWorkout}
-                title={t.plan.deleteWorkout}
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
+            <Button asChild variant="ghost" size="sm">
+              <Link href={href}>{t.plan.editWorkout}</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={t.plan.deleteWorkout}
+              title={t.plan.deleteWorkout}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col justify-center">
-            <Button asChild variant="outline" size="sm" className="w-full">
+          <div className="flex items-center sm:shrink-0 sm:pl-2">
+            <Button asChild variant="outline" size="sm">
               <Link href={href}>
                 <Plus className="size-4" />
                 {t.plan.planWorkout}
@@ -133,8 +126,7 @@ export function DayTrainingCard({
             </Button>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
