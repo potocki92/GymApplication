@@ -7,10 +7,10 @@ import {
   usePlanStore,
   useSessionHistoryStore,
 } from "@/store";
-import { cn } from "@/lib/utils";
-import { DayTrainingCard } from "./day-training-card";
+import { Card } from "@/components/ui/card";
+import { DayTrainingRow } from "./day-training-row";
 
-export function WeeklyPlan({ gridClassName }: { gridClassName?: string }) {
+export function WeeklyPlan() {
   const plan = usePlanStore((s) => s.plan);
   const sessions = useSessionHistoryStore((s) => s.sessions);
   const now = useMemo(() => new Date(), []);
@@ -20,14 +20,9 @@ export function WeeklyPlan({ gridClassName }: { gridClassName?: string }) {
   );
 
   return (
-    <div
-      className={cn(
-        "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7",
-        gridClassName,
-      )}
-    >
+    <Card className="gap-0 divide-y divide-border py-0">
       {plan.days.map((day) => (
-        <DayTrainingCard
+        <DayTrainingRow
           key={day.weekday}
           day={day}
           completed={
@@ -36,6 +31,6 @@ export function WeeklyPlan({ gridClassName }: { gridClassName?: string }) {
           }
         />
       ))}
-    </div>
+    </Card>
   );
 }
