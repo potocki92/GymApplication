@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, Dumbbell } from "lucide-react";
@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDictionary } from "@/hooks/use-dictionary";
+import { pluralPl } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import { usePlanStore, useWorkoutDraftStore } from "@/store";
 import type { Weekday } from "@/types";
@@ -32,6 +34,26 @@ export function WorkoutFormView() {
   const reset = useWorkoutDraftStore((s) => s.reset);
   const exercises = useWorkoutDraftStore((s) => s.exercises);
   const editingId = useWorkoutDraftStore((s) => s.editingWorkoutId);
+
+  const count = exercises.length;
+  const hasExercises = count > 0;
+
+  // Briefly pulse the count badge whenever the number of exercises grows.
+  const [bump, setBump] = useState(false);
+  const prevCount = useRef(count);
+  useEffect(() => {
+    if (count > prevCount.current) {
+      setBump(true);
+      const id = setTimeout(() => setBump(false), 220);
+      prevCount.current = count;
+      return () => clearTimeout(id);
+    }
+    prevCount.current = count;
+  }, [count]);
+
+  const saveLabel = hasExercises
+    ? `${t.workoutForm.save} · ${count} ${pluralPl(count, t.workoutForm.exerciseForms)}`
+    : t.workoutForm.save;
 
   useEffect(() => {
     const weekday = resolveWeekday(dayParam);
@@ -81,9 +103,14 @@ export function WorkoutFormView() {
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} size="lg" className="hidden h-10 sm:inline-flex">
+        <Button
+          onClick={handleSave}
+          size="lg"
+          disabled={!hasExercises}
+          className="hidden h-10 sm:inline-flex"
+        >
           <Check className="size-4" />
-          {t.workoutForm.save}
+          {saveLabel}
         </Button>
       </div>
 
@@ -111,8 +138,16 @@ export function WorkoutFormView() {
         <Card className="order-3 lg:col-start-1 lg:row-start-2">
           <CardHeader className="flex-row items-center justify-between gap-3">
             <CardTitle>{t.workoutForm.selectedExercises}</CardTitle>
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-              {exercises.length}
+            <span
+              className={cn(
+                "grid h-6 min-w-[1.625rem] place-items-center rounded-full px-2 text-xs font-bold tabular-nums transition-transform duration-200",
+                hasExercises
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground",
+                bump && "scale-[1.18]",
+              )}
+            >
+              {count}
             </span>
           </CardHeader>
           <CardContent>
@@ -136,9 +171,13 @@ export function WorkoutFormView() {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl shadow-background/80 backdrop-blur sm:hidden">
-        <Button onClick={handleSave} className="h-12 w-full text-base">
+        <Button
+          onClick={handleSave}
+          disabled={!hasExercises}
+          className="h-12 w-full text-base"
+        >
           <Check className="size-4" />
-          {t.workoutForm.save}
+          {saveLabel}
         </Button>
       </div>
     </div>

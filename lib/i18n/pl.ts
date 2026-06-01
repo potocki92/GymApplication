@@ -288,6 +288,14 @@ export const pl = {
     subtitle: "Skomponuj trening i dopasuj parametry ćwiczeń",
     nameLabel: "Nazwa treningu",
     namePlaceholder: "np. Push — Klatka + Barki + Triceps",
+    typeLabel: "Typ treningu",
+    types: {
+      Siła: "Siła",
+      Hipertrofia: "Hipertrofia",
+      Wytrzymałość: "Wytrzymałość",
+      Cardio: "Cardio",
+      Mobilność: "Mobilność",
+    },
     dayLabel: "Dzień tygodnia",
     addExercise: "Dodaj ćwiczenie",
     addExerciseToWorkout: "Dodaj ćwiczenie do treningu",
@@ -307,6 +315,7 @@ export const pl = {
     nameError: "Podaj nazwę treningu",
     exerciseError: "Dodaj co najmniej jedno ćwiczenie",
     alreadyAdded: "Dodane",
+    exerciseForms: { one: "ćwiczenie", few: "ćwiczenia", many: "ćwiczeń" },
   },
 
   exercises: {

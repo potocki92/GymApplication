@@ -212,8 +212,12 @@ export const WORKOUT_TYPE_BADGE_CLASSES: Record<WorkoutType, string> = {
   Pull: "bg-violet-500/15 text-violet-300",
   Nogi: "bg-emerald-500/15 text-emerald-300",
   "Full Body": "bg-amber-500/15 text-amber-300",
-  Cardio: "bg-orange-500/15 text-orange-300",
   Custom: "bg-muted text-muted-foreground",
+  Siła: "bg-rose-500/15 text-rose-300",
+  Hipertrofia: "bg-fuchsia-500/15 text-fuchsia-300",
+  Wytrzymałość: "bg-cyan-500/15 text-cyan-300",
+  Cardio: "bg-orange-500/15 text-orange-300",
+  Mobilność: "bg-teal-500/15 text-teal-300",
 };
 
 /** Solid dot colours used to mark planned workouts inside calendar cells. */
@@ -222,8 +226,12 @@ export const WORKOUT_TYPE_DOT_CLASSES: Record<WorkoutType, string> = {
   Pull: "bg-violet-400",
   Nogi: "bg-emerald-400",
   "Full Body": "bg-amber-400",
-  Cardio: "bg-orange-400",
   Custom: "bg-muted-foreground",
+  Siła: "bg-rose-400",
+  Hipertrofia: "bg-fuchsia-400",
+  Wytrzymałość: "bg-cyan-400",
+  Cardio: "bg-orange-400",
+  Mobilność: "bg-teal-400",
 };
 
 export function workoutTypeDotClass(type?: WorkoutType): string {
