@@ -1,6 +1,18 @@
-import type { ExerciseCategory, MuscleGroup, Weekday } from "@/types";
+import type { ExerciseCategory, MuscleGroup, Weekday, WorkoutType } from "@/types";
 
 export const APP_NAME = "REPIFY";
+
+/** Training-style options offered when composing a workout. */
+export const WORKOUT_TYPE_OPTIONS = [
+  "Siła",
+  "Hipertrofia",
+  "Wytrzymałość",
+  "Cardio",
+  "Mobilność",
+] as const satisfies readonly WorkoutType[];
+
+/** Workout types selectable in the form (narrowed from {@link WorkoutType}). */
+export type SelectableWorkoutType = (typeof WORKOUT_TYPE_OPTIONS)[number];
 
 export const WEEKDAY_ORDER: Weekday[] = [
   "monday",

@@ -11,3 +11,4 @@ export function getDictionary(locale: Locale = defaultLocale): Dictionary {
 }
 
 export type { Dictionary };
+export { pluralPl, type PluralForms } from "./plural";

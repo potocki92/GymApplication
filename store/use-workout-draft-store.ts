@@ -1,8 +1,24 @@
 import { create } from "zustand";
 
-import type { Exercise, Weekday, Workout, WorkoutExercise } from "@/types";
+import type {
+  Exercise,
+  Weekday,
+  Workout,
+  WorkoutExercise,
+  WorkoutType,
+} from "@/types";
+import { WORKOUT_TYPE_OPTIONS } from "@/lib/constants";
 import { averageReps, reindexExercises } from "@/lib/workout-utils";
 import { usePlanStore } from "./use-plan-store";
+
+const DEFAULT_WORKOUT_TYPE: WorkoutType = "Siła";
+
+/** Coerce an existing workout's type to a selectable option, else default. */
+function resolveType(type?: WorkoutType): WorkoutType {
+  return type && (WORKOUT_TYPE_OPTIONS as readonly WorkoutType[]).includes(type)
+    ? type
+    : DEFAULT_WORKOUT_TYPE;
+}
 
 function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -24,11 +40,13 @@ interface DraftState {
   open: boolean;
   editingWorkoutId: string | null;
   name: string;
+  type: WorkoutType;
   weekday: Weekday;
   exercises: WorkoutExercise[];
 
   init: (weekday: Weekday, existing?: Workout) => void;
   setName: (name: string) => void;
+  setType: (type: WorkoutType) => void;
   setWeekday: (weekday: Weekday) => void;
   addExercise: (exercise: Exercise) => void;
   removeExercise: (id: string) => void;
@@ -41,6 +59,7 @@ const initialState = {
   open: false,
   editingWorkoutId: null as string | null,
   name: "",
+  type: DEFAULT_WORKOUT_TYPE,
   weekday: "monday" as Weekday,
   exercises: [] as WorkoutExercise[],
 };
@@ -54,10 +73,12 @@ export const useWorkoutDraftStore = create<DraftState>((set, get) => ({
       weekday,
       editingWorkoutId: existing?.id ?? null,
       name: existing?.name ?? "",
+      type: resolveType(existing?.type),
       exercises: existing ? existing.exercises.map((e) => ({ ...e })) : [],
     }),
 
   setName: (name) => set({ name }),
+  setType: (type) => set({ type }),
   setWeekday: (weekday) => set({ weekday }),
 
   addExercise: (exercise) =>
@@ -89,13 +110,13 @@ export const useWorkoutDraftStore = create<DraftState>((set, get) => ({
   reset: () => set({ ...initialState }),
 
   commit: () => {
-    const { name, weekday, exercises, editingWorkoutId } = get();
+    const { name, type, weekday, exercises, editingWorkoutId } = get();
     if (!name.trim() || exercises.length === 0) return false;
 
     const workout: Workout = {
       id: editingWorkoutId ?? `w-${uid()}`,
       name: name.trim(),
-      type: "Custom",
+      type,
       exercises: reindexExercises(exercises),
       estimatedDurationMin: estimateDuration(exercises),
       completed: false,

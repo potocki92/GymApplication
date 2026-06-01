@@ -1,4 +1,16 @@
-export type WorkoutType = "Push" | "Pull" | "Nogi" | "Full Body" | "Cardio" | "Custom";
+export type WorkoutType =
+  // Legacy split taxonomy used by seed data and historical workouts.
+  | "Push"
+  | "Pull"
+  | "Nogi"
+  | "Full Body"
+  | "Custom"
+  // Training-style taxonomy selectable when composing a workout.
+  | "Siła"
+  | "Hipertrofia"
+  | "Wytrzymałość"
+  | "Cardio"
+  | "Mobilność";
 
 /** A single exercise as configured inside a concrete workout. */
 export interface WorkoutExercise {

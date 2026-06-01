@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXERCISES } from "@/data";
 import { useDictionary } from "@/hooks/use-dictionary";
+import { cn } from "@/lib/utils";
 import { useWorkoutDraftStore } from "@/store";
 
 export function ExercisePicker() {
@@ -18,9 +19,10 @@ export function ExercisePicker() {
   const [filter, setFilter] = useState<MuscleFilterValue>("all");
 
   const addExercise = useWorkoutDraftStore((s) => s.addExercise);
+  const removeExercise = useWorkoutDraftStore((s) => s.removeExercise);
   const selected = useWorkoutDraftStore((s) => s.exercises);
-  const addedIds = useMemo(
-    () => new Set(selected.map((e) => e.exerciseId)),
+  const addedById = useMemo(
+    () => new Map(selected.map((e) => [e.exerciseId, e.id])),
     [selected],
   );
 
@@ -50,11 +52,15 @@ export function ExercisePicker() {
       <ScrollArea className="h-[18rem] pr-2 sm:h-[22rem] sm:pr-3">
         <div className="space-y-2">
           {results.map((ex) => {
-            const added = addedIds.has(ex.id);
+            const addedId = addedById.get(ex.id);
+            const added = addedId !== undefined;
             return (
               <div
                 key={ex.id}
-                className="flex items-center gap-2 rounded-xl border border-border bg-card p-2.5 sm:gap-3"
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border bg-card p-2.5 transition-colors sm:gap-3",
+                  added ? "border-primary/40" : "border-border",
+                )}
               >
                 <ExerciseIcon
                   muscleGroup={ex.muscleGroup}
@@ -74,14 +80,10 @@ export function ExercisePicker() {
                   <Button
                     type="button"
                     size="icon-sm"
-                    variant="ghost"
-                    disabled
-                    className="text-success sm:h-7 sm:w-auto sm:px-2.5"
+                    aria-label={t.workoutForm.alreadyAdded}
+                    onClick={() => removeExercise(addedId)}
                   >
                     <Check className="size-4" />
-                    <span className="sr-only sm:not-sr-only">
-                      {t.workoutForm.alreadyAdded}
-                    </span>
                   </Button>
                 ) : (
                   <Button
