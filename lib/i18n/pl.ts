@@ -191,6 +191,17 @@ export const pl = {
       volume: "Objętość",
       calories: "Kalorie",
     },
+    tiles: {
+      streak: "Seria",
+      streakLongest: "Najdłuższa",
+      volume7d: "Objętość 7 dni",
+      vsPrevWeek: "Tydzień temu",
+      weight: "Waga",
+      target: "Cel",
+      records: "Rekordy",
+      recordsUnit: "PR",
+      recordsSub: "Rekordy 1RM",
+    },
     workoutMeta: {
       exercises: "Ćwiczenia",
       time: "Czas",
