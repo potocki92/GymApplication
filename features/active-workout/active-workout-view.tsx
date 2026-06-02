@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { Dumbbell, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -38,7 +37,7 @@ import {
   HrZoneLegend,
   LiveHeartRateChart,
 } from "./components/live-heart-rate-chart";
-import { RestPanel } from "./components/rest-panel";
+import { RestTimerModal } from "./components/rest-timer-modal";
 import { SessionSummary } from "./components/session-summary";
 import { SetLogger } from "./components/set-logger";
 import { WorkoutActionBar } from "./components/workout-action-bar";
@@ -275,23 +274,12 @@ export function ActiveWorkoutView() {
           </div>
         ) : null}
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={status === "resting" ? "resting" : "executing"}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-            className="space-y-4"
-          >
-            <CurrentExercisePanel session={session} />
-            {status === "resting" ? (
-              <RestPanel session={session} clock={clock} />
-            ) : (
-              <SetLogger session={session} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {/* Live workout surface. During `resting` this stays mounted as the
+            ambient backdrop behind the fullscreen rest overlay. */}
+        <div className="space-y-4">
+          <CurrentExercisePanel session={session} />
+          <SetLogger session={session} />
+        </div>
       </div>
 
       <WorkoutActionBar
@@ -299,6 +287,9 @@ export function ActiveWorkoutView() {
         session={session}
         onExit={exitToHome}
       />
+
+      {/* Fullscreen REST MODE — opens itself whenever status === "resting". */}
+      <RestTimerModal clock={clock} />
     </div>
   );
 }
