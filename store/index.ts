@@ -37,6 +37,10 @@ export {
   selectGarminConnected,
 } from "./use-garmin-integration-store";
 export {
+  useAppleHealthIntegrationStore,
+  selectAppleHealthConnected,
+} from "./use-apple-health-integration-store";
+export {
   useUiStore,
   selectSidebarCollapsed,
   selectCommandOpen,

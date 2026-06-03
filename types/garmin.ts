@@ -6,7 +6,12 @@
  * lastSyncAt, externalUserId) — never the tokens themselves.
  */
 
-export type IntegrationProvider = "garmin" | "polar" | "strava" | "wahoo";
+export type IntegrationProvider =
+  | "garmin"
+  | "polar"
+  | "strava"
+  | "wahoo"
+  | "apple_health";
 
 export type IntegrationStatus =
   | "connected"

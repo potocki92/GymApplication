@@ -30,6 +30,7 @@ export type FeatureKey =
   | "view_organization_reports"
   | "manage_system"
   | "garmin_connect"
+  | "apple_health_connect"
   | "experimental_features"
   | "hidden_dev_panel";
 
