@@ -70,6 +70,7 @@ export const FEATURES = [
   { key: "view_organization_reports", label: "Raporty organizacji", description: "Podgląd aktywności trenerów i klientów.", category: "organization", visibility: "public" },
   { key: "manage_system", label: "Administracja systemem", description: "Operacje administracyjne platformy.", category: "admin", visibility: "public" },
   { key: "garmin_connect", label: "Garmin Connect", description: "Eksperymentalna integracja z Garmin Connect.", category: "integration", visibility: "hidden", experimental: true },
+  { key: "apple_health_connect", label: "Apple Health", description: "Eksperymentalny import danych Apple Health przez iOS Skróty.", category: "integration", visibility: "hidden", experimental: true },
   { key: "experimental_features", label: "Eksperymenty", description: "Dostęp do funkcji ukrytych i eksperymentalnych.", category: "experimental", visibility: "hidden", experimental: true },
   { key: "hidden_dev_panel", label: "Panel developerski", description: "Wewnętrzne narzędzia diagnostyczne właścicieli aplikacji.", category: "experimental", visibility: "hidden", experimental: true },
 ] as const satisfies readonly FeatureDefinition[];
@@ -85,7 +86,7 @@ export const PLANS = [
   { id: "premium", label: "Premium", description: "Pełny pakiet dla użytkownika indywidualnego.", features: [...PRO_FEATURES], maxTrainingPlans: null, maxClients: 0, maxTrainers: 0 },
   { id: "trainer", label: "Trainer", description: "Konto trenera do pracy z podopiecznymi.", features: [...TRAINER_FEATURES], maxTrainingPlans: null, maxClients: 50, maxTrainers: 0 },
   { id: "gym", label: "Gym", description: "Konto organizacji z trenerami, klientami i raportami.", features: [...GYM_FEATURES], maxTrainingPlans: null, maxClients: null, maxTrainers: null },
-  { id: "developer", label: "Developer", description: "Wewnętrzny plan właścicieli aplikacji z pełnym dostępem.", features: [...GYM_FEATURES, "manage_system", "garmin_connect", "experimental_features", "hidden_dev_panel"], maxTrainingPlans: null, maxClients: null, maxTrainers: null },
+  { id: "developer", label: "Developer", description: "Wewnętrzny plan właścicieli aplikacji z pełnym dostępem.", features: [...GYM_FEATURES, "manage_system", "garmin_connect", "apple_health_connect", "experimental_features", "hidden_dev_panel"], maxTrainingPlans: null, maxClients: null, maxTrainers: null },
 ] as const satisfies readonly PlanDefinition[];
 
 export const PLANS_BY_ID = Object.fromEntries(
@@ -97,7 +98,7 @@ export const ROLE_FEATURES = {
   trainer: ["create_training_plan", "assign_training_plan", "view_client_workouts", "view_client_progress", "send_client_recommendations"],
   gym_owner: ["manage_organization", "manage_trainers", "manage_gym_clients", "view_organization_reports"],
   admin: ["manage_system"],
-  dev: ["experimental_features", "hidden_dev_panel", "garmin_connect"],
+  dev: ["experimental_features", "hidden_dev_panel", "garmin_connect", "apple_health_connect"],
 } as const satisfies Record<AppAccessUser["role"], readonly FeatureKey[]>;
 
 export const USERS = [
@@ -116,6 +117,7 @@ export const SUBSCRIPTIONS = [
 
 export const USER_FEATURES = [
   { userId: "dev-owner", feature: "garmin_connect", enabled: true, reason: "internal_owner" },
+  { userId: "dev-owner", feature: "apple_health_connect", enabled: true, reason: "internal_owner" },
 ] as const;
 
 export const TRAINER_CLIENTS = [

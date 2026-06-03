@@ -75,6 +75,16 @@ export type {
   UserIntegrationWithTokens,
 } from "./garmin";
 export type {
+  AppleHealthIngestLog,
+  AppleHealthIngestResult,
+  AppleHealthIngestStatus,
+  AppleHealthIntegration,
+  AppleHealthMetric,
+  AppleHealthSample,
+  AppleHealthSampleInput,
+} from "./apple-health";
+export { APPLE_HEALTH_METRICS } from "./apple-health";
+export type {
   ProgressPhotoDraft,
   ProgressPhotoRecord,
   ProgressPose,

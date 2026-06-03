@@ -7,9 +7,11 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionHeader } from "@/components/shared/section-header";
 import { useDictionary } from "@/hooks/use-dictionary";
-import { useGarminIntegrationStore } from "@/store";
+import { useAppleHealthIntegrationStore, useGarminIntegrationStore } from "@/store";
 
+import { AppleHealthCard } from "./components/apple-health-card";
 import { GarminCard } from "./components/garmin-card";
+import { AppleHealthHydrationGate } from "./apple-health-hydration-gate";
 import { GarminIntegrationHydrationGate } from "./garmin-integration-hydration-gate";
 
 export function IntegrationsView() {
@@ -17,6 +19,7 @@ export function IntegrationsView() {
   const hydrated = useGarminIntegrationStore((s) => s.hydrated);
   const demoMode = useGarminIntegrationStore((s) => s.demoMode);
   const garminAvailable = useGarminIntegrationStore((s) => s.available);
+  const appleHealthAvailable = useAppleHealthIntegrationStore((s) => s.available);
   const searchParams = useSearchParams();
   const consumedRef = useRef(false);
 
@@ -49,6 +52,7 @@ export function IntegrationsView() {
   return (
     <div className="space-y-6">
       <GarminIntegrationHydrationGate />
+      <AppleHealthHydrationGate />
       <SectionHeader
         title={t.integrations.title}
         description={t.integrations.subtitle}
@@ -66,9 +70,10 @@ export function IntegrationsView() {
 
       {!hydrated ? (
         <Skeleton className="h-64 w-full" />
-      ) : garminAvailable ? (
+      ) : garminAvailable || appleHealthAvailable ? (
         <div className="grid gap-4">
-          <GarminCard />
+          {garminAvailable ? <GarminCard /> : null}
+          {appleHealthAvailable ? <AppleHealthCard /> : null}
         </div>
       ) : null}
     </div>

@@ -4,7 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./config";
 
 const AUTH_ROUTES = new Set(["/login", "/signup"]);
-const PUBLIC_PREFIXES = ["/auth/"]; // OAuth callback etc.
+const PUBLIC_PREFIXES = [
+  "/auth/", // OAuth callback etc.
+  // Apple Health ingest from iOS Skróty: no Supabase session cookie — the route
+  // authenticates the request with a per-user bearer token instead.
+  "/api/integrations/apple-health/ingest",
+];
 const ONBOARDING_PATH = "/onboarding";
 /** Paths skipped by the onboarding gate even when the user is signed in. */
 const ONBOARDING_EXEMPT_PREFIXES = [
