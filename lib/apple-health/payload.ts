@@ -153,9 +153,46 @@ function normalizeSample(entry: unknown): AppleHealthSampleInput | null {
   };
 }
 
+/**
+ * Parsuje "luźną" listę próbek przesłaną jako tekst. iOS Skróty potrafią
+ * zserializować listę słowników do pojedynczego stringa zamiast tablicy JSON —
+ * najczęściej jako obiekty rozdzielone nowymi liniami (NDJSON), np.
+ * `{"metric":"steps",...}\n{"metric":"steps",...}`. Obsługujemy też wariant,
+ * gdy całość jest poprawną tablicą lub pojedynczym obiektem JSON.
+ */
+function parseLooseJsonList(input: string): unknown[] {
+  const trimmed = input.trim();
+  if (trimmed === "") return [];
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) return parsed;
+    if (isRecord(parsed)) return [parsed];
+  } catch {
+    // Nie jest kompletnym JSON-em — parsujemy linia po linii poniżej.
+  }
+
+  const out: unknown[] = [];
+  for (const line of trimmed.split(/\r?\n/)) {
+    const candidate = line.trim().replace(/,\s*$/, "");
+    if (candidate === "") continue;
+    try {
+      out.push(JSON.parse(candidate));
+    } catch {
+      // Pomijamy linie, których nie da się sparsować.
+    }
+  }
+  return out;
+}
+
 function extractSamples(raw: unknown): unknown[] {
   if (Array.isArray(raw)) return raw;
-  if (isRecord(raw) && Array.isArray(raw.samples)) return raw.samples;
+  if (isRecord(raw)) {
+    const samples = raw.samples;
+    if (Array.isArray(samples)) return samples;
+    if (typeof samples === "string") return parseLooseJsonList(samples);
+  }
+  if (typeof raw === "string") return parseLooseJsonList(raw);
   return [];
 }
 
