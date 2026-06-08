@@ -76,6 +76,29 @@ describe("normalizeIngestPayload", () => {
     expect(result).toHaveLength(0);
   });
 
+  it("parses { samples } sent as a newline-joined string (iOS Shortcuts)", () => {
+    const samples = [
+      '{"metric":"steps","value":17283,"unit":"count","start":"2026-06-01"}',
+      '{"metric":"steps","value":13840,"unit":"count","start":"2026-06-02"}',
+      '{"metric":"steps","value":1895,"unit":"count","start":"2026-06-07"}',
+    ].join("\n");
+
+    const result = normalizeIngestPayload({ samples });
+
+    expect(result).toHaveLength(3);
+    expect(result[0]).toMatchObject({ metric: "steps", value: 17283, unit: "count" });
+    expect(result[0].startTime).toBe(new Date("2026-06-01").toISOString());
+  });
+
+  it("parses { samples } sent as a stringified JSON array", () => {
+    const samples = JSON.stringify([
+      { metric: "steps", value: 500, start: "2026-06-03" },
+    ]);
+    const result = normalizeIngestPayload({ samples });
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe(500);
+  });
+
   it("returns an empty array for malformed input", () => {
     expect(normalizeIngestPayload(null)).toEqual([]);
     expect(normalizeIngestPayload({})).toEqual([]);
