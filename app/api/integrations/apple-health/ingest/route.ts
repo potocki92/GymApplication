@@ -32,6 +32,18 @@ export async function POST(request: NextRequest) {
 
   const samples = normalizeIngestPayload(body);
 
+  // Tryb diagnostyczny: `?debug=1` zwraca surowy odebrany payload oraz wynik
+  // normalizacji, bez zapisu do bazy. Ułatwia debugowanie skrótu iOS, który
+  // potrafi serializować próbki Zdrowia w nieoczekiwany sposób.
+  if (request.nextUrl.searchParams.get("debug") === "1") {
+    return NextResponse.json({
+      debug: true,
+      receivedBody: body,
+      normalizedCount: samples.length,
+      firstNormalized: samples[0] ?? null,
+    });
+  }
+
   const { data, error } = await supabase.rpc("ingest_apple_health", {
     p_token: token,
     p_samples: toIngestRows(samples),
