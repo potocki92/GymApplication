@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CircleCheckBig, Coffee, Play, Plus, Trash2 } from "lucide-react";
+import { BookmarkPlus, CircleCheckBig, Coffee, Play, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,7 @@ import {
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useActiveSessionStore, usePlanStore } from "@/store";
+import { useActiveSessionStore, usePlanStore, useTemplatesStore } from "@/store";
 import type { WorkoutDay } from "@/types";
 
 export function DayTrainingRow({
@@ -32,6 +32,7 @@ export function DayTrainingRow({
   const router = useRouter();
   const startSession = useActiveSessionStore((s) => s.startWorkoutSession);
   const removeWorkout = usePlanStore((s) => s.removeWorkout);
+  const saveAsTemplate = useTemplatesStore((s) => s.saveFromWorkout);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { weekday, rest, workout } = day;
   const href = `/plan/new?day=${weekday}`;
@@ -52,6 +53,12 @@ export function DayTrainingRow({
     setConfirmDelete(false);
     removeWorkout(weekday);
     toast.success(t.plan.deleted);
+  };
+
+  const handleSaveTemplate = () => {
+    if (!workout) return;
+    void saveAsTemplate(workout);
+    toast.success(t.templates.saved);
   };
 
   return (
@@ -103,6 +110,17 @@ export function DayTrainingRow({
             ) : null}
             <Button asChild variant="ghost" size="sm">
               <Link href={href}>{t.plan.editWorkout}</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-primary"
+              aria-label={t.templates.saveAsTemplate}
+              title={t.templates.saveAsTemplate}
+              onClick={handleSaveTemplate}
+            >
+              <BookmarkPlus className="size-4" />
             </Button>
             <Button
               type="button"

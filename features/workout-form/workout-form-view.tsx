@@ -19,7 +19,8 @@ import { useDictionary } from "@/hooks/use-dictionary";
 import { pluralPl } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { WEEKDAY_ORDER } from "@/lib/constants";
-import { usePlanStore, useWorkoutDraftStore } from "@/store";
+import { templateToWorkout } from "@/lib/template-utils";
+import { usePlanStore, useTemplatesStore, useWorkoutDraftStore } from "@/store";
 import type { Weekday } from "@/types";
 import { ExercisePicker } from "./components/exercise-picker";
 import { SelectedExerciseRow } from "./components/selected-exercise-row";
@@ -36,8 +37,10 @@ export function WorkoutFormView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dayParam = searchParams.get("day");
+  const templateParam = searchParams.get("template");
 
   const init = useWorkoutDraftStore((s) => s.init);
+  const initFromTemplate = useWorkoutDraftStore((s) => s.initFromTemplate);
   const reset = useWorkoutDraftStore((s) => s.reset);
   const exercises = useWorkoutDraftStore((s) => s.exercises);
   const editingId = useWorkoutDraftStore((s) => s.editingWorkoutId);
@@ -68,12 +71,21 @@ export function WorkoutFormView() {
 
   useEffect(() => {
     const weekday = resolveWeekday(dayParam);
+    if (templateParam) {
+      const template = useTemplatesStore
+        .getState()
+        .templates.find((tpl) => tpl.id === templateParam);
+      if (template) {
+        initFromTemplate(weekday, templateToWorkout(template));
+        return () => reset();
+      }
+    }
     const existing = usePlanStore.getState().plan.days.find(
       (d) => d.weekday === weekday,
     )?.workout;
     init(weekday, existing);
     return () => reset();
-  }, [dayParam, init, reset]);
+  }, [dayParam, templateParam, init, initFromTemplate, reset]);
 
   const handleSave = () => {
     const ok = useWorkoutDraftStore.getState().commit();

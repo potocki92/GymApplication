@@ -28,3 +28,12 @@ export function makeWorkoutExerciseId(workoutId: string, order: number): string 
 export function reindexExercises(exercises: WorkoutExercise[]): WorkoutExercise[] {
   return exercises.map((ex, i) => ({ ...ex, order: i }));
 }
+
+/** Rough session-length estimate (minutes) from sets, reps and rest. */
+export function estimateWorkoutDuration(exercises: WorkoutExercise[]): number {
+  const seconds = exercises.reduce(
+    (total, ex) => total + ex.sets * (averageReps(ex.reps) * 4 + ex.restSec),
+    0,
+  );
+  return Math.max(0, Math.round(seconds / 60));
+}
