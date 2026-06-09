@@ -30,6 +30,7 @@ import { WeeklyProgressCard } from "./components/weekly-progress-card";
 import { WeeklyStatsCard } from "./components/weekly-stats-card";
 import { WeightProgressCard } from "./components/weight-progress-card";
 import { StatRow } from "./sections/stat-row";
+import { StepsCard } from "./sections/steps-card";
 
 /** Week-columns rendered in the activity heatmap. */
 const ACTIVITY_WEEKS = 18;
@@ -108,8 +109,13 @@ export function DashboardView() {
         <ActivityHeatmap activity={activity} />
       </Reveal>
 
-      {/* Detail row: last workout · weekly stats · quick weight */}
+      {/* Daily steps (Apple Health) */}
       <Reveal index={6}>
+        <StepsCard />
+      </Reveal>
+
+      {/* Detail row: last workout · weekly stats · quick weight */}
+      <Reveal index={7}>
         <div className="grid gap-4 lg:grid-cols-3">
           <LastWorkoutCard session={lastWorkout} />
           <WeeklyStatsCard
@@ -122,11 +128,11 @@ export function DashboardView() {
         </div>
       </Reveal>
 
-      <Reveal index={7}>
+      <Reveal index={8}>
         <TopPRsCard />
       </Reveal>
 
-      <Reveal index={8}>
+      <Reveal index={9}>
         <UpcomingCard items={upcoming} />
       </Reveal>
     </div>

@@ -4,10 +4,13 @@ import {
   Camera,
   ClipboardList,
   Dumbbell,
+  Footprints,
   History,
   LayoutDashboard,
+  LayoutTemplate,
   Plug,
   Settings,
+  Target,
   TrendingUp,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -17,10 +20,13 @@ export type NavKey =
   | "plan"
   | "calendar"
   | "exercises"
+  | "templates"
   | "history"
   | "progress"
   | "progressPhotos"
   | "stats"
+  | "steps"
+  | "goals"
   | "integrations"
   | "settings";
 
@@ -52,6 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
     badge: "calendar",
   },
   { key: "exercises", href: "/exercises", icon: Dumbbell, section: "train" },
+  { key: "templates", href: "/templates", icon: LayoutTemplate, section: "train" },
   { key: "history", href: "/history", icon: History, section: "progress" },
   { key: "progress", href: "/progress", icon: TrendingUp, section: "progress" },
   {
@@ -61,6 +68,8 @@ export const NAV_ITEMS: NavItem[] = [
     section: "progress",
   },
   { key: "stats", href: "/stats", icon: BarChart3, section: "progress" },
+  { key: "steps", href: "/steps", icon: Footprints, section: "progress" },
+  { key: "goals", href: "/goals", icon: Target, section: "progress" },
   { key: "integrations", href: "/integrations", icon: Plug, section: "account" },
   { key: "settings", href: "/settings", icon: Settings, section: "account" },
 ];

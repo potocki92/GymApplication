@@ -40,6 +40,9 @@ export {
   useAppleHealthIntegrationStore,
   selectAppleHealthConnected,
 } from "./use-apple-health-integration-store";
+export { useStepsStore, STEPS_WINDOW_DAYS } from "./use-steps-store";
+export { useGoalsStore } from "./use-goals-store";
+export { useTemplatesStore } from "./use-templates-store";
 export {
   useUiStore,
   selectSidebarCollapsed,

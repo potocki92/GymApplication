@@ -8,6 +8,10 @@ export type {
 export type { Workout, WorkoutExercise, WorkoutType } from "./workout";
 export type { Weekday, WeeklyPlan, WorkoutDay } from "./plan";
 export type { ActivityDay, ActivityLevel } from "./stats";
+export type { DailyStepsPoint, StepsSource } from "./steps";
+export type { Goal, GoalType } from "./goal";
+export { GOAL_TYPES } from "./goal";
+export type { WorkoutTemplate } from "./template";
 export type {
   ActiveExercise,
   ActiveSession,

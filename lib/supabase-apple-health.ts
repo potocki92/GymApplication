@@ -188,6 +188,32 @@ export async function fetchRecentAppleHealthSamples(
   return (data ?? []).map((row) => mapSampleRow(row as SampleRow));
 }
 
+/**
+ * Pobiera próbki kroków z ostatnich `days` dni (RLS przypina do właściciela).
+ * Używane przez wykres kroków i cele krokowe; działa zarówno z klientem
+ * przeglądarkowym, jak i serwerowym.
+ */
+export async function fetchAppleHealthSteps(
+  supabase: SupabaseClient,
+  userId: string,
+  days = 90,
+): Promise<AppleHealthSample[]> {
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  since.setDate(since.getDate() - (days - 1));
+
+  const { data, error } = await supabase
+    .from("apple_health_samples")
+    .select("id, metric, value, unit, start_time, end_time, source")
+    .eq("user_id", userId)
+    .eq("metric", "steps")
+    .gte("start_time", since.toISOString())
+    .order("start_time", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => mapSampleRow(row as SampleRow));
+}
+
 export async function fetchRecentAppleHealthIngestLogs(
   supabase: SupabaseClient,
   userId: string,

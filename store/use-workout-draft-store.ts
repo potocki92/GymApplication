@@ -8,7 +8,7 @@ import type {
   WorkoutType,
 } from "@/types";
 import { WORKOUT_TYPE_OPTIONS } from "@/lib/constants";
-import { averageReps, reindexExercises } from "@/lib/workout-utils";
+import { estimateWorkoutDuration, reindexExercises } from "@/lib/workout-utils";
 import { usePlanStore } from "./use-plan-store";
 
 const DEFAULT_WORKOUT_TYPE: WorkoutType = "Siła";
@@ -27,15 +27,6 @@ function uid(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
 }
 
-/** Rough session-length estimate from sets and rest. */
-function estimateDuration(exercises: WorkoutExercise[]): number {
-  const seconds = exercises.reduce(
-    (total, ex) => total + ex.sets * (averageReps(ex.reps) * 4 + ex.restSec),
-    0,
-  );
-  return Math.max(0, Math.round(seconds / 60));
-}
-
 interface DraftState {
   open: boolean;
   editingWorkoutId: string | null;
@@ -45,6 +36,8 @@ interface DraftState {
   exercises: WorkoutExercise[];
 
   init: (weekday: Weekday, existing?: Workout) => void;
+  /** Wypełnia draft z szablonu jako NOWY trening (commit → addWorkout). */
+  initFromTemplate: (weekday: Weekday, workout: Workout) => void;
   setName: (name: string) => void;
   setType: (type: WorkoutType) => void;
   setWeekday: (weekday: Weekday) => void;
@@ -75,6 +68,16 @@ export const useWorkoutDraftStore = create<DraftState>((set, get) => ({
       name: existing?.name ?? "",
       type: resolveType(existing?.type),
       exercises: existing ? existing.exercises.map((e) => ({ ...e })) : [],
+    }),
+
+  initFromTemplate: (weekday, workout) =>
+    set({
+      open: true,
+      weekday,
+      editingWorkoutId: null,
+      name: workout.name,
+      type: resolveType(workout.type),
+      exercises: workout.exercises.map((e) => ({ ...e })),
     }),
 
   setName: (name) => set({ name }),
@@ -118,7 +121,7 @@ export const useWorkoutDraftStore = create<DraftState>((set, get) => ({
       name: name.trim(),
       type,
       exercises: reindexExercises(exercises),
-      estimatedDurationMin: estimateDuration(exercises),
+      estimatedDurationMin: estimateWorkoutDuration(exercises),
       completed: false,
     };
 
