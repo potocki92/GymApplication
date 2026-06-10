@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { Camera, ImagePlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
@@ -11,9 +11,16 @@ interface PhotoDropzoneProps {
   onFile: (file: File) => void;
   disabled?: boolean;
   hasFile?: boolean;
+  /** When provided, renders an extra "take a photo" button (camera capture). */
+  onOpenCamera?: () => void;
 }
 
-export function PhotoDropzone({ onFile, disabled, hasFile }: PhotoDropzoneProps) {
+export function PhotoDropzone({
+  onFile,
+  disabled,
+  hasFile,
+  onOpenCamera,
+}: PhotoDropzoneProps) {
   const t = useDictionary();
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,9 +69,17 @@ export function PhotoDropzone({ onFile, disabled, hasFile }: PhotoDropzoneProps)
         <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <ImagePlus className="size-5" />
         </span>
-        <Button type="button" variant="outline" size="sm" onClick={openPicker}>
-          {hasFile ? t.progressPhotos.upload.replace : t.progressPhotos.upload.chooseFile}
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={openPicker}>
+            {hasFile ? t.progressPhotos.upload.replace : t.progressPhotos.upload.chooseFile}
+          </Button>
+          {onOpenCamera ? (
+            <Button type="button" variant="outline" size="sm" onClick={onOpenCamera}>
+              <Camera className="size-4" />
+              {t.progressPhotos.camera.open}
+            </Button>
+          ) : null}
+        </div>
         <p className="text-xs text-muted-foreground">{t.progressPhotos.upload.orDrag}</p>
       </div>
     </div>

@@ -2,15 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
+import { formatLongDate } from "@/lib/progress-photos/format";
 import { useProgressPhotosStore } from "@/store";
 import type { ProgressPhotoRecord } from "@/types";
 
+import { EditPhotoSheet } from "./edit-photo-sheet";
 import { ViewerSlide } from "./viewer-slide";
 
 interface FullscreenViewerProps {
@@ -18,12 +20,6 @@ interface FullscreenViewerProps {
   index: number | null;
   onIndexChange: (index: number) => void;
   onClose: () => void;
-}
-
-function formatLong(iso: string, monthNames: readonly string[]): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
-  return `${d} ${monthNames[m - 1]?.toLowerCase() ?? ""} ${y}`;
 }
 
 export function FullscreenViewer({
@@ -35,6 +31,7 @@ export function FullscreenViewer({
   const t = useDictionary();
   const remove = useProgressPhotosStore((s) => s.remove);
   const [zoomed, setZoomed] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   // Only the originally-opened photo carries the shared-element `layoutId` morph
   // from its gallery card; once the user paginates there is no source element.
   const [navigated, setNavigated] = useState(false);
@@ -54,6 +51,7 @@ export function FullscreenViewer({
 
   const close = () => {
     setZoomed(false);
+    setEditOpen(false);
     setNavigated(false);
     if (triggerEl.current instanceof HTMLElement) triggerEl.current.focus();
     onClose();
@@ -70,7 +68,7 @@ export function FullscreenViewer({
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || editOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
       else if (e.key === "ArrowLeft") paginate(-1);
@@ -79,7 +77,7 @@ export function FullscreenViewer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, index, photos.length]);
+  }, [open, editOpen, index, photos.length]);
 
   const handleDelete = () => {
     if (!record) return;
@@ -119,13 +117,13 @@ export function FullscreenViewer({
           className="fixed inset-0 z-[60] flex flex-col bg-background/95 backdrop-blur"
           role="dialog"
           aria-modal="true"
-          aria-label={`${formatLong(record.takenAt, t.progressPhotos.months)} · ${t.progressPhotos.poses[record.pose]}`}
+          aria-label={`${formatLongDate(record.takenAt, t.progressPhotos.months)} · ${t.progressPhotos.poses[record.pose]}`}
         >
           {/* Header chrome */}
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
             <div className="flex min-w-0 items-center gap-2">
               <p className="truncate text-sm font-semibold">
-                {formatLong(record.takenAt, t.progressPhotos.months)}
+                {formatLongDate(record.takenAt, t.progressPhotos.months)}
               </p>
               <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
                 {t.progressPhotos.poses[record.pose]}
@@ -140,6 +138,14 @@ export function FullscreenViewer({
               <span className="mr-1 text-xs tabular-nums text-muted-foreground">
                 {counter}
               </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setEditOpen(true)}
+                aria-label={t.progressPhotos.edit.action}
+              >
+                <Pencil className="size-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -213,6 +219,17 @@ export function FullscreenViewer({
               {record.notes}
             </div>
           ) : null}
+
+          <EditPhotoSheet
+            record={record}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            // A pose/date change can move the record out of the current pose
+            // filter — close instead of pointing at a shifted index.
+            onSaved={(poseChanged) => {
+              if (poseChanged) close();
+            }}
+          />
         </motion.div>
       ) : null}
     </AnimatePresence>

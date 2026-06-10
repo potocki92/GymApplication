@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDictionary } from "@/hooks/use-dictionary";
+import { nearestMetricOnOrBefore } from "@/lib/metrics-utils";
+import { parseWeight } from "@/lib/progress-photos/meta-edit";
 import {
   progressPhotoDraftSchema,
   validateUploadFile,
 } from "@/lib/progress-photos/schema";
-import { useProgressPhotosStore } from "@/store";
+import {
+  selectPhotosByPose,
+  useMetricsStore,
+  useProgressPhotosStore,
+} from "@/store";
 import { PROGRESS_POSES, type ProgressPose } from "@/types";
 
+import { CameraCapture } from "./camera-capture";
 import { PhotoDropzone } from "./photo-dropzone";
 import { PhotoPreview } from "./photo-preview";
 
@@ -40,16 +47,21 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function parseWeight(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (trimmed === "") return null;
-  const n = Number.parseFloat(trimmed.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
+// SSR-safe getUserMedia detection: false on the server, the real answer after
+// hydration. The value never changes at runtime, so no subscription is needed.
+const noopSubscribe = () => () => {};
+function useCameraSupported(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => !!navigator.mediaDevices?.getUserMedia,
+    () => false,
+  );
 }
 
 export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogProps) {
   const t = useDictionary();
   const add = useProgressPhotosStore((s) => s.add);
+  const records = useProgressPhotosStore((s) => s.records);
   const uploading = useProgressPhotosStore((s) => s.uploading);
   const uploadPhase = useProgressPhotosStore((s) => s.uploadPhase);
   const uploadProgress = useProgressPhotosStore((s) => s.uploadProgress);
@@ -66,14 +78,55 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
   const [date, setDate] = useState(defaultDate);
   const [pose, setPose] = useState<ProgressPose>(defaultPose ?? "front");
   const [weight, setWeight] = useState("");
+  const [weightTouched, setWeightTouched] = useState(false);
+  const [weightAutofilled, setWeightAutofilled] = useState(false);
   const [notes, setNotes] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const cameraSupported = useCameraSupported();
+
+  // Latest photo of the selected pose — the camera alignment ghost.
+  const ghostRecord = useMemo(
+    () => selectPhotosByPose(records, pose)[0] ?? null,
+    [records, pose],
+  );
+
+  const metricRecords = useMetricsStore((s) => s.records);
+
+  // Prefill the weight from the body-metric log (nearest entry up to 3 days
+  // back) until the user types their own value.
+  const autofillWeight = (forDate: string) => {
+    if (weightTouched) return;
+    const found = nearestMetricOnOrBefore(metricRecords, forDate, 3);
+    if (found) {
+      setWeight(found.weightKg.toFixed(1));
+      setWeightAutofilled(true);
+    } else if (weightAutofilled) {
+      setWeight("");
+      setWeightAutofilled(false);
+    }
+  };
+
+  // Render-time adjustment: seed the autofill once per dialog opening.
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open && !weightTouched && weight === "") {
+      const found = nearestMetricOnOrBefore(metricRecords, date, 3);
+      if (found) {
+        setWeight(found.weightKg.toFixed(1));
+        setWeightAutofilled(true);
+      }
+    }
+  }
 
   const reset = () => {
     setFile(null);
     setDate(defaultDate);
     setPose(defaultPose ?? "front");
     setWeight("");
+    setWeightTouched(false);
+    setWeightAutofilled(false);
     setNotes("");
     setFieldError(null);
   };
@@ -150,7 +203,12 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
     >
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <BottomSheetBody className="grid gap-3">
-          <PhotoDropzone onFile={handleFile} disabled={uploading} hasFile={!!file} />
+          <PhotoDropzone
+            onFile={handleFile}
+            disabled={uploading}
+            hasFile={!!file}
+            onOpenCamera={cameraSupported ? () => setCameraOpen(true) : undefined}
+          />
           {file ? <PhotoPreview file={file} /> : null}
 
           <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -161,7 +219,10 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
                 type="date"
                 value={date}
                 max={todayISO()}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  autofillWeight(e.target.value);
+                }}
                 required
               />
             </div>
@@ -193,8 +254,17 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
               max="400"
               placeholder="—"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                setWeight(e.target.value);
+                setWeightTouched(true);
+                setWeightAutofilled(false);
+              }}
             />
+            {weightAutofilled ? (
+              <p className="text-[11px] text-muted-foreground">
+                {t.progressPhotos.fields.weightAutofilled}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
@@ -238,6 +308,13 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
           </Button>
         </BottomSheetFooter>
       </form>
+
+      <CameraCapture
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        ghostRecord={ghostRecord}
+        onCapture={handleFile}
+      />
     </BottomSheet>
   );
 }

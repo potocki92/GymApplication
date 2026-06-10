@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-import { getSignedPhotoUrl } from "@/lib/supabase-progress-photos";
+import {
+  getSignedPhotoUrl,
+  getSignedPhotoUrls,
+} from "@/lib/supabase-progress-photos";
 
 /**
  * Signed URLs live for 1h on Supabase's side; we cache them for 50min so they
@@ -78,6 +81,32 @@ export function useSignedUrl(path: string | null): {
   const url = path ? readCache(path) : null;
   const loading = path != null && url == null;
   return { url, loading };
+}
+
+/**
+ * Batch-signs `paths` in one request and seeds the shared cache, so subsequent
+ * `useSignedUrl` consumers (and e.g. the time-lapse player) hit it directly.
+ * Already-cached paths are skipped. Returns path → url for the resolvable ones.
+ */
+export async function prefetchSignedUrls(
+  paths: string[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const missing: string[] = [];
+  for (const path of paths) {
+    const cached = readCache(path);
+    if (cached) out.set(path, cached);
+    else missing.push(path);
+  }
+  if (missing.length > 0) {
+    const signed = await getSignedPhotoUrls(missing);
+    const expiresAt = Date.now() + SIGNED_URL_TTL_MS;
+    for (const [path, url] of signed) {
+      cache.set(path, { url, expiresAt });
+      out.set(path, url);
+    }
+  }
+  return out;
 }
 
 /** Manually clears the signed-URL cache — used on sign-out. */

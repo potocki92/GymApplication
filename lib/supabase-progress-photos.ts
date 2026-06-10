@@ -4,6 +4,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import type {
   ProgressPhotoDraft,
   ProgressPhotoRecord,
+  ProgressPose,
 } from "@/types";
 
 const BUCKET = "progress-photos";
@@ -178,6 +179,7 @@ export async function deleteProgressPhoto(
 
 export interface UpdateProgressPhotoPatch {
   takenAt?: string;
+  pose?: ProgressPose;
   weightKg?: number | null;
   notes?: string | null;
 }
@@ -191,6 +193,7 @@ export async function updateProgressPhotoMeta(
   if (!supabase) return null;
   const row: Record<string, unknown> = {};
   if (patch.takenAt !== undefined) row.taken_at = patch.takenAt;
+  if (patch.pose !== undefined) row.pose = patch.pose;
   if (patch.weightKg !== undefined) row.weight_kg = patch.weightKg;
   if (patch.notes !== undefined) row.notes = patch.notes;
   const { data, error } = await supabase

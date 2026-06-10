@@ -68,6 +68,59 @@ export function progressTier(pct: number): ProgressTier {
   return "behind";
 }
 
+/**
+ * Newest record with `date <= isoDate` that is at most `toleranceDays` older.
+ * Ties on the same date are broken by `updatedAt` (last write wins). Used to
+ * pair progress photos with the body-metric log without forcing same-day entries.
+ */
+export function nearestMetricOnOrBefore(
+  records: BodyMetricRecord[],
+  isoDate: string,
+  toleranceDays = 7,
+): BodyMetricRecord | null {
+  const earliest = subDaysISO(isoDate, toleranceDays);
+  let best: BodyMetricRecord | null = null;
+  for (const r of records) {
+    if (r.date > isoDate || r.date < earliest) continue;
+    if (!best || r.date > best.date || (r.date === best.date && r.updatedAt > best.updatedAt)) {
+      best = r;
+    }
+  }
+  return best;
+}
+
+/**
+ * Per-metric difference `after − before`, present only when both sides carry a
+ * finite value for that metric.
+ */
+export function metricDeltas(
+  before: BodyMetricRecord | null,
+  after: BodyMetricRecord | null,
+): Partial<Record<BodyMetricKey, number>> {
+  if (!before || !after) return {};
+  const keys: BodyMetricKey[] = [
+    "weightKg",
+    "chestCm",
+    "waistCm",
+    "hipsCm",
+    "bodyFatPct",
+  ];
+  const out: Partial<Record<BodyMetricKey, number>> = {};
+  for (const key of keys) {
+    const a = before[key];
+    const b = after[key];
+    if (
+      typeof a === "number" &&
+      Number.isFinite(a) &&
+      typeof b === "number" &&
+      Number.isFinite(b)
+    ) {
+      out[key] = b - a;
+    }
+  }
+  return out;
+}
+
 /** Latest record that has a value for the given metric, or null. */
 export function latestForMetric(
   records: BodyMetricRecord[],
