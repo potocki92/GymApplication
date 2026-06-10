@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Camera, Plus } from "lucide-react";
+import { Camera, Film, Plus } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -22,6 +22,7 @@ import { MonthSection } from "./components/month-section";
 import { PoseTabs } from "./components/pose-tabs";
 import { ProgressTimeline } from "./components/progress-timeline";
 import { StreakCard } from "./components/streak-card";
+import { TimelapsePlayer } from "./components/timelapse-player";
 import { TransformationHero } from "./components/transformation-hero";
 import { UploadDialog } from "./components/upload-dialog";
 import { useComparisonEndpoints } from "./use-comparison-endpoints";
@@ -33,6 +34,7 @@ export function ProgressPhotosView() {
   const [pose, setPose] = useState<ProgressPose>("front");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [timelapseOpen, setTimelapseOpen] = useState(false);
 
   const filtered = useMemo(
     () => selectPhotosByPose(records, pose),
@@ -108,9 +110,21 @@ export function ProgressPhotosView() {
               <ComparisonCard records={filtered} cmp={cmp} />
 
               <section className="space-y-2">
-                <h2 className="font-heading text-lg font-semibold tracking-tight">
-                  {t.progressPhotos.sections.timeline}
-                </h2>
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="font-heading text-lg font-semibold tracking-tight">
+                    {t.progressPhotos.sections.timeline}
+                  </h2>
+                  {filtered.length >= 3 ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTimelapseOpen(true)}
+                    >
+                      <Film className="size-4" />
+                      {t.progressPhotos.timelapse.open}
+                    </Button>
+                  ) : null}
+                </div>
                 <ProgressTimeline
                   records={filtered}
                   beforeId={cmp.before?.id ?? null}
@@ -147,6 +161,11 @@ export function ProgressPhotosView() {
         index={viewerIndex}
         onIndexChange={setViewerIndex}
         onClose={() => setViewerIndex(null)}
+      />
+      <TimelapsePlayer
+        photos={filtered}
+        open={timelapseOpen}
+        onClose={() => setTimelapseOpen(false)}
       />
       <CelebrationOverlay />
     </div>

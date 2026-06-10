@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   latestForMetric,
+  metricDeltas,
+  nearestMetricOnOrBefore,
   progressTier,
   progressToGoalPct,
   sma7,
@@ -141,5 +143,80 @@ describe("latestForMetric", () => {
 
   it("returns null when nothing matches", () => {
     expect(latestForMetric([], "weightKg")).toBeNull();
+  });
+});
+
+describe("nearestMetricOnOrBefore", () => {
+  it("returns the exact-date record when present", () => {
+    const records = [
+      rec({ date: "2024-05-01" }),
+      rec({ date: "2024-05-03" }),
+    ];
+    expect(nearestMetricOnOrBefore(records, "2024-05-03")?.date).toBe("2024-05-03");
+  });
+
+  it("falls back to the newest record within tolerance", () => {
+    const records = [
+      rec({ date: "2024-04-20" }),
+      rec({ date: "2024-04-28" }),
+    ];
+    expect(nearestMetricOnOrBefore(records, "2024-05-01", 7)?.date).toBe("2024-04-28");
+  });
+
+  it("ignores records older than the tolerance window", () => {
+    const records = [rec({ date: "2024-04-20" })];
+    expect(nearestMetricOnOrBefore(records, "2024-05-01", 7)).toBeNull();
+  });
+
+  it("ignores records after the target date", () => {
+    const records = [rec({ date: "2024-05-05" })];
+    expect(nearestMetricOnOrBefore(records, "2024-05-01")).toBeNull();
+  });
+
+  it("breaks same-date ties by updatedAt", () => {
+    const records = [
+      rec({ date: "2024-05-01", id: "old", updatedAt: 100 }),
+      rec({ date: "2024-05-01", id: "new", updatedAt: 200 }),
+    ];
+    expect(nearestMetricOnOrBefore(records, "2024-05-01")?.id).toBe("new");
+  });
+});
+
+describe("metricDeltas", () => {
+  it("returns deltas only for metrics present on both sides", () => {
+    const before = rec({ date: "2024-04-01", weightKg: 84, waistCm: 90 });
+    const after = rec({ date: "2024-05-01", weightKg: 81.5, chestCm: 102 });
+    expect(metricDeltas(before, after)).toEqual({ weightKg: -2.5 });
+  });
+
+  it("covers every metric when both records are complete", () => {
+    const before = rec({
+      date: "2024-04-01",
+      weightKg: 84,
+      chestCm: 100,
+      waistCm: 90,
+      hipsCm: 100,
+      bodyFatPct: 22,
+    });
+    const after = rec({
+      date: "2024-05-01",
+      weightKg: 82,
+      chestCm: 101,
+      waistCm: 88,
+      hipsCm: 99,
+      bodyFatPct: 20.5,
+    });
+    expect(metricDeltas(before, after)).toEqual({
+      weightKg: -2,
+      chestCm: 1,
+      waistCm: -2,
+      hipsCm: -1,
+      bodyFatPct: -1.5,
+    });
+  });
+
+  it("returns an empty object when either side is missing", () => {
+    expect(metricDeltas(null, rec({ date: "2024-05-01" }))).toEqual({});
+    expect(metricDeltas(rec({ date: "2024-05-01" }), null)).toEqual({});
   });
 });

@@ -1,8 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Columns2, Layers, Share2 } from "lucide-react";
+import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -13,10 +16,17 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { useDictionary } from "@/hooks/use-dictionary";
+import {
+  buildCollageBlob,
+  shareOrDownloadBlob,
+} from "@/lib/progress-photos/collage";
+import { formatLongDate } from "@/lib/progress-photos/format";
 import { useSignedUrl } from "@/lib/progress-photos/use-signed-url";
 import type { ProgressPhotoRecord } from "@/types";
 
 import { ComparePicker } from "./compare-picker";
+import { ComparisonMetrics } from "./comparison-metrics";
+import { OverlayCompare } from "./overlay-compare";
 import type { ComparePreset, ComparisonEndpoints } from "../use-comparison-endpoints";
 
 // react-compare-image touches `document` on import — load it only on the client.
@@ -31,9 +41,13 @@ interface ComparisonCardProps {
   cmp: ComparisonEndpoints;
 }
 
+type CompareMode = "slider" | "overlay";
+
 export function ComparisonCard({ records, cmp }: ComparisonCardProps) {
   const t = useDictionary();
   const { before, after, preset } = cmp;
+  const [mode, setMode] = useState<CompareMode>("slider");
+  const [exporting, setExporting] = useState(false);
 
   // Ascending feeds the manual pickers (oldest → newest).
   const ascending = useMemo(
@@ -58,6 +72,41 @@ export function ComparisonCard({ records, cmp }: ComparisonCardProps) {
     leftUrl && rightUrl && !leftLoading && !rightLoading && before && after;
   const samePair = before && after && before.id === after.id;
 
+  const handleExport = async () => {
+    if (!ready || !before || !after || !leftUrl || !rightUrl) return;
+    setExporting(true);
+    try {
+      const deltaKg =
+        before.weightKg != null && after.weightKg != null
+          ? after.weightKg - before.weightKg
+          : null;
+      const blob = await buildCollageBlob({
+        beforeUrl: leftUrl,
+        afterUrl: rightUrl,
+        beforeLabel: formatLongDate(before.takenAt, t.progressPhotos.months),
+        afterLabel: formatLongDate(after.takenAt, t.progressPhotos.months),
+        deltaLine:
+          deltaKg != null
+            ? `${t.progressPhotos.export.weightDelta}: ${deltaKg > 0 ? "+" : deltaKg < 0 ? "−" : "±"}${Math.abs(Math.round(deltaKg * 10) / 10).toLocaleString("pl-PL")} kg`
+            : undefined,
+        brand: "FitFlow",
+      });
+      const result = await shareOrDownloadBlob(
+        blob,
+        `fitflow-progres-${before.takenAt}-${after.takenAt}.jpg`,
+      );
+      toast.success(
+        result === "shared"
+          ? t.progressPhotos.export.shared
+          : t.progressPhotos.export.downloaded,
+      );
+    } catch {
+      toast.error(t.progressPhotos.export.failed);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -67,21 +116,45 @@ export function ComparisonCard({ records, cmp }: ComparisonCardProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div
-          role="group"
-          aria-label={t.progressPhotos.sections.presetLabel}
-          className="flex flex-wrap gap-2"
-        >
-          {presets.map((p) => (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div
+            role="group"
+            aria-label={t.progressPhotos.sections.presetLabel}
+            className="flex flex-wrap gap-2"
+          >
+            {presets.map((p) => (
+              <ToggleChip
+                key={p.key}
+                size="sm"
+                selected={preset === p.key}
+                onClick={() => cmp.setPreset(p.key)}
+              >
+                {p.label}
+              </ToggleChip>
+            ))}
+          </div>
+          <div
+            role="group"
+            aria-label={t.progressPhotos.comparison.modeLabel}
+            className="flex gap-2"
+          >
             <ToggleChip
-              key={p.key}
               size="sm"
-              selected={preset === p.key}
-              onClick={() => cmp.setPreset(p.key)}
+              selected={mode === "slider"}
+              onClick={() => setMode("slider")}
             >
-              {p.label}
+              <Columns2 className="size-3.5" />
+              {t.progressPhotos.comparison.modeSlider}
             </ToggleChip>
-          ))}
+            <ToggleChip
+              size="sm"
+              selected={mode === "overlay"}
+              onClick={() => setMode("overlay")}
+            >
+              <Layers className="size-3.5" />
+              {t.progressPhotos.comparison.modeOverlay}
+            </ToggleChip>
+          </div>
         </div>
 
         {preset === "manual" ? (
@@ -117,17 +190,26 @@ export function ComparisonCard({ records, cmp }: ComparisonCardProps) {
           <>
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               {ready ? (
-                <ReactCompareImage
-                  leftImage={leftUrl}
-                  rightImage={rightUrl}
-                  leftImageAlt={before.notes ?? before.takenAt}
-                  rightImageAlt={after.notes ?? after.takenAt}
-                  sliderLineColor="var(--color-primary)"
-                  sliderLineWidth={2}
-                  leftImageLabel={t.progressPhotos.comparison.leftLabel}
-                  rightImageLabel={t.progressPhotos.comparison.rightLabel}
-                  hover={false}
-                />
+                mode === "overlay" ? (
+                  <OverlayCompare
+                    beforeUrl={leftUrl}
+                    afterUrl={rightUrl}
+                    beforeAlt={before.notes ?? before.takenAt}
+                    afterAlt={after.notes ?? after.takenAt}
+                  />
+                ) : (
+                  <ReactCompareImage
+                    leftImage={leftUrl}
+                    rightImage={rightUrl}
+                    leftImageAlt={before.notes ?? before.takenAt}
+                    rightImageAlt={after.notes ?? after.takenAt}
+                    sliderLineColor="var(--color-primary)"
+                    sliderLineWidth={2}
+                    leftImageLabel={t.progressPhotos.comparison.leftLabel}
+                    rightImageLabel={t.progressPhotos.comparison.rightLabel}
+                    hover={false}
+                  />
+                )
               ) : (
                 <Skeleton className="aspect-[3/4] w-full" />
               )}
@@ -137,6 +219,21 @@ export function ComparisonCard({ records, cmp }: ComparisonCardProps) {
               <Caption record={before} />
               <Caption record={after} />
             </div>
+
+            <ComparisonMetrics before={before} after={after} />
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={!ready || exporting}
+            >
+              <Share2 className="size-4" />
+              {exporting
+                ? t.progressPhotos.export.preparing
+                : t.progressPhotos.export.button}
+            </Button>
           </>
         )}
       </CardContent>
@@ -146,11 +243,7 @@ export function ComparisonCard({ records, cmp }: ComparisonCardProps) {
 
 function Caption({ record }: { record: ProgressPhotoRecord }) {
   const t = useDictionary();
-  const [y, m, d] = record.takenAt.split("-").map(Number);
-  const dateLabel =
-    y && m && d
-      ? `${d} ${t.progressPhotos.months[m - 1]?.toLowerCase() ?? ""} ${y}`
-      : record.takenAt;
+  const dateLabel = formatLongDate(record.takenAt, t.progressPhotos.months);
   return (
     <div className="space-y-0.5">
       <p className="font-medium text-foreground">{dateLabel}</p>
