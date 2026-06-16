@@ -1,7 +1,7 @@
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. If `node_modules/next/dist/docs/` exists, read the relevant guide there before writing any code; if it is not present in this install, rely on the official Next 16 documentation and the conventions already used in this repo instead. Do not reach for Next/React APIs from model memory alone, and heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
 # FitFlow / GymApplication Agent Rules
@@ -23,6 +23,7 @@ Current stack and conventions:
 - shadcn/radix-nova UI configured through `components.json`.
 - lucide-react icons.
 - Zustand for client-side application state.
+- React Hook Form + Zod (`@hookform/resolvers/zod`) for structured profile/settings/onboarding forms; Zustand-driven drafts for the workout editor. See "Forms and Mutations".
 - Supabase integration through dedicated `lib/supabase-*` modules and `supabase/migrations`.
 - Polish UI copy through `lib/i18n/pl.ts` and `useDictionary`.
 - Root-level `@/*` import alias. There is no `src/` directory.
@@ -60,7 +61,7 @@ Do not move the project into `src/`.
 - Keep server-compatible files server-compatible by default.
 - Do not import client-only stores/hooks into server-only modules.
 - Do not move client state into server components.
-- Before using a Next API, check the local Next docs mentioned at the top of this file.
+- Before using a Next API, consult the Next docs as described at the top of this file rather than relying on model memory.
 
 ## Feature Structure
 
@@ -73,6 +74,8 @@ Follow the existing feature-first pattern:
 - Layout pieces belong in `components/layout/`.
 
 Prefer small composed components over one large component, but avoid extracting abstractions that are used only once and do not improve clarity.
+
+A few older features (`auth/`, `history/`, `metrics/`) predate the `components/` subfolder convention and keep their pieces in the feature root. This is the legacy shape, not the target. Use the canonical `features/<feature>/components/*` layout for new code, and when you add new components to those older features, place them under `components/`. Do not do a wholesale reorganization as part of an unrelated task.
 
 ## UI and Styling
 
@@ -145,10 +148,21 @@ The UI is Polish-first.
 
 ## Forms and Mutations
 
-Current forms are store-driven and component-composed.
+The app has two established, sanctioned form patterns. Pick the one that matches the area you are working in — do not introduce a third form library.
 
-- Follow existing form patterns in `features/workout-form` unless the task explicitly asks for a different form library.
-- Do not introduce React Hook Form or Zod unless requested or already adopted for the specific area being changed.
+1. React Hook Form + Zod — for structured input forms such as profile, settings, and onboarding.
+   - Use `useForm` with `zodResolver` from `@hookform/resolvers/zod`.
+   - Keep the Zod schema in a `lib/**/schema.ts` module (for example `lib/profile/schema.ts`, `lib/progress-photos/schema.ts`) and reuse it for both validation and inferred types.
+   - Follow the existing examples in `features/settings/components/*` (`profile-section.tsx`, `training-section.tsx`, `weight-goal-section.tsx`) and `features/onboarding/onboarding-flow.tsx`.
+   - Use `components/shared/form-field.tsx` for the label/control/error wrapper.
+
+2. Store-driven drafts — for the workout editor.
+   - Follow `features/workout-form` backed by `useWorkoutDraftStore`. Commit logic stays close to the store.
+
+For new forms, default to React Hook Form + Zod unless the work belongs to the workout-draft flow, which stays store-driven.
+
+In both patterns:
+
 - Validate before committing state or persisting data.
 - Show feedback with existing `sonner` toast patterns where appropriate.
 - Keep save/commit logic close to the relevant store or domain helper, not scattered across many components.
@@ -195,7 +209,7 @@ Do not:
 - rewrite unrelated files
 - perform broad refactors while implementing a small task
 - introduce a new state library without explicit request
-- introduce a new form library without explicit request
+- introduce another form library beyond the adopted React Hook Form + Zod and store-driven patterns without explicit request
 - introduce a new UI library without explicit request
 - move the project into `src/`
 - bypass strict TypeScript
