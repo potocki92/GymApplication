@@ -24,7 +24,7 @@ import { ProgressTimeline } from "./components/progress-timeline";
 import { StreakCard } from "./components/streak-card";
 import { TimelapsePlayer } from "./components/timelapse-player";
 import { TransformationHero } from "./components/transformation-hero";
-import { UploadDialog } from "./components/upload-dialog";
+import { UploadSheet } from "./components/upload-sheet";
 import { useComparisonEndpoints } from "./use-comparison-endpoints";
 
 export function ProgressPhotosView() {
@@ -151,7 +151,7 @@ export function ProgressPhotosView() {
         </>
       )}
 
-      <UploadDialog
+      <UploadSheet
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         defaultPose={pose}

@@ -48,10 +48,10 @@ export function MilestoneBadges({ records }: MilestoneBadgesProps) {
               viewport={{ once: true }}
               transition={{ delay: reduceMotion ? 0 : i * 0.05, duration: 0.25 }}
               className={cn(
-                "flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-primary/20",
+                "flex items-center gap-2.5 rounded-xl bg-card p-3 ring-1 ring-data/20",
               )}
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-data/12 text-data">
                 <Icon className="size-4" />
               </span>
               <span className="min-w-0 truncate text-sm font-medium">

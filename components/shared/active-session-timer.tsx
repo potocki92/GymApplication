@@ -24,7 +24,7 @@ export function ActiveSessionTimer({ className }: { className?: string }) {
       aria-label={t.activeWorkout.returnToWorkout}
       title={t.activeWorkout.inProgress}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20",
+        "inline-flex items-center gap-2 rounded-full border border-data/30 bg-data/10 px-3 py-1.5 text-sm font-semibold text-data transition-colors duration-fast hover:bg-data/15",
         className,
       )}
     >

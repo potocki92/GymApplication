@@ -39,7 +39,7 @@ function TechniquePreview({ exercise }: { exercise: Exercise }) {
       >
         {t.exercises.detail.techniqueSheet.preview}
       </p>
-      <div className="overflow-hidden rounded-2xl bg-background ring-1 ring-foreground/10">
+      <div className="overflow-hidden rounded-2xl bg-background ring-1 ring-border">
         {exercise.animationUrl && isVideo(exercise.animationUrl) ? (
           <video
             src={exercise.animationUrl}
@@ -230,10 +230,10 @@ export function ExerciseTechniqueSheet({
                   {steps.map((step, index) => (
                     <article
                       key={`${step.title}-${index}`}
-                      className="rounded-2xl bg-card p-3 ring-1 ring-foreground/10"
+                      className="rounded-2xl bg-card p-3 ring-1 ring-border"
                     >
                       <div className="flex gap-3">
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary ring-1 ring-primary/25">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-data/12 text-xs font-bold text-data ring-1 ring-data/25">
                           {index + 1}
                         </span>
                         <div className="min-w-0 space-y-1">
@@ -257,8 +257,8 @@ export function ExerciseTechniqueSheet({
                 >
                   {t.exercises.detail.techniqueSheet.muscles}
                 </h3>
-                <div className="rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
-                  <div className="mb-4 flex items-center justify-center rounded-2xl bg-primary/10 py-5 text-primary ring-1 ring-primary/20">
+                <div className="rounded-2xl bg-card p-4 ring-1 ring-border">
+                  <div className="mb-4 flex items-center justify-center rounded-2xl bg-data/10 py-5 text-data ring-1 ring-data/20">
                     <Dumbbell className="size-12" aria-hidden="true" />
                   </div>
                   <MuscleList
@@ -313,8 +313,8 @@ function MuscleList({
             key={item}
             className={
               highlighted
-                ? "rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary ring-1 ring-primary/25"
-                : "rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-foreground/10"
+                ? "rounded-full bg-data/12 px-3 py-1 text-xs font-semibold text-data ring-1 ring-data/25"
+                : "rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border"
             }
           >
             {item}
@@ -337,13 +337,13 @@ function InfoListCard({
   warning?: boolean;
 }) {
   return (
-    <section className="rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+    <section className="rounded-2xl bg-card p-4 ring-1 ring-border">
       <div className="mb-3 flex items-center gap-2">
         <span
           className={
             warning
               ? "flex size-8 items-center justify-center rounded-full bg-destructive/10 text-destructive"
-              : "flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary"
+              : "flex size-8 items-center justify-center rounded-full bg-data/12 text-data"
           }
         >
           {icon}

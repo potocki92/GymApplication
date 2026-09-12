@@ -46,7 +46,7 @@ function PlateCalculatorBody({ initialWeightKg }: { initialWeightKg: number }) {
         </p>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-lg bg-primary/10 px-3 py-2">
+          <div className="flex items-center justify-between rounded-lg bg-data/10 px-3 py-2">
             <span className="text-sm font-medium text-primary">
               {t.plates.perSide}
             </span>
@@ -66,7 +66,7 @@ function PlateCalculatorBody({ initialWeightKg }: { initialWeightKg: number }) {
                 {grouped.map(({ size, count }) => (
                   <span
                     key={size}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-sm font-medium ring-1 ring-foreground/10 tabular-nums"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-sm font-medium ring-1 ring-border tabular-nums"
                   >
                     <span>
                       {size} {t.units.kg}

@@ -53,7 +53,7 @@ export function SessionCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+    <article className="overflow-hidden rounded-xl bg-card ring-1 ring-border">
       <header className="space-y-2 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">

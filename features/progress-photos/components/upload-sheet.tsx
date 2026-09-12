@@ -37,7 +37,7 @@ import { CameraCapture } from "./camera-capture";
 import { PhotoDropzone } from "./photo-dropzone";
 import { PhotoPreview } from "./photo-preview";
 
-interface UploadDialogProps {
+interface UploadSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultPose?: ProgressPose;
@@ -58,7 +58,7 @@ function useCameraSupported(): boolean {
   );
 }
 
-export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogProps) {
+export function UploadSheet({ open, onOpenChange, defaultPose }: UploadSheetProps) {
   const t = useDictionary();
   const add = useProgressPhotosStore((s) => s.add);
   const records = useProgressPhotosStore((s) => s.records);

@@ -206,7 +206,7 @@ export function ActiveWorkoutView() {
             return (
               <div
                 key={ex.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+                className="flex items-center justify-between gap-3 rounded-xl bg-card p-3 ring-1 ring-border"
               >
                 <span className="line-clamp-1 text-sm font-medium">
                   {meta?.name ?? t.activeWorkout.exercise}
@@ -265,7 +265,7 @@ export function ActiveWorkoutView() {
         />
 
         {LIVE_HR_ENABLED ? (
-          <div className="space-y-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
+          <div className="space-y-2 rounded-xl bg-card p-3 ring-1 ring-border">
             <LiveHeartRateChart samples={liveChartSamples} zones={zones} />
             <HrZoneLegend
               zones={zones}

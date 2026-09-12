@@ -25,8 +25,10 @@ interface SegmentedControlProps<T extends string> {
   className?: string;
 }
 
+// Segment hit area = root height - 2x padding - 2x border; both sizes land on
+// 34px so the control stays a comfortable target on a phone.
 const SIZE = {
-  sm: { root: "h-9 p-0.5", item: "px-2.5 text-xs", gap: "gap-1.5", icon: "size-3.5" },
+  sm: { root: "h-10 p-0.5", item: "px-2 text-xs", gap: "gap-1.5", icon: "size-3.5" },
   default: { root: "h-11 p-1", item: "px-3 text-sm", gap: "gap-2", icon: "size-4" },
 } as const;
 
@@ -144,7 +146,7 @@ export function SegmentedControl<T extends string>({
               />
             ) : null}
             <span className={cn("relative z-10 inline-flex items-center truncate", s.gap)}>
-              {Icon ? <Icon className={s.icon} /> : null}
+              {Icon ? <Icon className={cn("hidden sm:block", s.icon)} /> : null}
               {option.label}
             </span>
           </button>

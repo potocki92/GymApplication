@@ -51,7 +51,7 @@ export function GoalCard({
               "rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
               progress.achieved
                 ? "bg-success/15 text-success"
-                : "bg-primary/15 text-primary",
+                : "bg-data/12 text-data",
             )}
           >
             {progress.achieved ? t.goals.status.achieved : `${progress.progressPct}%`}

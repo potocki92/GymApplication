@@ -95,7 +95,7 @@ export function SetLogger({ session }: { session: ActiveSession }) {
     );
 
   return (
-    <div className="space-y-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+    <div className="space-y-4 rounded-xl bg-card p-4 ring-1 ring-border">
       <div className="flex items-center justify-between">
         <span className="font-heading text-sm font-semibold">
           {t.activeWorkout.setOf

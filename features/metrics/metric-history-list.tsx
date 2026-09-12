@@ -46,7 +46,7 @@ export function MetricHistoryList({
         return (
           <li
             key={r.id}
-            className="flex items-center gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10"
+            className="flex items-center gap-3 rounded-xl bg-card p-3 ring-1 ring-border"
           >
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">

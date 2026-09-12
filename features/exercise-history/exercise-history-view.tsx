@@ -92,9 +92,9 @@ export function ExerciseHistoryView({ exerciseId }: { exerciseId: string }) {
         onClose={() => setIsTechniqueOpen(false)}
       />
 
-      <div className="rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+      <div className="rounded-xl bg-card p-4 ring-1 ring-border">
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-data/12 text-data">
             <Trophy className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
@@ -138,7 +138,7 @@ export function ExerciseHistoryView({ exerciseId }: { exerciseId: string }) {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+          <div className="overflow-hidden rounded-xl bg-card ring-1 ring-border">
             <div className="grid grid-cols-[1.4fr_1fr_0.6fr_0.6fr_0.8fr] gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <span>{t.exercises.detail.columns.date}</span>
               <span className="text-right">{t.exercises.detail.columns.weight}</span>

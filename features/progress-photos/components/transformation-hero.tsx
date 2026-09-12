@@ -31,10 +31,10 @@ export function TransformationHero({
       ? "text-muted-foreground"
       : delta < 0
         ? "text-primary"
-        : "text-accent";
+        : "text-data";
 
   return (
-    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-card to-accent/5 p-4 ring-1 ring-primary/20 sm:p-5">
+    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-data/10 via-card to-card p-4 ring-1 ring-data/20 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">

@@ -9,7 +9,7 @@ import { useProgressPhotosStore } from "@/store";
 import type { MilestoneKind } from "@/lib/progress-photos/streak-utils";
 
 const DISMISS_MS = 2400;
-const PARTICLE_COLORS = ["var(--color-primary)", "var(--color-accent)", "var(--color-info)"];
+const PARTICLE_COLORS = ["var(--color-data)", "var(--color-foreground)", "var(--color-data-muted)"];
 
 /**
  * Brief, full-screen reward shown when an upload crosses a count milestone.
@@ -87,9 +87,9 @@ export function CelebrationOverlay() {
               initial={{ scale: reduceMotion ? 1 : 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 320, damping: 18 }}
-              className="flex flex-col items-center gap-3 rounded-3xl bg-card px-8 py-7 text-center shadow-[0_0_60px_-12px] shadow-primary/50 ring-1 ring-primary/30"
+              className="flex flex-col items-center gap-3 rounded-3xl bg-card px-8 py-7 text-center shadow-[0_0_60px_-12px] shadow-data/40 ring-1 ring-data/25"
             >
-              <span className="flex size-16 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+              <span className="flex size-16 items-center justify-center rounded-2xl bg-data/12 text-data">
                 <Sparkles className="size-8" />
               </span>
               <p className="max-w-[16rem] font-heading text-lg font-semibold leading-tight">

@@ -22,7 +22,7 @@ const TONE_RING = {
 
 const TONE_ICON_BG = {
   success: "bg-success/15 text-success",
-  info: "bg-primary/15 text-primary",
+  info: "bg-data/12 text-data",
   warning: "bg-warning/15 text-warning",
   neutral: "bg-muted text-muted-foreground",
 } as const;

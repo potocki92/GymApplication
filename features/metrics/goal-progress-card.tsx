@@ -33,7 +33,7 @@ export function GoalProgressCard() {
 
   const tierColor: Record<string, string> = {
     ahead: "bg-success/15 text-success",
-    "on-track": "bg-primary/15 text-primary",
+    "on-track": "bg-data/12 text-data",
     behind: "bg-destructive/15 text-destructive",
   };
   const tierIndicator: Record<string, string> = {

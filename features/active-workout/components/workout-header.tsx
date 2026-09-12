@@ -63,7 +63,7 @@ export function WorkoutHeader({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {status === "paused" ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[0.7rem] font-medium text-primary">
+            <span className="inline-flex items-center gap-1 rounded-full bg-data/12 px-2 py-0.5 text-[0.7rem] font-medium text-data">
               <Pause className="size-3" />
               {t.activeWorkout.paused}
             </span>
@@ -73,7 +73,7 @@ export function WorkoutHeader({
               {t.activeWorkout.finalSetOfWorkout}
             </span>
           ) : showLastExerciseBadge ? (
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[0.7rem] font-semibold text-primary">
+            <span className="rounded-full bg-data/12 px-2 py-0.5 text-[0.7rem] font-semibold text-data">
               {t.activeWorkout.lastExerciseBadge}
             </span>
           ) : null}

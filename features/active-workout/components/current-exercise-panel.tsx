@@ -22,7 +22,7 @@ export function CurrentExercisePanel({ session }: { session: ActiveSession }) {
   const pct = progress.total === 0 ? 0 : (progress.done / progress.total) * 100;
 
   return (
-    <div className="space-y-4 overflow-hidden rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+    <div className="space-y-4 overflow-hidden rounded-xl bg-card p-4 ring-1 ring-border">
       <AnimatePresence mode="wait">
         <motion.div
           key={session.currentExerciseIndex}
@@ -61,11 +61,11 @@ export function CurrentExercisePanel({ session }: { session: ActiveSession }) {
                 <span
                   key={s.id}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium tabular-nums ring-1 ring-foreground/10",
+                    "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium tabular-nums ring-1 ring-border",
                     s.status === "completed" && "bg-success/15 text-success",
                     s.status === "skipped" &&
                       "bg-muted text-muted-foreground line-through",
-                    s.status === "active" && "bg-primary/15 text-primary",
+                    s.status === "active" && "bg-data/12 text-data",
                     s.status === "pending" && "bg-muted/50 text-muted-foreground",
                     isCurrent && "ring-2 ring-primary/50",
                   )}

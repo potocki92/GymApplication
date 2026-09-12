@@ -21,7 +21,7 @@ const ACTIVE_CLASS: Record<Tier, string> = {
 
 const IDLE_CLASS: Record<Tier, string> = {
   success: "bg-success/10 text-success",
-  primary: "bg-primary/10 text-primary",
+  primary: "bg-data/12 text-data",
   warning: "bg-warning/10 text-warning",
   destructive: "bg-destructive/10 text-destructive",
 };

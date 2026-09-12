@@ -209,7 +209,7 @@ export function SessionSummary({
               return (
                 <li
                   key={pr.exerciseId}
-                  className="flex items-center gap-3 rounded-xl bg-primary/10 p-3 ring-1 ring-primary/30"
+                  className="flex items-center gap-3 rounded-xl bg-data/10 p-3 ring-1 ring-data/25"
                 >
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <Trophy className="size-4" />
@@ -239,7 +239,7 @@ export function SessionSummary({
         </section>
       ) : null}
 
-      <section className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+      <section className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-border">
         <div>
           <Label className="text-sm">{t.activeWorkout.summary.ratingLabel}</Label>
           <p className="text-xs text-muted-foreground">

@@ -28,7 +28,7 @@ export function ExerciseRow({ exercise }: { exercise: Exercise }) {
   return (
     <Link
       href={`/exercises/${exercise.id}`}
-      className="relative flex items-stretch gap-4 rounded-2xl border border-border bg-card p-3 transition-all hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="relative flex items-stretch gap-4 rounded-2xl border border-border bg-card p-3 transition-colors duration-fast hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-muted">
         {exercise.image ? (
@@ -61,14 +61,14 @@ export function ExerciseRow({ exercise }: { exercise: Exercise }) {
         </div>
         <p className="text-xs text-muted-foreground">
           {lastPrefix}:{" "}
-          <span className="font-medium tabular-nums text-primary">
+          <span className="font-medium tabular-nums text-data">
             {lastLabel}
           </span>
         </p>
       </div>
 
       {pr ? (
-        <span className="absolute right-3 top-3 rounded-md bg-primary px-2 py-0.5 text-[10px] font-bold tracking-wide text-primary-foreground">
+        <span className="absolute right-3 top-3 rounded-full bg-data/12 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-data">
           {t.exercises.pr}
         </span>
       ) : null}

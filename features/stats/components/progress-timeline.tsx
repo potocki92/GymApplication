@@ -23,12 +23,16 @@ const ICON_BY_TYPE: Record<TimelineEvent["type"], ComponentType<{ className?: st
   goal_set: Target,
 };
 
+/**
+ * Achievements are green, setup events are neutral. The icon distinguishes the
+ * kind — colour is not a per-type label, so this never becomes a rainbow.
+ */
 const ACCENT_BY_TYPE: Record<TimelineEvent["type"], string> = {
-  first_workout: "bg-primary/15 text-primary",
-  first_weight: "bg-info/15 text-info",
-  weight_milestone: "bg-success/15 text-success",
-  pr_milestone: "bg-warning/15 text-warning",
-  goal_set: "bg-accent/15 text-accent",
+  first_workout: "bg-data/12 text-data",
+  first_weight: "bg-surface-interactive text-foreground",
+  weight_milestone: "bg-data/12 text-data",
+  pr_milestone: "bg-data/12 text-data",
+  goal_set: "bg-surface-interactive text-foreground",
 };
 
 export function ProgressTimeline({

@@ -62,7 +62,7 @@ export function HeartRatePanel({
     return (
       <div
         className={cn(
-          "flex items-center justify-between gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10",
+          "flex items-center justify-between gap-3 rounded-xl bg-card p-3 ring-1 ring-border",
           zoneClass,
         )}
       >
@@ -100,7 +100,7 @@ export function HeartRatePanel({
   return (
     <div
       className={cn(
-        "rounded-xl bg-card p-4 ring-1 ring-foreground/10",
+        "rounded-xl bg-card p-4 ring-1 ring-border",
         zoneClass,
       )}
     >
