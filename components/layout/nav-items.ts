@@ -116,3 +116,17 @@ export function isNavActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+/**
+ * Routes that own the whole screen. They run a long workflow and carry their own
+ * bottom action bar, so the mobile nav is hidden there — both to avoid stacking
+ * two bars at the bottom edge and because leaving mid-workflow should be a
+ * deliberate act, not a stray tap.
+ */
+const FULLSCREEN_ROUTES = ["/workout/active", "/plan/new"];
+
+export function isFullscreenRoute(pathname: string): boolean {
+  return FULLSCREEN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}

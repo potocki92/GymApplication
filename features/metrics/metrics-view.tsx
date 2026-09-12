@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { SectionLabel } from "@/components/ui/section-label";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,16 +95,12 @@ export function MetricsView() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">
-                {t.metrics.comparative.primary}
-              </p>
+            <div className="space-y-2">
+              <SectionLabel>{t.metrics.comparative.primary}</SectionLabel>
               <MetricSelector value={primary} onChange={setPrimary} />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">
-                {t.metrics.comparative.secondary}
-              </p>
+            <div className="space-y-2">
+              <SectionLabel>{t.metrics.comparative.secondary}</SectionLabel>
               <MetricSelector value={secondary} onChange={setSecondary} />
             </div>
           </div>

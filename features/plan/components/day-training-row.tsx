@@ -96,7 +96,7 @@ export function DayTrainingRow({
         {workout ? (
           <div className="flex items-center gap-2 sm:shrink-0 sm:pl-2">
             {!completed ? (
-              <Button size="sm" onClick={() => void handleStart()}>
+              <Button variant="outline" size="sm" onClick={() => void handleStart()}>
                 <Play className="size-4" />
                 {t.activeWorkout.start}
               </Button>
@@ -108,7 +108,7 @@ export function DayTrainingRow({
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="text-muted-foreground hover:text-primary"
+              className="text-muted-foreground hover:text-foreground"
               aria-label={t.templates.saveAsTemplate}
               title={t.templates.saveAsTemplate}
               onClick={handleSaveTemplate}

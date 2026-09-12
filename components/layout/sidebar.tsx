@@ -64,7 +64,7 @@ export function Sidebar() {
       </Link>
 
       {/* Navigation — grouped into sections. */}
-      <nav aria-label={t.app.name} className="flex flex-1 flex-col gap-1 overflow-y-auto">
+      <nav aria-label={t.nav.sidebarLabel} className="flex flex-1 flex-col gap-1 overflow-y-auto">
         {NAV_SECTIONS.map((section) => (
           <div key={section.id} className="flex flex-col gap-1">
             {collapsed ? (

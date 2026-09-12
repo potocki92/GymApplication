@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, Dumbbell, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppSheet, AppSheetBody } from "@/components/ui/app-sheet";
@@ -155,19 +156,19 @@ export function WorkoutFormView() {
         </div>
 
         <Card className="order-3 lg:col-start-1 lg:row-start-2">
-          <CardHeader className="flex-row items-center justify-between gap-3">
+          {/* `flex`, not `flex-row` — CardHeader is a grid, so only changing the
+              direction left the badge stretched across the whole column. */}
+          <CardHeader className="flex items-center justify-between gap-3">
             <CardTitle>{t.workoutForm.selectedExercises}</CardTitle>
-            <span
+            <Badge
+              variant={hasExercises ? "data" : "secondary"}
               className={cn(
-                "grid h-6 min-w-[1.625rem] place-items-center rounded-full px-2 text-xs font-bold tabular-nums transition-transform duration-200",
-                hasExercises
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground",
+                "min-w-[1.625rem] tabular-nums transition-transform duration-200",
                 bump && "scale-[1.18]",
               )}
             >
               {count}
-            </span>
+            </Badge>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button

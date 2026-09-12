@@ -42,6 +42,9 @@ export const pl = {
     },
     more: "Więcej",
     moreTitle: "Wszystkie sekcje",
+    /* Two nav landmarks (sidebar + bottom bar) must not share a name. */
+    primaryLabel: "Nawigacja główna",
+    sidebarLabel: "Nawigacja boczna",
   },
 
   commandPalette: {

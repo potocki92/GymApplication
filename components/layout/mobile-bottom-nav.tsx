@@ -16,6 +16,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store";
 import {
+  isFullscreenRoute,
   isNavActive,
   MOBILE_MORE_NAV_SECTIONS,
   MOBILE_PRIMARY_NAV_ITEMS,
@@ -40,6 +41,9 @@ export function MobileBottomNav() {
   const authUser = useAuthStore((s) => s.user);
   const canSignOut = isSupabaseConfigured() && Boolean(authUser);
 
+  // Full-screen workflows carry their own bottom action bar.
+  if (isFullscreenRoute(pathname)) return null;
+
   // "Więcej" is active whenever the current route is not one of the pinned four.
   const moreActive =
     !moreOpen &&
@@ -48,7 +52,7 @@ export function MobileBottomNav() {
   return (
     <>
       <nav
-        aria-label={t.app.name}
+        aria-label={t.nav.primaryLabel}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] supports-backdrop-filter:bg-background/80 supports-backdrop-filter:backdrop-blur-xl md:hidden"
       >
         <ul className="flex items-stretch">

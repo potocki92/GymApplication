@@ -238,6 +238,16 @@ hand-written.
 
 Active is white/foreground; inactive is muted. No large coloured highlights.
 
+The two nav landmarks must keep **distinct** accessible names
+(`nav.primaryLabel` / `nav.sidebarLabel`) — two `<nav>`s called "REPIFY" are
+indistinguishable to a screen reader.
+
+**Full-screen routes** (`isFullscreenRoute`, currently `/workout/active` and
+`/plan/new`) hide the bottom bar: they run a long workflow and carry their own
+bottom action bar, so two bars would stack at the same edge, and leaving
+mid-workflow should be deliberate. Add a route there whenever you build a screen
+with its own fixed/sticky bottom bar.
+
 To add a destination, add it to `NAV_ITEMS` with a `section` and a `t.nav` key.
 It appears in the sidebar and in "Więcej" automatically.
 
