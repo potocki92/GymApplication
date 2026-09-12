@@ -27,7 +27,7 @@ import {
 } from "@/store";
 import type { Goal, GoalType } from "@/types";
 import { GoalCard } from "./components/goal-card";
-import { GoalFormDialog } from "./components/goal-form-dialog";
+import { GoalFormSheet } from "./components/goal-form-sheet";
 
 const GOAL_ICON: Record<GoalType, typeof Dumbbell> = {
   workouts_weekly: Dumbbell,
@@ -161,7 +161,7 @@ export function GoalsView() {
         </div>
       )}
 
-      <GoalFormDialog
+      <GoalFormSheet
         open={formOpen}
         onOpenChange={setFormOpen}
         initial={editing}

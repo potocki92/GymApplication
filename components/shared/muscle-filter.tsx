@@ -1,8 +1,8 @@
 "use client";
 
+import { ChipFilter } from "@/components/shared/chip-filter";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { MUSCLE_GROUP_ORDER } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import type { MuscleGroup } from "@/types";
 
 export type MuscleFilterValue = MuscleGroup | "all";
@@ -17,29 +17,22 @@ export function MuscleFilter({
   className?: string;
 }) {
   const t = useDictionary();
-  const options: MuscleFilterValue[] = ["all", ...MUSCLE_GROUP_ORDER];
+
+  const options = [
+    { value: "all" as const, label: t.common.all },
+    ...MUSCLE_GROUP_ORDER.map((group) => ({
+      value: group,
+      label: t.muscleGroups[group],
+    })),
+  ];
 
   return (
-    <div className={cn("no-scrollbar flex gap-2 overflow-x-auto pb-1", className)}>
-      {options.map((opt) => {
-        const active = value === opt;
-        const label = opt === "all" ? t.common.all : t.muscleGroups[opt];
-        return (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onChange(opt)}
-            className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
-              active
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
+    <ChipFilter
+      value={value}
+      onChange={onChange}
+      options={options}
+      aria-label={t.exercises.filters.muscleGroup}
+      className={className}
+    />
   );
 }

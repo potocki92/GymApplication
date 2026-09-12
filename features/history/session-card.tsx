@@ -14,16 +14,9 @@ import {
   Weight,
 } from "lucide-react";
 
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { getExerciseById } from "@/data";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatClock, formatVolume, formatWeekdayDatePL } from "@/lib/format";
@@ -227,28 +220,17 @@ export function SessionCard({
         </div>
       ) : null}
 
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t.history.deleteConfirmTitle}</DialogTitle>
-            <DialogDescription>{t.history.deleteConfirmDesc}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
-              {t.common.cancel}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setConfirmDelete(false);
-                onDelete?.(session.id);
-              }}
-            >
-              {t.history.deleteCta}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t.history.deleteConfirmTitle}
+        description={t.history.deleteConfirmDesc}
+        confirmLabel={t.history.deleteCta}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          onDelete?.(session.id);
+        }}
+      />
     </article>
   );
 }

@@ -11,7 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { StatTile } from "@/features/stats/components/stat-tile";
+import { MetricCard } from "@/components/shared/metric-card";
+import { StatValue } from "@/components/shared/stat-value";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
   buildActivityCalendar,
@@ -44,24 +45,22 @@ export function ActivityCalendar({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile
+        <MetricCard
           icon={Flame}
           label={t.calendar.streak.current}
-          value={currentStreak}
+          value={<StatValue value={currentStreak} tone="data" />}
           hint={t.calendar.streak.unit}
-          accent="primary"
         />
-        <StatTile
+        <MetricCard
           icon={Trophy}
           label={t.calendar.streak.longest}
-          value={longestStreak}
+          value={<StatValue value={longestStreak} />}
           hint={t.calendar.streak.unit}
-          accent="success"
         />
-        <StatTile
+        <MetricCard
           icon={Calendar}
           label={t.calendar.streak.total}
-          value={total}
+          value={<StatValue value={total} />}
           hint={t.calendar.streak.workoutsUnit}
         />
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -33,38 +33,11 @@ import {
 import { cn } from "@/lib/utils";
 import { useHistoryStore } from "@/store";
 import type { ActiveSession } from "@/types";
+import { MetricCard } from "@/components/shared/metric-card";
+import { StatValue } from "@/components/shared/stat-value";
+
 import { AddExerciseSheet } from "./add-exercise-sheet";
 
-function StatTile({
-  icon,
-  label,
-  value,
-  className,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10",
-        className,
-      )}
-    >
-      <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="truncate font-heading text-base font-semibold tabular-nums">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function StarRating({
   value,
@@ -160,30 +133,30 @@ export function SessionSummary({
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile
-          icon={<TimerReset className="size-5" />}
+        <MetricCard
+          icon={TimerReset}
           label={t.activeWorkout.summary.duration}
-          value={formatClock(completed.totalActiveMs)}
+          value={<StatValue size="sm" value={formatClock(completed.totalActiveMs)} />}
         />
-        <StatTile
-          icon={<Layers className="size-5" />}
+        <MetricCard
+          icon={Layers}
           label={t.activeWorkout.summary.sets}
-          value={`${progress.done} / ${progress.total}`}
+          value={<StatValue size="sm" value={`${progress.done} / ${progress.total}`} />}
         />
-        <StatTile
-          icon={<Dumbbell className="size-5" />}
+        <MetricCard
+          icon={Dumbbell}
           label={t.activeWorkout.summary.exercises}
-          value={String(session.exercises.length)}
+          value={<StatValue size="sm" value={session.exercises.length} />}
         />
-        <StatTile
-          icon={<ArrowRight className="size-5" />}
+        <MetricCard
+          icon={ArrowRight}
           label={t.activeWorkout.summary.reps}
-          value={String(totalReps)}
+          value={<StatValue size="sm" value={totalReps} />}
         />
-        <StatTile
-          icon={<Weight className="size-5" />}
+        <MetricCard
+          icon={Weight}
           label={t.activeWorkout.summary.volume}
-          value={formatVolume(volume)}
+          value={<StatValue size="sm" value={formatVolume(volume)} />}
           className="col-span-2 sm:col-span-1"
         />
       </div>

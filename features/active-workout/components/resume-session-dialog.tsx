@@ -1,14 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useDictionary } from "@/hooks/use-dictionary";
 
 export function ResumeSessionDialog({
@@ -24,22 +16,18 @@ export function ResumeSessionDialog({
 }) {
   const t = useDictionary();
   return (
-    <Dialog open={open} onOpenChange={(next) => (!next ? onDiscard() : undefined)}>
-      <DialogContent showCloseButton={false}>
-        <DialogHeader>
-          <DialogTitle>{t.activeWorkout.resumeDialog.title}</DialogTitle>
-          <DialogDescription>
-            {t.activeWorkout.resumeDialog.desc}
-            {workoutName ? ` — ${workoutName}` : ""}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={onDiscard}>
-            {t.activeWorkout.resumeDialog.discard}
-          </Button>
-          <Button onClick={onResume}>{t.activeWorkout.resumeDialog.resume}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      // Closing by any route discards the recovered session — unchanged behaviour.
+      onOpenChange={(next) => {
+        if (!next) onDiscard();
+      }}
+      title={t.activeWorkout.resumeDialog.title}
+      description={`${t.activeWorkout.resumeDialog.desc}${workoutName ? ` — ${workoutName}` : ""}`}
+      cancelLabel={t.activeWorkout.resumeDialog.discard}
+      confirmLabel={t.activeWorkout.resumeDialog.resume}
+      destructive={false}
+      onConfirm={onResume}
+    />
   );
 }

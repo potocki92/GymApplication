@@ -12,6 +12,12 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  CHART_AXIS_PROPS,
+  CHART_COLORS,
+  CHART_GRID_PROPS,
+  CHART_TOOLTIP_PROPS,
+} from "@/components/shared/chart/chart-theme";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatShortWeekdayDatePL } from "@/lib/format";
 import { sortRecords } from "@/lib/metrics-utils";
@@ -79,27 +85,30 @@ export function ComparativeChart({
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+          <CartesianGrid {...CHART_GRID_PROPS} />
           <XAxis
             dataKey="date"
             tickFormatter={(iso: string) => formatShortWeekdayDatePL(iso)}
-            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-            stroke="rgba(255,255,255,0.2)"
+            {...CHART_AXIS_PROPS}
             minTickGap={24}
           />
+          {/* Dual axis is the one honest reason for a second series colour:
+              each axis is tinted to match the line it scales. */}
           <YAxis
             yAxisId="left"
             domain={["auto", "auto"]}
-            tick={{ fontSize: 11, fill: "#C6FF3D" }}
-            stroke="#C6FF3D"
+            tick={{ fontSize: 11, fill: CHART_COLORS.primary }}
+            stroke={CHART_COLORS.primary}
+            tickLine={false}
             width={42}
           />
           <YAxis
             yAxisId="right"
             orientation="right"
             domain={["auto", "auto"]}
-            tick={{ fontSize: 11, fill: "#FF5722" }}
-            stroke="#FF5722"
+            tick={{ fontSize: 11, fill: CHART_COLORS.neutral }}
+            stroke={CHART_COLORS.neutral}
+            tickLine={false}
             width={42}
           />
           <Tooltip
@@ -114,17 +123,10 @@ export function ComparativeChart({
                   : UNIT_BY_METRIC[secondary];
               return [`${value} ${unit}`];
             }}
-            contentStyle={{
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "#1a1a1a",
-              color: "#ffffff",
-              fontSize: 12,
-            }}
-            labelStyle={{ color: "rgba(255,255,255,0.7)" }}
+            {...CHART_TOOLTIP_PROPS}
           />
           <Legend
-            wrapperStyle={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}
+            wrapperStyle={{ fontSize: 12, color: "var(--muted-foreground)" }}
             formatter={(value) =>
               value === "primary"
                 ? t.metrics.metricSelector[primary]
@@ -135,18 +137,18 @@ export function ComparativeChart({
             yAxisId="left"
             type="monotone"
             dataKey="primary"
-            stroke="#C6FF3D"
+            stroke={CHART_COLORS.primary}
             strokeWidth={2}
-            dot={{ r: 3, fill: "#C6FF3D" }}
+            dot={{ r: 3, fill: CHART_COLORS.primary }}
             connectNulls
           />
           <Line
             yAxisId="right"
             type="monotone"
             dataKey="secondary"
-            stroke="#FF5722"
+            stroke={CHART_COLORS.neutral}
             strokeWidth={2}
-            dot={{ r: 3, fill: "#FF5722" }}
+            dot={{ r: 3, fill: CHART_COLORS.neutral }}
             connectNulls
           />
         </LineChart>

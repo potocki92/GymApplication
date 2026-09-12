@@ -2,17 +2,32 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * The base surface of the design system: `--card` (#161616), a single hairline
+ * ring, no shadow. Every panel in the app should be a `Card` — features must not
+ * hand-roll `rounded-xl bg-[#161616] border` wrappers.
+ *
+ * Pass `interactive` when the whole card is a link/button; it is the only way a
+ * card gets a hover response, which keeps static panels visually inert.
+ */
 function Card({
   className,
   size = "default",
+  interactive = false,
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm"
+  interactive?: boolean
+}) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-interactive={interactive || undefined}
       className={cn(
-        "group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-border has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        interactive &&
+          "cursor-pointer transition-colors duration-fast hover:bg-surface-raised hover:ring-foreground/15 focus-within:ring-ring",
         className
       )}
       {...props}
@@ -84,7 +99,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-4 group-data-[size=sm]/card:p-3",
+        "flex items-center rounded-b-xl border-t border-border bg-surface-raised/60 p-4 group-data-[size=sm]/card:p-3",
         className
       )}
       {...props}

@@ -76,12 +76,41 @@ export const NAV_ITEMS: NavItem[] = [
 
 export const NAV_SECTION_ORDER: NavSection[] = ["train", "progress", "account"];
 
+/**
+ * The four destinations pinned to the mobile bottom bar. Everything else is
+ * reachable through its "Więcej" sheet — which is a sheet, not a route, so the
+ * bar never needs a fifth entry in `NAV_ITEMS`.
+ */
+export const MOBILE_PRIMARY_NAV_KEYS = [
+  "dashboard",
+  "plan",
+  "calendar",
+  "progress",
+] as const;
+
+export type MobilePrimaryNavKey = (typeof MOBILE_PRIMARY_NAV_KEYS)[number];
+
+/** Derived, never hand-written — order follows `MOBILE_PRIMARY_NAV_KEYS`. */
+export const MOBILE_PRIMARY_NAV_ITEMS: NavItem[] = MOBILE_PRIMARY_NAV_KEYS.flatMap(
+  (key) => NAV_ITEMS.filter((item) => item.key === key),
+);
+
+const isPrimaryMobileKey = (key: NavKey): boolean =>
+  (MOBILE_PRIMARY_NAV_KEYS as readonly NavKey[]).includes(key);
+
 /** Grouped view derived from the flat list, for the sidebar + mobile drawer. */
 export const NAV_SECTIONS: { id: NavSection; items: NavItem[] }[] =
   NAV_SECTION_ORDER.map((id) => ({
     id,
     items: NAV_ITEMS.filter((item) => item.section === id),
   }));
+
+/** Same grouping, minus whatever already has a slot in the mobile bottom bar. */
+export const MOBILE_MORE_NAV_SECTIONS: { id: NavSection; items: NavItem[] }[] =
+  NAV_SECTIONS.map(({ id, items }) => ({
+    id,
+    items: items.filter((item) => !isPrimaryMobileKey(item.key)),
+  })).filter((section) => section.items.length > 0);
 
 export function isNavActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";

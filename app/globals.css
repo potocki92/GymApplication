@@ -52,6 +52,16 @@
   --color-info-foreground: var(--info-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
+  /* Elevation ladder above --card. `surface` is an alias so feature code can say
+     what it means instead of reaching for --card. */
+  --color-surface: var(--card);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-interactive: var(--surface-interactive);
+  --color-surface-hover: var(--surface-hover);
+  /* The one chromatic accent: charts, deltas, streaks, "on track" states. */
+  --color-data: var(--data);
+  --color-data-foreground: var(--data-foreground);
+  --color-data-muted: var(--data-muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -71,121 +81,94 @@
   --radius-4xl: calc(var(--radius) * 2.5);
 }
 
-/* Athletic Brutalism — single dark theme. Sharp 8px corners, near-black surfaces,
-   lime accent (#C6FF3D) and deep-orange secondary (#FF5722). */
+/* Premium dark — single theme. Black canvas, graphite surfaces, near-white as the
+   "active" color and a single green (#6ABC7E) reserved for data and success.
+   Chromatic tokens (destructive / warning / info) are semantic only: they never
+   carry brand or decoration. */
 :root {
-  --radius: 0.5rem;
+  /* 12px base → cards land at rounded-xl (15px), controls at rounded-lg (12px). */
+  --radius: 0.75rem;
 
-  --background: oklch(0.067 0 0); /* #0a0a0a */
-  --foreground: oklch(0.985 0 0); /* near white */
-  --card: oklch(0.158 0 0); /* #1a1a1a */
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.158 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --background: oklch(0.1149 0 0); /* #050505 */
+  --foreground: oklch(0.9702 0 0); /* #F5F5F5 */
+  --card: oklch(0.2002 0 0); /* #161616 */
+  --card-foreground: oklch(0.9702 0 0);
+  /* Popovers/sheets sit one step above cards so stacked surfaces stay legible. */
+  --popover: oklch(0.2221 0 0); /* #1B1B1B */
+  --popover-foreground: oklch(0.9702 0 0);
 
-  --primary: oklch(0.929 0.235 122); /* #C6FF3D lime */
-  --primary-foreground: oklch(0.067 0 0); /* dark text on lime */
-  --secondary: oklch(0.247 0 0); /* #2a2a2a */
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.247 0 0);
-  --muted-foreground: oklch(0.694 0 0); /* #a0a0a0 */
-  --accent: oklch(0.685 0.213 33); /* #FF5722 deep orange */
-  --accent-foreground: oklch(0.985 0 0);
+  --surface-raised: oklch(0.2221 0 0); /* #1B1B1B */
+  --surface-interactive: oklch(0.2435 0 0); /* #202020 */
+  /* Opaque hover step. Opaque (not white-alpha) so a control hovers to the same
+     color whether it sits on --background or inside a --card. */
+  --surface-hover: oklch(0.2891 0 0); /* #2B2B2B */
 
-  --success: oklch(0.685 0.179 142); /* #4CAF50 */
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.773 0.176 70); /* #FF9800 */
-  --warning-foreground: oklch(0.067 0 0);
-  --destructive: oklch(0.649 0.234 28); /* #F44336 */
-  --destructive-foreground: oklch(0.985 0 0);
-  --info: oklch(0.658 0.171 250); /* #2196F3 */
-  --info-foreground: oklch(0.985 0 0);
+  /* Active elements are near-white on near-black — no brand hue. */
+  --primary: oklch(0.9851 0 0); /* #FAFAFA */
+  --primary-foreground: oklch(0.1638 0 0); /* #0E0E0E */
+  --secondary: oklch(0.2435 0 0); /* #202020 */
+  --secondary-foreground: oklch(0.9702 0 0);
+  --muted: oklch(0.2221 0 0);
+  --muted-foreground: oklch(0.6614 0.0119 256.7); /* #8E939A */
+  /* `accent` is shadcn's hover/focus surface (dropdown, select, command) — not a
+     brand color. Keeping it graphite is what removes orange app-wide. */
+  --accent: oklch(0.2435 0 0);
+  --accent-foreground: oklch(0.9702 0 0);
 
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.929 0.235 122);
+  /* The single chromatic accent. `success` is the same green by definition. */
+  --data: oklch(0.7266 0.121 150.3); /* #6ABC7E */
+  --data-foreground: oklch(0.1638 0 0);
+  --data-muted: oklch(0.625 0.1151 150.3); /* #4E9B62 — secondary series */
+  --success: var(--data);
+  --success-foreground: var(--data-foreground);
 
-  /* Chart palette — keyed off accents, designed for the dark canvas. */
-  --chart-1: oklch(0.929 0.235 122); /* lime */
-  --chart-2: oklch(0.685 0.213 33); /* orange */
-  --chart-3: oklch(0.658 0.171 250); /* blue */
-  --chart-4: oklch(0.685 0.179 142); /* green */
-  --chart-5: oklch(0.649 0.234 28); /* red */
+  --warning: oklch(0.7819 0.1585 72.3); /* #F5A524 — semantic only */
+  --warning-foreground: oklch(0.1638 0 0);
+  --destructive: oklch(0.6256 0.1933 23); /* #E5484D — semantic only */
+  --destructive-foreground: oklch(0.9702 0 0);
+  --info: oklch(0.6708 0.1089 247.5); /* #5B9BD5 — semantic only */
+  --info-foreground: oklch(0.1638 0 0);
 
-  /* Heatmap ramp from neutral surface to full-lime accent. */
-  --heat-0: oklch(0.18 0 0);
-  --heat-1: oklch(0.32 0.06 122);
-  --heat-2: oklch(0.5 0.12 122);
-  --heat-3: oklch(0.72 0.19 122);
-  --heat-4: oklch(0.929 0.235 122);
+  --border: oklch(1 0 0 / 9%); /* ≈ #2B2B2B over the card surface */
+  --input: oklch(1 0 0 / 10%);
+  /* Focus ring is neutral and quiet; visibility comes from width, not color. */
+  --ring: oklch(0.9702 0 0 / 45%);
+
+  /* Charts default to one green series; the rest are neutral steps so a chart
+     never turns into a rainbow. Reach for chart-4/5 only for true semantics. */
+  --chart-1: var(--data);
+  --chart-2: oklch(0.9702 0 0 / 55%); /* neutral comparison series */
+  --chart-3: var(--data-muted);
+  --chart-4: var(--warning);
+  --chart-5: var(--destructive);
+
+  /* Heatmap ramp: graphite → green. */
+  --heat-0: oklch(0.2002 0 0);
+  --heat-1: oklch(0.3334 0.0305 153.8);
+  --heat-2: oklch(0.4646 0.062 151);
+  --heat-3: oklch(0.5956 0.0915 150.7);
+  --heat-4: var(--data);
 
   /* Sidebar is the deepest surface so it visually anchors the layout. */
-  --sidebar: oklch(0.04 0 0);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.929 0.235 122);
-  --sidebar-primary-foreground: oklch(0.067 0 0);
-  --sidebar-accent: oklch(0.158 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.929 0.235 122);
+  --sidebar: oklch(0.0656 0 0); /* #020202-ish, below --background */
+  --sidebar-foreground: oklch(0.9702 0 0);
+  --sidebar-primary: oklch(0.9702 0 0);
+  --sidebar-primary-foreground: oklch(0.1638 0 0);
+  --sidebar-accent: oklch(0.2002 0 0);
+  --sidebar-accent-foreground: oklch(0.9702 0 0);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.9702 0 0 / 45%);
 
-  /* Glass header — frosted near-black pane over scrolling content. */
-  --header-bg: oklch(0.067 0 0 / 0.72);
-  --header-border: oklch(1 0 0 / 8%);
+  /* Glass header — frosted black pane over scrolling content. */
+  --header-bg: oklch(0.1149 0 0 / 0.78);
+  --header-border: oklch(1 0 0 / 7%);
   --header-blur: 20px;
 }
 
-/* Mirrored block so `.dark` selectors in shadcn primitives still match — there is
-   no light theme; the `dark` class on <html> activates `dark:` Tailwind variants. */
-.dark {
-  --background: oklch(0.067 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.158 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.158 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.929 0.235 122);
-  --primary-foreground: oklch(0.067 0 0);
-  --secondary: oklch(0.247 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.247 0 0);
-  --muted-foreground: oklch(0.694 0 0);
-  --accent: oklch(0.685 0.213 33);
-  --accent-foreground: oklch(0.985 0 0);
-  --success: oklch(0.685 0.179 142);
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.773 0.176 70);
-  --warning-foreground: oklch(0.067 0 0);
-  --destructive: oklch(0.649 0.234 28);
-  --destructive-foreground: oklch(0.985 0 0);
-  --info: oklch(0.658 0.171 250);
-  --info-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.929 0.235 122);
-  --chart-1: oklch(0.929 0.235 122);
-  --chart-2: oklch(0.685 0.213 33);
-  --chart-3: oklch(0.658 0.171 250);
-  --chart-4: oklch(0.685 0.179 142);
-  --chart-5: oklch(0.649 0.234 28);
-  --heat-0: oklch(0.18 0 0);
-  --heat-1: oklch(0.32 0.06 122);
-  --heat-2: oklch(0.5 0.12 122);
-  --heat-3: oklch(0.72 0.19 122);
-  --heat-4: oklch(0.929 0.235 122);
-  --sidebar: oklch(0.04 0 0);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.929 0.235 122);
-  --sidebar-primary-foreground: oklch(0.067 0 0);
-  --sidebar-accent: oklch(0.158 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.929 0.235 122);
-
-  --header-bg: oklch(0.067 0 0 / 0.72);
-  --header-border: oklch(1 0 0 / 8%);
-  --header-blur: 20px;
-}
+/* There is exactly one theme. `:root` above carries it, so `.dark` needs no
+   token overrides — the `dark` class on <html> exists only to activate the
+   `dark:` Tailwind variants baked into the shadcn primitives. Do not re-add a
+   mirrored copy of the palette here; it only drifts. */
 
 @layer base {
   * {

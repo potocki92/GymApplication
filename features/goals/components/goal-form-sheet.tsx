@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AppSheet,
+  AppSheetBody,
+  AppSheetFooter,
+} from "@/components/ui/app-sheet";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleChip } from "@/components/ui/toggle-chip";
@@ -49,11 +47,7 @@ function GoalFormBody({
 
   return (
     <form onSubmit={handleSubmit} className="contents">
-      <DialogHeader>
-        <DialogTitle>{initial ? t.goals.editGoal : t.goals.addGoal}</DialogTitle>
-      </DialogHeader>
-
-      <div className="grid gap-4">
+      <AppSheetBody className="grid gap-4">
         <div className="space-y-1.5">
           <Label>{t.goals.typeLabel}</Label>
           <div className="flex flex-wrap gap-1.5">
@@ -87,19 +81,19 @@ function GoalFormBody({
           />
         </div>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      </div>
+      </AppSheetBody>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <AppSheetFooter>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           {t.common.cancel}
         </Button>
         <Button type="submit">{t.common.save}</Button>
-      </DialogFooter>
+      </AppSheetFooter>
     </form>
   );
 }
 
-export function GoalFormDialog({
+export function GoalFormSheet({
   open,
   onOpenChange,
   initial,
@@ -110,20 +104,25 @@ export function GoalFormDialog({
   initial?: Goal | null;
   onSubmit: (value: GoalFormValue) => void;
 }) {
+  const t = useDictionary();
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        {open ? (
-          <GoalFormBody
-            initial={initial ?? null}
-            onSubmit={(value) => {
-              onSubmit(value);
-              onOpenChange(false);
-            }}
-            onCancel={() => onOpenChange(false)}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={initial ? t.goals.editGoal : t.goals.addGoal}
+      size="sm"
+    >
+      {open ? (
+        <GoalFormBody
+          initial={initial ?? null}
+          onSubmit={(value) => {
+            onSubmit(value);
+            onOpenChange(false);
+          }}
+          onCancel={() => onOpenChange(false)}
+        />
+      ) : null}
+    </AppSheet>
   );
 }

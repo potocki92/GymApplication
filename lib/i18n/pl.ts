@@ -33,6 +33,15 @@ export const pl = {
       progress: "Postępy",
       account: "Konto",
     },
+    /** Compact labels for the mobile bottom bar, where space is ~64px per tab. */
+    short: {
+      dashboard: "Pulpit",
+      plan: "Plan",
+      calendar: "Kalendarz",
+      progress: "Postęp",
+    },
+    more: "Więcej",
+    moreTitle: "Wszystkie sekcje",
   },
 
   commandPalette: {
@@ -106,6 +115,12 @@ export const pl = {
     add: "Dodaj",
     save: "Zapisz",
     cancel: "Anuluj",
+    close: "Zamknij",
+    apply: "Zastosuj",
+    reset: "Resetuj",
+    filters: "Filtry",
+    activeFilters: "Aktywne filtry",
+    more: "Więcej",
     edit: "Edytuj",
     delete: "Usuń",
     remove: "Usuń",
@@ -314,6 +329,7 @@ export const pl = {
   calendar: {
     title: "Kalendarz treningów",
     subtitle: "Zaplanowane i wykonane treningi w jednym widoku",
+    viewLabel: "Widok kalendarza",
     views: {
       month: "Miesiąc",
       activity: "Aktywność",
@@ -409,6 +425,11 @@ export const pl = {
     empty: "Nie znaleziono ćwiczeń",
     emptyHint: "Spróbuj zmienić wyszukiwanie, filtr partii mięśniowej lub sprzętu.",
     count: "ćwiczeń",
+    filters: {
+      muscleGroup: "Partia mięśniowa",
+      category: "Kategoria",
+      search: "Wyszukiwanie",
+    },
     defaults: "Domyślnie",
     last: "Ostatnio",
     equipment: "Sprzęt",
@@ -824,6 +845,11 @@ export const pl = {
     filterAll: "Wszystkie",
     filterRated: "Z oceną",
     filterUnrated: "Bez oceny",
+    filters: {
+      search: "Wyszukiwanie",
+      range: "Zakres dat",
+      rating: "Ocena",
+    },
     cardLabels: {
       duration: "Czas",
       volume: "Objętość",
@@ -998,6 +1024,7 @@ export const pl = {
     emptyDescription:
       "Dodaj pierwsze zdjęcie, aby zacząć śledzić wizualne zmiany sylwetki.",
     emptyAction: "Dodaj pierwsze zdjęcie",
+    poseLabel: "Ujęcie",
     poses: {
       front: "Przód",
       side: "Bok",

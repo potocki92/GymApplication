@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AppSheet, AppSheetBody } from "@/components/ui/app-sheet";
 import { Stepper } from "@/components/ui/stepper";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { calculatePlates, DEFAULT_BAR_KG } from "@/lib/plate-utils";
@@ -30,12 +24,7 @@ function PlateCalculatorBody({ initialWeightKg }: { initialWeightKg: number }) {
   const grouped = groupPlates(result.plates);
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{t.plates.title}</DialogTitle>
-        <DialogDescription>{t.plates.subtitle}</DialogDescription>
-      </DialogHeader>
-
+    <AppSheetBody className="grid gap-3">
       <div className="grid grid-cols-2 gap-3">
         <Stepper
           label={t.plates.target}
@@ -98,11 +87,11 @@ function PlateCalculatorBody({ initialWeightKg }: { initialWeightKg: number }) {
           ) : null}
         </div>
       )}
-    </>
+    </AppSheetBody>
   );
 }
 
-export function PlateCalculatorDialog({
+export function PlateCalculatorSheet({
   open,
   onOpenChange,
   initialWeightKg,
@@ -111,11 +100,17 @@ export function PlateCalculatorDialog({
   onOpenChange: (open: boolean) => void;
   initialWeightKg: number;
 }) {
+  const t = useDictionary();
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        {open ? <PlateCalculatorBody initialWeightKg={initialWeightKg} /> : null}
-      </DialogContent>
-    </Dialog>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t.plates.title}
+      description={t.plates.subtitle}
+      size="sm"
+    >
+      {open ? <PlateCalculatorBody initialWeightKg={initialWeightKg} /> : null}
+    </AppSheet>
   );
 }

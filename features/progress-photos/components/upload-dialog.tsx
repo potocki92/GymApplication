@@ -5,10 +5,10 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
-  BottomSheet,
-  BottomSheetBody,
-  BottomSheetFooter,
-} from "@/components/ui/bottom-sheet";
+  AppSheet,
+  AppSheetBody,
+  AppSheetFooter,
+} from "@/components/ui/app-sheet";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
@@ -191,7 +191,7 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
   };
 
   return (
-    <BottomSheet
+    <AppSheet
       open={open}
       onOpenChange={(next) => {
         if (!next) reset();
@@ -199,10 +199,10 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
       }}
       title={t.progressPhotos.upload.title}
       description={t.progressPhotos.upload.description}
-      dismissOnDrag={!uploading}
+      locked={uploading}
     >
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <BottomSheetBody className="grid gap-3">
+        <AppSheetBody className="grid gap-3">
           <PhotoDropzone
             onFile={handleFile}
             disabled={uploading}
@@ -283,9 +283,9 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
           <p className="text-[11px] text-muted-foreground">
             {t.progressPhotos.upload.tips}
           </p>
-        </BottomSheetBody>
+        </AppSheetBody>
 
-        <BottomSheetFooter>
+        <AppSheetFooter>
           {uploading ? (
             <div className="flex w-full flex-col gap-1.5 sm:mr-auto sm:max-w-[14rem]">
               <Progress
@@ -306,7 +306,7 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
           <Button type="submit" disabled={!file || uploading}>
             {uploading ? phaseLabel : t.progressPhotos.upload.submit}
           </Button>
-        </BottomSheetFooter>
+        </AppSheetFooter>
       </form>
 
       <CameraCapture
@@ -315,6 +315,6 @@ export function UploadDialog({ open, onOpenChange, defaultPose }: UploadDialogPr
         ghostRecord={ghostRecord}
         onCapture={handleFile}
       />
-    </BottomSheet>
+    </AppSheet>
   );
 }

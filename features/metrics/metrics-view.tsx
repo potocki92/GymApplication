@@ -19,7 +19,7 @@ import { useMetricsStore, useProfileStore } from "@/store";
 import type { BodyMetricKey, BodyMetricRecord } from "@/types";
 import { ComparativeChart } from "./comparative-chart";
 import { GoalProgressCard } from "./goal-progress-card";
-import { MetricFormDialog } from "./metric-form-dialog";
+import { MetricFormSheet } from "./metric-form-sheet";
 import { MetricHistoryList } from "./metric-history-list";
 import { MetricSelector } from "./metric-selector";
 import { WeightChart } from "./weight-chart";
@@ -120,7 +120,7 @@ export function MetricsView() {
         <MetricHistoryList onEdit={openEdit} />
       </section>
 
-      <MetricFormDialog
+      <MetricFormSheet
         open={formOpen}
         onOpenChange={setFormOpen}
         initial={editing}

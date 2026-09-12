@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getExerciseById } from "@/data";
-import { WorkoutSwapDialog } from "@/features/plan/components/workout-swap-dialog";
+import { WorkoutSwapSheet } from "@/features/plan/components/workout-swap-sheet";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { weekdayFromISO } from "@/lib/calendar-utils";
 import { formatMinutes, formatVolume } from "@/lib/format";
@@ -134,7 +134,7 @@ export function TodayWorkoutCard({
       </CardContent>
 
       {weekday ? (
-        <WorkoutSwapDialog
+        <WorkoutSwapSheet
           open={swapOpen}
           onOpenChange={setSwapOpen}
           todayWeekday={weekday}

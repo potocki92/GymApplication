@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AppSheet,
+  AppSheetBody,
+  AppSheetFooter,
+} from "@/components/ui/app-sheet";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDictionary } from "@/hooks/use-dictionary";
@@ -55,11 +53,7 @@ function GoalEditorBody({
 
   return (
     <form onSubmit={handleSubmit} className="contents">
-      <DialogHeader>
-        <DialogTitle>{t.metrics.goalSection.title}</DialogTitle>
-      </DialogHeader>
-
-      <div className="grid gap-3">
+      <AppSheetBody className="grid gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="goal-start">{t.metrics.goalSection.startKg}</Label>
           <Input
@@ -86,19 +80,19 @@ function GoalEditorBody({
           />
         </div>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      </div>
+      </AppSheetBody>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <AppSheetFooter>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           {t.metrics.cancel}
         </Button>
         <Button type="submit">{t.metrics.save}</Button>
-      </DialogFooter>
+      </AppSheetFooter>
     </form>
   );
 }
 
-export function GoalEditorDialog({
+export function GoalEditorSheet({
   open,
   onOpenChange,
   initial,
@@ -109,20 +103,25 @@ export function GoalEditorDialog({
   initial?: BodyMetricGoal | null;
   onSubmit: (goal: BodyMetricGoal) => void;
 }) {
+  const t = useDictionary();
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        {open ? (
-          <GoalEditorBody
-            initial={initial ?? null}
-            onSubmit={(g) => {
-              onSubmit(g);
-              onOpenChange(false);
-            }}
-            onCancel={() => onOpenChange(false)}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t.metrics.goalSection.title}
+      size="sm"
+    >
+      {open ? (
+        <GoalEditorBody
+          initial={initial ?? null}
+          onSubmit={(g) => {
+            onSubmit(g);
+            onOpenChange(false);
+          }}
+          onCancel={() => onOpenChange(false)}
+        />
+      ) : null}
+    </AppSheet>
   );
 }

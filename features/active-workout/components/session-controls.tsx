@@ -3,15 +3,8 @@
 import { useState } from "react";
 import { Flag, LogOut, Pause, Play, Redo2, Undo2 } from "lucide-react";
 
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { useActiveSessionStore } from "@/store";
 import type { SessionStatus } from "@/types";
@@ -107,54 +100,30 @@ export function SessionControls({
         </Button>
       </div>
 
-      <Dialog open={confirmFinish} onOpenChange={setConfirmFinish}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t.activeWorkout.finishConfirmTitle}</DialogTitle>
-            <DialogDescription>
-              {t.activeWorkout.finishConfirmDesc}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmFinish(false)}>
-              {t.common.cancel}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setConfirmFinish(false);
-                finishEarly();
-                onAfterAction?.();
-              }}
-            >
-              {t.activeWorkout.finish}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmFinish}
+        onOpenChange={setConfirmFinish}
+        title={t.activeWorkout.finishConfirmTitle}
+        description={t.activeWorkout.finishConfirmDesc}
+        confirmLabel={t.activeWorkout.finish}
+        onConfirm={() => {
+          setConfirmFinish(false);
+          finishEarly();
+          onAfterAction?.();
+        }}
+      />
 
-      <Dialog open={confirmExit} onOpenChange={setConfirmExit}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t.activeWorkout.exitConfirmTitle}</DialogTitle>
-            <DialogDescription>{t.activeWorkout.exitConfirmDesc}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmExit(false)}>
-              {t.common.cancel}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setConfirmExit(false);
-                onExit();
-              }}
-            >
-              {t.activeWorkout.exit}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmExit}
+        onOpenChange={setConfirmExit}
+        title={t.activeWorkout.exitConfirmTitle}
+        description={t.activeWorkout.exitConfirmDesc}
+        confirmLabel={t.activeWorkout.exit}
+        onConfirm={() => {
+          setConfirmExit(false);
+          onExit();
+        }}
+      />
     </div>
   );
 }

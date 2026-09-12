@@ -5,10 +5,10 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
-  BottomSheet,
-  BottomSheetBody,
-  BottomSheetFooter,
-} from "@/components/ui/bottom-sheet";
+  AppSheet,
+  AppSheetBody,
+  AppSheetFooter,
+} from "@/components/ui/app-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -123,15 +123,15 @@ export function EditPhotoSheet({
   };
 
   return (
-    <BottomSheet
+    <AppSheet
       open={open}
       onOpenChange={onOpenChange}
       title={t.progressPhotos.edit.title}
       description={t.progressPhotos.edit.description}
-      dismissOnDrag={!saving}
+      locked={saving}
     >
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <BottomSheetBody className="grid gap-3">
+        <AppSheetBody className="grid gap-3">
           <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="pp-edit-date">{t.progressPhotos.fields.date}</Label>
@@ -189,9 +189,9 @@ export function EditPhotoSheet({
           {fieldError ? (
             <p className="text-xs text-destructive">{fieldError}</p>
           ) : null}
-        </BottomSheetBody>
+        </AppSheetBody>
 
-        <BottomSheetFooter>
+        <AppSheetFooter>
           <Button
             type="button"
             variant="outline"
@@ -203,8 +203,8 @@ export function EditPhotoSheet({
           <Button type="submit" disabled={saving}>
             {t.progressPhotos.edit.submit}
           </Button>
-        </BottomSheetFooter>
+        </AppSheetFooter>
       </form>
-    </BottomSheet>
+    </AppSheet>
   );
 }

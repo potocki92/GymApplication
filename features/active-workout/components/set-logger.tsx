@@ -16,7 +16,7 @@ import {
 } from "@/lib/session-utils";
 import { useActiveSessionStore } from "@/store";
 import type { ActiveSession, LoggedSet } from "@/types";
-import { PlateCalculatorDialog } from "./plate-calculator-dialog";
+import { PlateCalculatorSheet } from "./plate-calculator-sheet";
 import { RPESelector } from "./rpe-selector";
 
 /**
@@ -179,7 +179,7 @@ export function SetLogger({ session }: { session: ActiveSession }) {
         </div>
       </div>
 
-      <PlateCalculatorDialog
+      <PlateCalculatorSheet
         open={plateDialogOpen}
         onOpenChange={setPlateDialogOpen}
         initialWeightKg={weight}

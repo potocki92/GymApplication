@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { BottomSheet, BottomSheetBody } from "@/components/ui/bottom-sheet";
+import { AppSheet, AppSheetBody } from "@/components/ui/app-sheet";
 import { Button } from "@/components/ui/button";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
@@ -122,14 +122,14 @@ export function MonthCalendar({
         ))}
       </div>
 
-      <BottomSheet
+      <AppSheet
         open={selectedISO !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedISO(null);
         }}
         title={selectedISO ? formatWeekdayDatePL(selectedISO) : t.calendar.detail.title}
       >
-        <BottomSheetBody>
+        <AppSheetBody>
           {selectedISO ? (
             <DayDetailPanel
               iso={selectedISO}
@@ -140,8 +140,8 @@ export function MonthCalendar({
               showOverlay={showOverlay}
             />
           ) : null}
-        </BottomSheetBody>
-      </BottomSheet>
+        </AppSheetBody>
+      </AppSheet>
     </div>
   );
 }

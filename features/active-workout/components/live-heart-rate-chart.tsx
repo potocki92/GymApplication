@@ -12,6 +12,10 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  CHART_AXIS_PROPS,
+  CHART_GRID_PROPS,
+} from "@/components/shared/chart/chart-theme";
 import { useDictionary } from "@/hooks/use-dictionary";
 import type {
   HeartRateSample,
@@ -78,20 +82,18 @@ export function LiveHeartRateChart({
           data={data}
           margin={{ top: 8, right: 12, bottom: 0, left: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+          <CartesianGrid {...CHART_GRID_PROPS} />
           <XAxis
             dataKey="ts"
             type="number"
             domain={["dataMin", "dataMax"]}
             tickFormatter={(ts: number) => formatClock(ts)}
-            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-            stroke="rgba(255,255,255,0.2)"
+            {...CHART_AXIS_PROPS}
             minTickGap={32}
           />
           <YAxis
             domain={yDomain ?? ["auto", "auto"]}
-            tick={{ fontSize: 11, fill: "rgba(255,255,255,0.6)" }}
-            stroke="rgba(255,255,255,0.2)"
+            {...CHART_AXIS_PROPS}
             width={36}
           />
           {zones?.map((z) => (
@@ -111,17 +113,17 @@ export function LiveHeartRateChart({
             }
             contentStyle={{
               borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "#1a1a1a",
-              color: "#ffffff",
+              border: "1px solid var(--border)",
+              background: "var(--popover)",
+              color: "var(--popover-foreground)",
               fontSize: 12,
             }}
-            labelStyle={{ color: "rgba(255,255,255,0.7)" }}
+            labelStyle={{ color: "var(--muted-foreground)" }}
           />
           <Line
             type="monotone"
             dataKey="bpm"
-            stroke="#f43f5e"
+            stroke="var(--destructive)"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}

@@ -6,15 +6,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BookmarkPlus, CircleCheckBig, Coffee, Play, Plus, Trash2 } from "lucide-react";
 
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { formatMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -146,22 +139,14 @@ export function DayTrainingRow({
         )}
       </div>
 
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t.plan.deleteConfirmTitle}</DialogTitle>
-            <DialogDescription>{t.plan.deleteConfirmDesc}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
-              {t.common.cancel}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              {t.plan.deleteWorkout}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t.plan.deleteConfirmTitle}
+        description={t.plan.deleteConfirmDesc}
+        confirmLabel={t.plan.deleteWorkout}
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

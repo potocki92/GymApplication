@@ -8,13 +8,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { AppSheet, AppSheetBody } from "@/components/ui/app-sheet";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { pluralPl } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -205,18 +199,18 @@ export function WorkoutFormView() {
         </Card>
       </div>
 
-      {/* Mobile-only picker sheet. */}
-      <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
-        <SheetContent side="bottom" className="max-h-[88vh] lg:hidden">
-          <SheetHeader>
-            <SheetTitle>{t.workoutForm.addExerciseToWorkout}</SheetTitle>
-            <SheetDescription>{t.workoutForm.noExercisesHint}</SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <ExercisePicker />
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Mobile-only picker sheet — on `lg` the picker is inline in the layout. */}
+      <AppSheet
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        title={t.workoutForm.addExerciseToWorkout}
+        description={t.workoutForm.noExercisesHint}
+        className="h-[88dvh] lg:hidden"
+      >
+        <AppSheetBody>
+          <ExercisePicker />
+        </AppSheetBody>
+      </AppSheet>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl shadow-background/80 backdrop-blur sm:hidden">
         <Button

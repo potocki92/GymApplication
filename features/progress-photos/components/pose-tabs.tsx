@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { PROGRESS_POSES, type ProgressPose } from "@/types";
 
@@ -11,19 +11,17 @@ interface PoseTabsProps {
 
 export function PoseTabs({ value, onChange }: PoseTabsProps) {
   const t = useDictionary();
+
   return (
-    <Tabs
+    <SegmentedControl
       value={value}
-      onValueChange={(v) => onChange(v as ProgressPose)}
-      className="w-full"
-    >
-      <TabsList className="w-full">
-        {PROGRESS_POSES.map((pose) => (
-          <TabsTrigger key={pose} value={pose}>
-            {t.progressPhotos.poses[pose]}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+      onValueChange={onChange}
+      aria-label={t.progressPhotos.poseLabel}
+      size="sm"
+      options={PROGRESS_POSES.map((pose) => ({
+        value: pose,
+        label: t.progressPhotos.poses[pose],
+      }))}
+    />
   );
 }

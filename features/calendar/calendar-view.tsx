@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Activity, CalendarDays, LayoutGrid, LineChart } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useDictionary } from "@/hooks/use-dictionary";
 import {
   currentLocalISODate,
@@ -34,36 +34,26 @@ export function CalendarView() {
     <div className="space-y-6">
       <PageHeader title={t.calendar.title} description={t.calendar.subtitle} />
 
-      <Tabs value={mode} onValueChange={(value) => setMode(value as CalendarMode)}>
-        <TabsList className="w-full">
-          <TabsTrigger value="month" className="text-xs sm:text-sm">
-            <LayoutGrid className="hidden sm:block" />
-            {t.calendar.views.month}
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="text-xs sm:text-sm">
-            <Activity className="hidden sm:block" />
-            {t.calendar.views.activity}
-          </TabsTrigger>
-          <TabsTrigger value="plan" className="text-xs sm:text-sm">
-            <CalendarDays className="hidden sm:block" />
-            {t.calendar.views.plan}
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="text-xs sm:text-sm">
-            <LineChart className="hidden sm:block" />
-            {t.calendar.views.timeline}
-          </TabsTrigger>
-        </TabsList>
+      <SegmentedControl
+        value={mode}
+        onValueChange={setMode}
+        aria-label={t.calendar.viewLabel}
+        size="sm"
+        options={[
+          { value: "month", label: t.calendar.views.month, icon: LayoutGrid },
+          { value: "activity", label: t.calendar.views.activity, icon: Activity },
+          { value: "plan", label: t.calendar.views.plan, icon: CalendarDays },
+          { value: "timeline", label: t.calendar.views.timeline, icon: LineChart },
+        ]}
+      />
 
-        <TabsContent value="month" className="mt-4">
+      <div>
+        {mode === "month" ? (
           <MonthCalendar plan={plan} sessions={sessions} todayISO={todayISO} />
-        </TabsContent>
-        <TabsContent value="activity" className="mt-4">
-          <ActivityCalendar sessions={sessions} />
-        </TabsContent>
-        <TabsContent value="plan" className="mt-4">
-          <PlanBoard />
-        </TabsContent>
-        <TabsContent value="timeline" className="mt-4">
+        ) : null}
+        {mode === "activity" ? <ActivityCalendar sessions={sessions} /> : null}
+        {mode === "plan" ? <PlanBoard /> : null}
+        {mode === "timeline" ? (
           <MonthCalendar
             plan={plan}
             sessions={sessions}
@@ -72,8 +62,8 @@ export function CalendarView() {
             todayISO={todayISO}
             showOverlay
           />
-        </TabsContent>
-      </Tabs>
+        ) : null}
+      </div>
     </div>
   );
 }

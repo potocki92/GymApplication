@@ -1,18 +1,12 @@
 "use client";
 
+import { AppSheet, AppSheetBody } from "@/components/ui/app-sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { WEEKDAY_ORDER } from "@/lib/constants";
 import type { Weekday, WorkoutTemplate } from "@/types";
 
-export function ApplyTemplateDialog({
+export function ApplyTemplateSheet({
   template,
   onOpenChange,
   onPick,
@@ -24,14 +18,14 @@ export function ApplyTemplateDialog({
   const t = useDictionary();
 
   return (
-    <Dialog open={template !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t.templates.applyToDay}</DialogTitle>
-          <DialogDescription>
-            {template ? template.name : ""}
-          </DialogDescription>
-        </DialogHeader>
+    <AppSheet
+      open={template !== null}
+      onOpenChange={onOpenChange}
+      title={t.templates.applyToDay}
+      description={template?.name}
+      size="sm"
+    >
+      <AppSheetBody>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {WEEKDAY_ORDER.map((weekday) => (
             <Button
@@ -43,7 +37,7 @@ export function ApplyTemplateDialog({
             </Button>
           ))}
         </div>
-      </DialogContent>
-    </Dialog>
+      </AppSheetBody>
+    </AppSheet>
   );
 }

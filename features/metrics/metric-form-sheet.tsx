@@ -2,15 +2,12 @@
 
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AppSheet,
+  AppSheetBody,
+  AppSheetFooter,
+} from "@/components/ui/app-sheet";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDictionary } from "@/hooks/use-dictionary";
@@ -79,13 +76,10 @@ function MetricFormBody({
   };
 
   return (
+    // `contents` lets the body and footer stay direct flex children of the
+    // sheet, so only the body scrolls and the actions stay pinned.
     <form onSubmit={handleSubmit} className="contents">
-      <DialogHeader>
-        <DialogTitle>{t.metrics.detailedTitle}</DialogTitle>
-        <DialogDescription>{t.metrics.detailedDesc}</DialogDescription>
-      </DialogHeader>
-
-      <div className="grid gap-3">
+      <AppSheetBody className="grid gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="metric-date">{t.metrics.fields.date}</Label>
           <Input
@@ -173,19 +167,19 @@ function MetricFormBody({
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
-      </div>
+      </AppSheetBody>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+      <AppSheetFooter>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           {t.metrics.cancel}
         </Button>
         <Button type="submit">{t.metrics.save}</Button>
-      </DialogFooter>
+      </AppSheetFooter>
     </form>
   );
 }
 
-export function MetricFormDialog({
+export function MetricFormSheet({
   open,
   onOpenChange,
   initial,
@@ -196,20 +190,25 @@ export function MetricFormDialog({
   initial?: BodyMetricRecord | null;
   onSubmit: (record: BodyMetricRecord) => void;
 }) {
+  const t = useDictionary();
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        {open ? (
-          <MetricFormBody
-            initial={initial ?? null}
-            onSubmit={(r) => {
-              onSubmit(r);
-              onOpenChange(false);
-            }}
-            onCancel={() => onOpenChange(false)}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t.metrics.detailedTitle}
+      description={t.metrics.detailedDesc}
+    >
+      {open ? (
+        <MetricFormBody
+          initial={initial ?? null}
+          onSubmit={(r) => {
+            onSubmit(r);
+            onOpenChange(false);
+          }}
+          onCancel={() => onOpenChange(false)}
+        />
+      ) : null}
+    </AppSheet>
   );
 }

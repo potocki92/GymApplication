@@ -7,6 +7,7 @@ import { PanelLeftClose, PanelLeftOpen, Timer } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Logo, Wordmark } from "@/components/shared/logo";
+import { SectionLabel } from "@/components/ui/section-label";
 import {
   Tooltip,
   TooltipContent,
@@ -40,7 +41,7 @@ export function Sidebar() {
     <aside
       data-collapsed={collapsed}
       className={cn(
-        "sticky top-0 z-40 hidden h-screen shrink-0 flex-col gap-2 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground shadow-xl shadow-black/20 md:flex",
+        "sticky top-0 z-40 hidden h-screen shrink-0 flex-col gap-2 overflow-hidden border-r border-sidebar-border bg-sidebar px-3 py-5 text-sidebar-foreground md:flex",
         "motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-[var(--ease-out-quint)]",
         collapsed ? "md:w-[4.5rem]" : "md:w-64",
       )}
@@ -69,9 +70,9 @@ export function Sidebar() {
             {collapsed ? (
               <div className="mx-2 my-2 h-px bg-sidebar-border/60" aria-hidden />
             ) : (
-              <p className="px-3 pt-4 pb-1 font-display text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/45">
+              <SectionLabel className="px-3 pt-4 pb-1.5">
                 {t.nav.sections[section.id]}
-              </p>
+              </SectionLabel>
             )}
 
             {section.items.map((item) => {
@@ -88,23 +89,11 @@ export function Sidebar() {
                     "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                     collapsed ? "justify-center" : "justify-start",
                     active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                   )}
                 >
-                  {/* Left accent bar on the active row. */}
-                  {active ? (
-                    <span
-                      aria-hidden
-                      className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-sidebar-primary"
-                    />
-                  ) : null}
-                  <item.icon
-                    className={cn(
-                      "size-5 shrink-0",
-                      active ? "text-sidebar-primary" : "",
-                    )}
-                  />
+                  <item.icon className="size-5 shrink-0" />
                   {!collapsed ? (
                     <span className="overflow-hidden whitespace-nowrap">
                       {label}
@@ -115,7 +104,7 @@ export function Sidebar() {
                       className={cn(
                         "ml-auto rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums",
                         active
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          ? "bg-sidebar-primary-foreground/15 text-sidebar-primary-foreground"
                           : "bg-sidebar-accent text-sidebar-foreground/80",
                       )}
                     >
@@ -126,7 +115,7 @@ export function Sidebar() {
                   {collapsed && badgeCount > 0 ? (
                     <span
                       aria-hidden
-                      className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-sidebar-primary"
+                      className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-data"
                     />
                   ) : null}
                 </Link>
@@ -157,14 +146,14 @@ export function Sidebar() {
                 href="/workout/active"
                 aria-label={t.activeWorkout.returnToWorkout}
                 className={cn(
-                  "group flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20",
+                  "group flex items-center gap-3 rounded-xl border border-data/30 bg-data/10 px-3 py-2.5 text-sm font-semibold text-data transition-colors duration-fast hover:bg-data/15",
                   collapsed ? "justify-center" : "justify-start",
                 )}
               >
                 <span className="relative flex size-5 shrink-0 items-center justify-center">
                   <Timer className="size-5" />
                   {!timer.isPaused ? (
-                    <span className="absolute -right-0.5 -top-0.5 inline-flex size-2 animate-ping rounded-full bg-primary" />
+                    <span className="absolute -right-0.5 -top-0.5 inline-flex size-2 animate-ping rounded-full bg-data" />
                   ) : null}
                 </span>
                 {!collapsed ? (

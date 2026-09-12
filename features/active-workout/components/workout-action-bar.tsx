@@ -13,13 +13,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { AppSheet, AppSheetBody } from "@/components/ui/app-sheet";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { cn } from "@/lib/utils";
 import { useActiveSessionStore } from "@/store";
@@ -172,35 +166,36 @@ export function WorkoutActionBar({
             <SkipForward className="size-5" />
           </Button>
         ) : null}
-        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-lg"
-              className="h-14 w-14 shrink-0"
-              aria-label={t.activeWorkout.menuLabel}
-            >
-              <MoreVertical className="size-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[80vh]">
-            <SheetHeader>
-              <SheetTitle>{t.activeWorkout.overflowMenuTitle}</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-3 px-4 pb-6">
-              <AddExerciseSheet session={session} onAdded={closeMenu} />
-              <SessionControls
-                status={status}
-                onExit={() => {
-                  closeMenu();
-                  onExit();
-                }}
-                onAfterAction={closeMenu}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-lg"
+          className="h-14 w-14 shrink-0"
+          aria-label={t.activeWorkout.menuLabel}
+          aria-haspopup="dialog"
+          onClick={() => setMenuOpen(true)}
+        >
+          <MoreVertical className="size-5" />
+        </Button>
+
+        <AppSheet
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          title={t.activeWorkout.overflowMenuTitle}
+          size="sm"
+        >
+          <AppSheetBody className="flex flex-col gap-3 pb-6">
+            <AddExerciseSheet session={session} onAdded={closeMenu} />
+            <SessionControls
+              status={status}
+              onExit={() => {
+                closeMenu();
+                onExit();
+              }}
+              onAfterAction={closeMenu}
+            />
+          </AppSheetBody>
+        </AppSheet>
       </div>
       {status === "paused" ? (
         <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">

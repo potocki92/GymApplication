@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { useTemplatesStore } from "@/store";
 import type { Weekday, WorkoutTemplate } from "@/types";
-import { ApplyTemplateDialog } from "./components/apply-template-dialog";
+import { ApplyTemplateSheet } from "./components/apply-template-sheet";
 import { TemplateCard } from "./components/template-card";
 
 export function TemplatesView() {
@@ -88,7 +88,7 @@ export function TemplatesView() {
         </>
       )}
 
-      <ApplyTemplateDialog
+      <ApplyTemplateSheet
         template={applying}
         onOpenChange={(open) => {
           if (!open) setApplying(null);

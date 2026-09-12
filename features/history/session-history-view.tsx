@@ -5,7 +5,11 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
+import { FilterSection, FilterSheet } from "@/components/shared/filter-sheet";
+import { FilterTrigger } from "@/components/shared/filter-trigger";
 import { PageHeader } from "@/components/shared/page-header";
+import { Card } from "@/components/ui/card";
+import { SectionLabel } from "@/components/ui/section-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,11 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useDictionary } from "@/hooks/use-dictionary";
 import { useGarminIntegrationStore, useHistoryStore, useSessionHistoryStore } from "@/store";
 import type { ExerciseHistoryRecord, SessionHistoryRecord } from "@/types";
@@ -64,6 +64,19 @@ export function SessionHistoryView() {
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount =
+    (query.trim() === "" ? 0 : 1) +
+    (dateRange === "all" ? 0 : 1) +
+    (ratingFilter === "all" ? 0 : 1);
+
+  const resetFilters = () => {
+    setQuery("");
+    setDateRange("all");
+    setRatingFilter("all");
+    setPage(1);
+  };
 
   const combinedSessions = useMemo<SessionHistoryRecord[]>(() => {
     const garmin = garminActivities.map(garminActivityToSessionRecord);
@@ -123,58 +136,74 @@ export function SessionHistoryView() {
         />
       ) : (
         <>
-          <section className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+          <Card className="gap-3 px-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="size-4 text-primary" />
-              <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {t.history.chart.title}
-              </h2>
+              <TrendingUp className="size-4 text-data" />
+              <SectionLabel>{t.history.chart.title}</SectionLabel>
             </div>
             <SessionProgressChart sessions={filtered} />
-          </section>
+          </Card>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
-              placeholder={t.history.searchPlaceholder}
-              className="sm:max-w-xs"
-            />
-            <Select
-              value={dateRange}
-              onValueChange={(v) => {
-                setDateRange(v as DateRange);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="sm:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t.history.range.all}</SelectItem>
-                <SelectItem value="7d">{t.history.range.last7}</SelectItem>
-                <SelectItem value="30d">{t.history.range.last30}</SelectItem>
-                <SelectItem value="90d">{t.history.range.last90}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Tabs
-              value={ratingFilter}
-              onValueChange={(v) => {
-                setRatingFilter(v as RatingFilter);
-                setPage(1);
-              }}
-              className="sm:ml-auto"
-            >
-              <TabsList>
-                <TabsTrigger value="all">{t.history.filterAll}</TabsTrigger>
-                <TabsTrigger value="rated">{t.history.filterRated}</TabsTrigger>
-                <TabsTrigger value="unrated">{t.history.filterUnrated}</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+          <FilterTrigger
+            onClick={() => setFiltersOpen(true)}
+            activeCount={activeFilterCount}
+            className="sm:max-w-md"
+          />
+
+          <FilterSheet
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
+            onReset={resetFilters}
+            activeCount={activeFilterCount}
+          >
+            <FilterSection label={t.history.filters.search}>
+              <Input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+                placeholder={t.history.searchPlaceholder}
+              />
+            </FilterSection>
+
+            <FilterSection label={t.history.filters.range}>
+              <Select
+                value={dateRange}
+                onValueChange={(v) => {
+                  setDateRange(v as DateRange);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.history.range.all}</SelectItem>
+                  <SelectItem value="7d">{t.history.range.last7}</SelectItem>
+                  <SelectItem value="30d">{t.history.range.last30}</SelectItem>
+                  <SelectItem value="90d">{t.history.range.last90}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FilterSection>
+
+            <FilterSection label={t.history.filters.rating}>
+              <SegmentedControl
+                value={ratingFilter}
+                onValueChange={(v) => {
+                  setRatingFilter(v);
+                  setPage(1);
+                }}
+                aria-label={t.history.filters.rating}
+                size="sm"
+                options={[
+                  { value: "all", label: t.history.filterAll },
+                  { value: "rated", label: t.history.filterRated },
+                  { value: "unrated", label: t.history.filterUnrated },
+                ]}
+              />
+            </FilterSection>
+          </FilterSheet>
 
           {visible.length === 0 ? (
             <EmptyState

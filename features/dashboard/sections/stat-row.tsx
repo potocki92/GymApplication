@@ -20,7 +20,8 @@ import {
   useProfileStore,
   useSessionHistoryStore,
 } from "@/store";
-import { StatTile } from "../components/stat-tile";
+import { MetricCard } from "@/components/shared/metric-card";
+import { StatValue } from "@/components/shared/stat-value";
 
 /** Sparkline points sampled for the strength tile. */
 const STRENGTH_POINTS = 12;
@@ -80,42 +81,40 @@ export function StatRow() {
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <StatTile
+      <MetricCard
         icon={Flame}
         label={t.dashboard.tiles.streak}
-        value={streak}
-        unit={t.dashboard.days}
-        foot={`${t.dashboard.tiles.streakLongest}: ${longestStreak} ${t.dashboard.days}`}
+        value={<StatValue value={streak} unit={t.dashboard.days} animate />}
+        hint={`${t.dashboard.tiles.streakLongest}: ${longestStreak} ${t.dashboard.days}`}
         sparkline={streakSpark}
       />
-      <StatTile
+      <MetricCard
         icon={Weight}
         label={t.dashboard.tiles.volume7d}
-        value={volume.total}
-        unit="kg"
+        value={<StatValue value={volume.total} unit="kg" animate />}
         delta={volumeDelta}
         sparkline={volume.points}
       />
-      <StatTile
+      <MetricCard
         icon={Scale}
         label={t.dashboard.tiles.weight}
-        value={currentWeight ?? 0}
-        unit="kg"
-        decimals={1}
-        foot={
+        value={
+          <StatValue value={currentWeight ?? 0} unit="kg" decimals={1} animate />
+        }
+        hint={
           targetWeight != null
             ? `${t.dashboard.tiles.target}: ${formatNumber(targetWeight)} kg`
             : undefined
         }
         sparkline={weights.slice(-STRENGTH_POINTS)}
-        sparklineColor="var(--chart-3)"
       />
-      <StatTile
+      <MetricCard
         icon={Trophy}
         label={t.dashboard.tiles.records}
-        value={prCount}
-        unit={t.dashboard.tiles.recordsUnit}
-        foot={t.dashboard.tiles.recordsSub}
+        value={
+          <StatValue value={prCount} unit={t.dashboard.tiles.recordsUnit} animate />
+        }
+        hint={t.dashboard.tiles.recordsSub}
         sparkline={strengthSpark}
       />
     </div>
