@@ -248,34 +248,43 @@ export function swapWorkoutDays(
 /* ----------------------------- type styling ----------------------------- */
 
 /**
- * Tinted chips per workout type for the day-detail panel. Literal class strings
- * so Tailwind's compiler keeps them (same approach as `MUSCLE_BADGE_CLASSES`).
+ * Workout-type chips for the day-detail panel. Uniform on purpose — the chip
+ * spells the type out, so a per-type hue was decoration. Literal class strings
+ * so Tailwind's compiler keeps them.
  */
+const WORKOUT_TYPE_BADGE_CLASS = "bg-surface-interactive text-foreground";
+
 export const WORKOUT_TYPE_BADGE_CLASSES: Record<WorkoutType, string> = {
-  Push: "bg-blue-500/15 text-blue-300",
-  Pull: "bg-violet-500/15 text-violet-300",
-  Nogi: "bg-emerald-500/15 text-emerald-300",
-  "Full Body": "bg-amber-500/15 text-amber-300",
+  Push: WORKOUT_TYPE_BADGE_CLASS,
+  Pull: WORKOUT_TYPE_BADGE_CLASS,
+  Nogi: WORKOUT_TYPE_BADGE_CLASS,
+  "Full Body": WORKOUT_TYPE_BADGE_CLASS,
   Custom: "bg-muted text-muted-foreground",
-  Siła: "bg-rose-500/15 text-rose-300",
-  Hipertrofia: "bg-fuchsia-500/15 text-fuchsia-300",
-  Wytrzymałość: "bg-cyan-500/15 text-cyan-300",
-  Cardio: "bg-orange-500/15 text-orange-300",
-  Mobilność: "bg-teal-500/15 text-teal-300",
+  Siła: WORKOUT_TYPE_BADGE_CLASS,
+  Hipertrofia: WORKOUT_TYPE_BADGE_CLASS,
+  Wytrzymałość: WORKOUT_TYPE_BADGE_CLASS,
+  Cardio: WORKOUT_TYPE_BADGE_CLASS,
+  Mobilność: WORKOUT_TYPE_BADGE_CLASS,
 };
 
-/** Solid dot colours used to mark planned workouts inside calendar cells. */
+/**
+ * Solid dot marking a planned workout inside a calendar cell. A 4px unlabelled
+ * dot cannot carry nine distinguishable meanings, so it says one thing —
+ * "something is planned here" — in the green data accent.
+ */
+const WORKOUT_TYPE_DOT_CLASS = "bg-data";
+
 export const WORKOUT_TYPE_DOT_CLASSES: Record<WorkoutType, string> = {
-  Push: "bg-blue-400",
-  Pull: "bg-violet-400",
-  Nogi: "bg-emerald-400",
-  "Full Body": "bg-amber-400",
+  Push: WORKOUT_TYPE_DOT_CLASS,
+  Pull: WORKOUT_TYPE_DOT_CLASS,
+  Nogi: WORKOUT_TYPE_DOT_CLASS,
+  "Full Body": WORKOUT_TYPE_DOT_CLASS,
   Custom: "bg-muted-foreground",
-  Siła: "bg-rose-400",
-  Hipertrofia: "bg-fuchsia-400",
-  Wytrzymałość: "bg-cyan-400",
-  Cardio: "bg-orange-400",
-  Mobilność: "bg-teal-400",
+  Siła: WORKOUT_TYPE_DOT_CLASS,
+  Hipertrofia: WORKOUT_TYPE_DOT_CLASS,
+  Wytrzymałość: WORKOUT_TYPE_DOT_CLASS,
+  Cardio: WORKOUT_TYPE_DOT_CLASS,
+  Mobilność: WORKOUT_TYPE_DOT_CLASS,
 };
 
 export function workoutTypeDotClass(type?: WorkoutType): string {

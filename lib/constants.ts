@@ -49,15 +49,23 @@ export const EXERCISE_CATEGORY_ORDER: ExerciseCategory[] = [
 
 /** Tinted muscle-group chips designed to read on the Athletic Brutalism dark
  *  surfaces. Written as literal class strings so Tailwind's compiler keeps them. */
+/**
+ * Muscle-group chips are intentionally uniform: the label already names the
+ * group, so a per-group colour ramp added noise, not information. Kept as a map
+ * (rather than one constant) because `ExerciseIcon` keys off the same shape and
+ * a future single accent per group stays a one-line change.
+ */
+const MUSCLE_BADGE_CLASS = "bg-surface-interactive text-foreground";
+
 export const MUSCLE_BADGE_CLASSES: Record<MuscleGroup, string> = {
-  klatka: "bg-rose-500/15 text-rose-300",
-  plecy: "bg-blue-500/15 text-blue-300",
-  barki: "bg-amber-500/15 text-amber-300",
-  biceps: "bg-violet-500/15 text-violet-300",
-  triceps: "bg-fuchsia-500/15 text-fuchsia-300",
-  nogi: "bg-emerald-500/15 text-emerald-300",
-  posladki: "bg-pink-500/15 text-pink-300",
-  brzuch: "bg-cyan-500/15 text-cyan-300",
-  cardio: "bg-orange-500/15 text-orange-300",
-  "cale-cialo": "bg-indigo-500/15 text-indigo-300",
+  klatka: MUSCLE_BADGE_CLASS,
+  plecy: MUSCLE_BADGE_CLASS,
+  barki: MUSCLE_BADGE_CLASS,
+  biceps: MUSCLE_BADGE_CLASS,
+  triceps: MUSCLE_BADGE_CLASS,
+  nogi: MUSCLE_BADGE_CLASS,
+  posladki: MUSCLE_BADGE_CLASS,
+  brzuch: MUSCLE_BADGE_CLASS,
+  cardio: MUSCLE_BADGE_CLASS,
+  "cale-cialo": MUSCLE_BADGE_CLASS,
 };

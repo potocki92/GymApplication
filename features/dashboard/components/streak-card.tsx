@@ -23,7 +23,7 @@ export function StreakCard({ days }: { days: number }) {
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">{t.dashboard.streakSub}</p>
         </div>
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-data/12 text-data">
           <Flame className="size-6" />
         </span>
       </CardContent>

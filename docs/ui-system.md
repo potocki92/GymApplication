@@ -218,7 +218,17 @@ Charts consume `components/shared/chart/chart-theme.ts`. Never inline hex.
   tooltip is a graphite mini-card with the system border and radius.
 
 Heart-rate zone bands are a deliberate exception: the blue→green→amber→orange→red
-ramp is domain meaning, not decoration.
+ramp is domain meaning, not decoration. It is the **only** place raw Tailwind
+palette colours (`bg-rose-500`, …) are allowed — `lib/heart-rate/zones.ts` and
+the heart-rate panel. Everywhere else, a raw palette colour is a bug.
+
+### Colour is not a label
+
+Muscle groups, workout types and calendar dots each used to carry a per-value
+hue. They no longer do: the chip already spells the value out, so the ramp added
+noise rather than information, and a 4px unlabelled dot cannot carry nine
+distinguishable meanings. Before adding a per-value colour map, ask what a reader
+learns from the hue that the text does not already tell them.
 
 ---
 

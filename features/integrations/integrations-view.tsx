@@ -63,7 +63,7 @@ export function IntegrationsView() {
       </p>
 
       {demoMode ? (
-        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+        <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
           {t.integrations.garmin.demoBanner}
         </p>
       ) : null}

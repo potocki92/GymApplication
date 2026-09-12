@@ -31,12 +31,12 @@ export function HighHrAlertBanner() {
       className={cn(
         "flex items-center gap-3 rounded-xl p-3 ring-1",
         isDanger
-          ? "bg-rose-500/15 ring-rose-500/40 text-rose-100"
-          : "bg-amber-500/15 ring-amber-500/40 text-amber-100",
+          ? "bg-destructive/12 text-destructive ring-destructive/30"
+          : "bg-warning/12 text-warning ring-warning/30",
       )}
     >
       <AlertTriangle
-        className={cn("size-5 shrink-0", isDanger ? "text-rose-300" : "text-amber-300")}
+        className="size-5 shrink-0"
       />
       <div className="min-w-0 flex-1 space-y-0.5">
         <p className="text-sm font-semibold">

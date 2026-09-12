@@ -56,12 +56,14 @@ export function FilterSheet({
       description={description}
     >
       <AppSheetBody className="flex flex-col gap-6 py-2">{children}</AppSheetBody>
-      <AppSheetFooter className="sm:justify-between">
+      {/* One row at every width: Reset sits beside Zastosuj rather than stacking
+          under it, where a full-width ghost button reads like a second CTA. */}
+      <AppSheetFooter className="flex-row items-center gap-3">
         <Button
           variant="ghost"
           onClick={onReset}
           disabled={activeCount === 0}
-          className="sm:min-w-24"
+          className="shrink-0"
         >
           {t.common.reset}
         </Button>
@@ -70,7 +72,7 @@ export function FilterSheet({
             onApply?.();
             onOpenChange(false);
           }}
-          className="sm:min-w-32"
+          className="flex-1"
         >
           {t.common.apply}
         </Button>
@@ -92,7 +94,11 @@ export function FilterSection({
   return (
     <section className={cn("flex flex-col gap-2.5", className)}>
       <SectionLabel>{label}</SectionLabel>
-      {children}
+      {/* A horizontal chip row bleeds to the sheet edges instead of clipping a
+          chip mid-word against the body's padding. */}
+      <div className="[&>[role=group]]:-mx-4 [&>[role=group]]:px-4">
+        {children}
+      </div>
     </section>
   );
 }
